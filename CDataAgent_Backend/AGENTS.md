@@ -65,23 +65,23 @@ com.AIBI/
 
 ## 核心架构
 
-### Agent 对话流程（Plan-Execute-Synthesize 三层编排）
+### Agent 对话流程（Executor + Synthesizer 双层编排）
 
 ```
 AgentController → AgentServiceImpl
-  ├── Phase 1: PlannerAgent   — 理解意图，生成 ExecutionPlan
-  ├── Phase 2: ExecutorAgent  — 按计划逐步调用工具，结果存入 AnalysisState
+  ├── Phase 1: ExecutorAgent  — 自主决策，逐步调用工具，结果存入 AnalysisState
   │     ├── DataLoadingTool   — 加载对话绑定文件到分析环境
   │     ├── DuckDbQueryTool   — SQL 查询（支持多文件 JOIN）
   │     ├── PythonRunnerTool  — Docker Python 沙箱（可选）
   │     └── PreferenceTool    — 用户偏好读写
-  └── Phase 3: SynthesizerAgent — 基于分析结果生成图表和结论
+  │     └── 检测 ##NEEDS_CHART## → 触发 SynthesizerAgent
+  └── Phase 2: SynthesizerAgent — 基于分析结果生成图表和结论
         ├── ChartOutputTool   — echarts-java 构建图表
         └── PreferenceTool
 ```
 
 **核心设计**：
-- **三层 Agent 编排**：Planner → Executor → Synthesizer，通过 Tool Calling 自主协调
+- **双层 Agent 编排**：Executor 自主决策 + Synthesizer 图表合成，通过 Tool Calling + ##NEEDS_CHART## 标记协调
 - **H2 直写持久化**：用户消息和 Assistant 回复在对话流中同步写入 H2，无外部 MQ
 - **Redis 共享数据区**：跨 Agent 数据通过 Redis 传递
 - **Redis Checkpoint**：对话记忆由 RedisSaver 管理，支持多轮对话

@@ -68,19 +68,18 @@ chmod +x deploy.sh && ./deploy.sh
 
 ## 核心架构
 
-### Agent 对话流程（Plan-Execute-Synthesize 三层编排）
+### Agent 对话流程（Executor + Synthesizer 双层编排）
 
 ```
 用户输入 → AgentController → AgentServiceImpl
-  ├── Phase 1: PlannerAgent
-  │   └── 理解意图，生成 ExecutionPlan
-  ├── Phase 2: ExecutorAgent
-  │   ├── DataLoadingTool   — 加载对话绑定文件到分析环境
-  │   ├── DuckDbQueryTool   — SQL 查询（支持多文件 JOIN）
-  │   ├── PythonRunnerTool  — Docker Python 沙箱（可选）
-  │   └── PreferenceTool    — 用户偏好读写
-  └── Phase 3: SynthesizerAgent
-      ├── ChartOutputTool   — echarts-java 构建图表
+  ├── Phase 1: ExecutorAgent（自主决策）
+  │   ├── DataLoadingTool    — 加载对话绑定文件到分析环境
+  │   ├── DuckDbQueryTool    — SQL 查询（支持多文件 JOIN）
+  │   ├── PythonRunnerTool   — Docker Python 沙箱（可选）
+  │   └── PreferenceTool     — 用户偏好读写
+  │   └── 检测 ##NEEDS_CHART## → 触发 Synthesizer
+  └── Phase 2: SynthesizerAgent
+      ├── ChartOutputTool    — echarts-java 构建图表
       └── PreferenceTool
 ```
 
