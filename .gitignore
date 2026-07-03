@@ -1,0 +1,71 @@
+# ===================== CDataAgent Root .gitignore =====================
+# 本文件覆盖根级目录，两个子项目各有自己的 .gitignore
+# 先执行 git add 前请确认：git status --ignored
+
+# ---- Claude Code 本地配置 ----
+.claude/
+
+# ---- IDE ----
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# ---- 系统文件 ----
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# ---- 环境变量 / 密钥 ----
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ---- 运行产物 / 临时目录 ----
+.uploads/
+/uploads/
+*.log
+hs_err_pid*
+replay_pid*
+
+# ---- 构建产物（子项目 gitignore 已覆盖，根级补充） ----
+target/
+dist/
+.vite/
+node_modules/
+*.tsbuildinfo
+*.jar
+*.war
+*.nar
+*.ear
+*.class
+
+# ---- H2 数据库文件 ----
+*.db
+*.mv.db
+*.trace.db
+
+# ---- Maven 临时文件 ----
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# ---- Maven wrapper 下载的 jar ----
+.mvn/wrapper/maven-wrapper.jar
+
+# ---- 存档/压缩包 ----
+*.zip
+*.tar.gz
+*.rar
+
+# ---- 操作系统文件 ----
+.DS_Store
+Thumbs.db
+desktop.ini

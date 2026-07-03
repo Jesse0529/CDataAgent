@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: cdata-agent-backend
+  profiles:
+    active: dev
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/create_table.sql
+  h2:
+    console:
+      enabled: true
+      path: /h2-console

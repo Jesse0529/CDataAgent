@@ -1,0 +1,78 @@
+server:
+  port: 9999
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:/data/cdata-files/h2/cdata;AUTO_SERVER=TRUE;MODE=MySQL
+    username: sa
+    password:
+  redis:
+    database: 1
+    host: 127.0.0.1
+    port: 6379
+    timeout: 5000
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+    log-impl: ''
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+
+# ======================== 数据文件存储 ========================
+data:
+  file:
+    storage-dir: /data/cdata-files
+    max-file-size: 10485760
+    allowed-extensions: xlsx,xls,csv
+    retention-days: 7
+    cleanup:
+      cron: "0 0 3 * * ?"
+      stuck-hours: 1
+
+# ======================== 模型配置 ========================
+model:
+  default:
+    provider: DEEPSEEK
+    model-name: deepseek-v4-flash
+    base-url: https://api.deepseek.com
+
+agent:
+  global-timeout-seconds: 300
+  rate-limit: 2
+  executor:
+    timeout-seconds: 90
+    max-tool-calls: 15
+  synthesizer:
+    timeout-seconds: 30
+  context:
+    inject-analysis-state: true
+    analysis-state-persistence:
+      enabled: true
+      meta-ttl-days: 3
+      data-ttl-minutes: 60
+      max-data-entries: 10
+      max-data-entry-bytes: 51200
+
+sandbox:
+  enabled: true
+  mount-dir: /data/sandbox-workspace
+  execution-timeout: 60
+  health-check-interval: 60000
+
+duckdb:
+  query:
+    max-result-rows: 1000
+    timeout-seconds: 30
+    threads: 4
+    memory-limit: 1GB
+
+report:
+  output-dir: /data/cdata-reports
+  max-generation-time: 30
+  supported-formats: markdown,html,pdf

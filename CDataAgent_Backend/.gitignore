@@ -1,0 +1,72 @@
+# ===================== CDataAgent Backend .gitignore =====================
+
+# ---- Maven 构建产物 ----
+target/
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+*.nar
+*.ear
+
+# ---- 编译产物 ----
+*.class
+*.ctxt
+
+# ---- H2 数据库文件（开发数据，不含版本控制） ----
+*.db
+*.mv.db
+*.trace.db
+
+# ---- 系统文件 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- IDE ----
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# ---- Claude Code 本地配置 ----
+.claude/
+
+# ---- 环境变量 / 密钥 ----
+.env
+.env.local
+.env.production
+
+# ---- 运行产物 ----
+*.log
+hs_err_pid*
+
+# ---- 临时/运行目录 ----
+/com/
+workspace/
+sessions_mount_dir/
+.uploads/
+/uploads/
+
+# ---- 存档/压缩包 ----
+*.zip
+*.tar.gz
+*.rar
+
+# ---- Maven wrapper（构建时下载） ----
+.mvn/wrapper/maven-wrapper.jar
+
+# ---- Maven 临时文件 ----
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# ---- JVM 崩溃日志 ----
+hs_err_pid*
+replay_pid*
+
