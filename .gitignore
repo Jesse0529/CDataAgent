@@ -65,6 +65,9 @@ buildNumber.properties
 *.tar.gz
 *.rar
 
+# ---- 设计文档（本地保留，不提交到 GitHub） ----
+CDataAgent_Backend/docs/
+
 # ---- 操作系统文件 ----
 .DS_Store
 Thumbs.db
