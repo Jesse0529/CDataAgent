@@ -93,11 +93,9 @@ public class TokenLedger {
         long outputDelta = getAndClearField(key, "roundOutputTokens");
 
         if (inputDelta == 0 && outputDelta == 0) {
-            // 可能没通过 recordModelCall 记录（未配置或早期版本），回退读取累计值
-            inputDelta = getTotalInputTokens(conversationId);
-            outputDelta = getTotalOutputTokens(conversationId);
-            // 不回退清零
-            return Optional.of(new RoundTokenUsage(inputDelta, outputDelta));
+            // 本轮无 token 记录（模型调用未完成或已全量消费），返回空而非累计值
+            // 避免前端展示累加的 token 误导用户
+            return Optional.empty();
         }
 
         return Optional.of(new RoundTokenUsage(inputDelta, outputDelta));
@@ -121,6 +119,21 @@ public class TokenLedger {
         } catch (Exception e) {
             log.warn("TokenLedger 记录失败: cid={}, input={}, out={}",
                     conversationId, inputTokens, outputTokens, e);
+        }
+    }
+
+    /**
+     * 初始化本轮计数器（在每轮对话开始前调用）。
+     * 确保 roundInputTokens / roundOutputTokens 有初始值 0，
+     * 避免 consumeRoundUsage 因字段不存在而错误降级。
+     */
+    public void initRound(Long conversationId) {
+        String key = KEY_PREFIX + conversationId;
+        try {
+            stringRedisTemplate.opsForHash().putIfAbsent(key, "roundInputTokens", "0");
+            stringRedisTemplate.opsForHash().putIfAbsent(key, "roundOutputTokens", "0");
+        } catch (Exception e) {
+            log.warn("TokenLedger initRound 失败: cid={}", conversationId, e);
         }
     }
 

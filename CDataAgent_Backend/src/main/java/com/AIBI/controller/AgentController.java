@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -91,9 +92,13 @@ public class AgentController {
         // 冷事件流 + 心跳 + 序号
         var eventFlux = agentService.chatStream(message, fileIdList);
 
+        // publish + connect: 将冷 Flux 转为热点，后续所有 subscriber 共享同一次执行
+        ConnectableFlux<Map<String, String>> hotFlux = eventFlux.publish();
+        reactor.core.Disposable hotConn = hotFlux.connect();
+
         Flux<Map<String, String>> hbFlux = Flux.interval(Duration.ofSeconds(15))
                 .map(i -> Map.of("type", "ping", "data", ""))
-                .takeUntilOther(eventFlux.then(Mono.empty()));
+                .takeUntilOther(hotFlux.then(Mono.empty()));
 
         AtomicLong seqCounter = new AtomicLong(0);
 
@@ -103,7 +108,7 @@ public class AgentController {
         tokenEvent.put("data", "resumeToken:" + resumeToken);
         sink.tryEmitNext(tokenEvent);
 
-        reactor.core.Disposable coldSub = Flux.merge(eventFlux, hbFlux)
+        reactor.core.Disposable coldSub = Flux.merge(hotFlux, hbFlux)
             .map(event -> {
                 long seq = seqCounter.getAndIncrement();
                 if (!"ping".equals(event.get("type"))) {
@@ -113,7 +118,10 @@ public class AgentController {
                 enriched.put("seq", String.valueOf(seq));
                 return enriched;
             })
-            .doFinally(signal -> buffer.markStreamEnd())
+            .doFinally(signal -> {
+                buffer.markStreamEnd();
+                hotConn.dispose();
+            })
             .subscribeOn(Schedulers.boundedElastic())
             .subscribe(
                 enriched -> sink.tryEmitNext(enriched),

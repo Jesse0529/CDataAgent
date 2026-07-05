@@ -1391,7 +1391,6 @@ function formatTokens(n: number): string {
 .msg-text :deep(.msg-table-wrap),
 .msg-tables .msg-table-wrap {
   overflow-x: auto;
-  overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
   margin: 12px 0;
@@ -1546,7 +1545,6 @@ function formatTokens(n: number): string {
 <style>
 .msg-text .msg-table-wrap {
   overflow-x: auto;
-  overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
   margin: 12px 0;

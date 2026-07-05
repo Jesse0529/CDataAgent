@@ -1,17 +1,17 @@
 server:
-  port: 9999
+  port: ${SERVER_PORT:9999}
 
 spring:
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:/data/cdata-files/h2/cdata;AUTO_SERVER=TRUE;MODE=MySQL
-    username: sa
-    password:
+    url: ${H2_URL}
+    username: ${H2_USERNAME:sa}
+    password: ${H2_PASSWORD:}
   redis:
-    database: 1
-    host: 127.0.0.1
-    port: 6379
-    timeout: 5000
+    database: ${REDIS_DATABASE:1}
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT:6379}
+    timeout: ${REDIS_TIMEOUT:5000}
   servlet:
     multipart:
       max-file-size: 10MB
@@ -27,7 +27,7 @@ mybatis-plus:
 # ======================== 数据文件存储 ========================
 data:
   file:
-    storage-dir: /data/cdata-files
+    storage-dir: ${DATA_STORAGE_DIR}
     max-file-size: 10485760
     allowed-extensions: xlsx,xls,csv
     retention-days: 7
@@ -38,18 +38,18 @@ data:
 # ======================== 模型配置 ========================
 model:
   default:
-    provider: DEEPSEEK
-    model-name: deepseek-v4-flash
-    base-url: https://api.deepseek.com
+    provider: ${MODEL_PROVIDER}
+    model-name: ${MODEL_NAME}
+    base-url: ${MODEL_BASE_URL}
 
 agent:
-  global-timeout-seconds: 300
-  rate-limit: 2
+  global-timeout-seconds: ${AGENT_TIMEOUT:300}
+  rate-limit: ${AGENT_RATE_LIMIT:2}
   executor:
-    timeout-seconds: 90
-    max-tool-calls: 15
+    timeout-seconds: ${EXECUTOR_TIMEOUT:90}
+    max-tool-calls: ${EXECUTOR_MAX_TOOL_CALLS:15}
   synthesizer:
-    timeout-seconds: 30
+    timeout-seconds: ${SYNTHESIZER_TIMEOUT:30}
   context:
     inject-analysis-state: true
     analysis-state-persistence:
@@ -60,10 +60,10 @@ agent:
       max-data-entry-bytes: 51200
 
 sandbox:
-  enabled: true
-  mount-dir: /data/sandbox-workspace
-  execution-timeout: 60
-  health-check-interval: 60000
+  enabled: ${SANDBOX_ENABLED:true}
+  mount-dir: ${SANDBOX_MOUNT_DIR:/data/sandbox-workspace}
+  execution-timeout: ${SANDBOX_EXECUTION_TIMEOUT:60}
+  health-check-interval: ${SANDBOX_HEALTH_INTERVAL:60000}
 
 duckdb:
   query:
@@ -73,6 +73,6 @@ duckdb:
     memory-limit: 1GB
 
 report:
-  output-dir: /data/cdata-reports
+  output-dir: ${REPORT_OUTPUT_DIR:/data/cdata-reports}
   max-generation-time: 30
   supported-formats: markdown,html,pdf

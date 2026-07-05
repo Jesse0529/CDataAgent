@@ -91,7 +91,7 @@ public class AgentConfig {
     @Bean
     public SummarizationHook summarizationHook(ChatModel chatModel,
                                                ExactTokenCounter exactTokenCounter) {
-        log.info("SummarizationHook: 初始化，阈值 20k tokens，使用精确 TokenCounter");
+        log.info("SummarizationHook: 初始化，阈值 600k tokens，使用精确 TokenCounter");
         return SummarizationHook.builder()
                 .model(chatModel)
                 .tokenCounter(exactTokenCounter)
