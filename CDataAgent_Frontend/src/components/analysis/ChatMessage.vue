@@ -5,13 +5,20 @@
  *  - 流式过程中自动过滤 raw JSON，只展示分析文本
  *  - 完成后显示「查看可视化图表」引导按钮
  *  - 点击按钮打开全屏弹窗清晰展示图表
+ *
+ * 当 AI 响应包含结论（conclusion）时：
+ *  - 独立渲染"分析结论"卡片，与推理文本分离
+ *  - 结论区右上角提供一键复制按钮
  */
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from 'vue'
+import { useMessage } from 'naive-ui'
 import type { ChatMessageVO } from '@/services/types'
 import { extractChartOption } from '@/utils/chartParser'
 import LogoIcon from './LogoIcon.vue'
+
+const msg = useMessage()
 
 /** 图表弹窗异步加载（仅用户点击时触发 ECharts 加载） */
 const ChartPreviewModal = defineAsyncComponent(() => import('./ChartPreviewModal.vue'))
@@ -31,6 +38,29 @@ const props = defineProps<{
 }>()
 
 const showChartModal = ref(false)
+const copySuccess = ref(false)
+
+/** 消息的结论文本（独立于推理过程） */
+const conclusion = computed((): string | null => {
+  if (props.message.role !== 'ai') return null
+  if (props.message.conclusion && props.message.conclusion.trim()) {
+    return props.message.conclusion.trim()
+  }
+  return null
+})
+
+/** 复制结论到剪贴板 */
+async function handleCopyConclusion(): Promise<void> {
+  if (!conclusion.value) return
+  try {
+    await navigator.clipboard.writeText(conclusion.value)
+    copySuccess.value = true
+    msg.success('分析结论已复制到剪贴板')
+    setTimeout(() => { copySuccess.value = false }, 2000)
+  } catch {
+    msg.error('复制失败，请手动选择文本复制')
+  }
+}
 
 /**
  * 从消息中提取图表配置数组（仅完成消息解析，流式消息不解析）。
@@ -489,7 +519,13 @@ const contentSegments = computed((): ContentSegment[] => {
     ? (getDisplayText(raw) || raw)
     : raw
 
-  const segments = parseContentSegments(content)
+  // 兜底清理：移除可能残留的 ##CONCLUSION## / ##END## 标记
+  const clean = content
+    .replace(/##CONCLUSION##\r?\n?/gi, '')
+    .replace(/\r?\n?##END##/gi, '')
+    .trim()
+
+  const segments = parseContentSegments(clean)
 
   // 流式状态：将光标插入最后一个文本段的末段 <p> 内，紧跟最后一个文字
   if (props.message.status === 'streaming' && segments.length > 0) {
@@ -532,8 +568,10 @@ function normalizeMarkdown(text: string): string {
     .replace(/---+[ \t]*(?=#)/g, '')
     // **text 前补空格：防止 ** 紧贴前文字符
     .replace(/([^\s(])\*\*/g, '$1 **')
-    // 清理 LLM 内部标记（含 normalizeMarkdown 可能插入的空格后的变体）
+    // 清理 LLM 内部标记
     .replace(/#+\s*NEEDS_CHART#*/gi, '')
+    .replace(/##CONCLUSION##\r?\n?/gi, '')
+    .replace(/\r?\n?##END##/gi, '')
     // 清理 Markdown 图片语法 ![alt](url) → 仅保留 alt 文本
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
@@ -552,6 +590,8 @@ function streamingMarkdown(text: string): string {
     .replace(/###柱状图\s*✅?\s*图表已生成并校验通过[！!]?/g, '')
     // 清理 LLM 内部标记
     .replace(/#+\s*NEEDS_CHART#*/gi, '')
+    .replace(/##CONCLUSION##\r?\n?/gi, '')
+    .replace(/\r?\n?##END##/gi, '')
     // 清理 Markdown 图片语法 ![alt](url) → 仅保留 alt 文本
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     // 归一化标题：##标题 → ## 标题
@@ -794,8 +834,36 @@ function formatTokens(n: number): string {
         <span class="status-text">{{ streamingDisplay() }}</span>
       </div>
 
+      <!-- 断线重连指示器 -->
+      <div v-else-if="message.reconnecting" class="msg-bubble msg-bubble--reconnecting">
+        <span class="reconnecting-spinner" />
+        <span class="reconnecting-text">连接中断，正在重连…</span>
+      </div>
+
       <!-- 真实内容气泡（流式 + 完成态共享同一段落结构） -->
       <div v-else class="msg-bubble msg-bubble--ai" :class="{ 'msg-bubble--streaming': message.status === 'streaming' }">
+        <!-- 结论区（独立于推理过程，仅完成态显示） -->
+        <div v-if="message.status === 'done' && conclusion" class="msg-conclusion">
+          <div class="msg-conclusion__header">
+            <span class="msg-conclusion__label">分析结论</span>
+            <button
+              class="msg-conclusion__copy"
+              :class="{ 'msg-conclusion__copy--done': copySuccess }"
+              @click="handleCopyConclusion"
+              :title="copySuccess ? '已复制' : '复制结论'"
+            >
+              <svg v-if="!copySuccess" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.8" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+          <div class="msg-conclusion__text">{{ conclusion }}</div>
+        </div>
+
         <!-- 内容段：文本段 v-html 更新，表格段 v-for 固定骨架 + 增量行 -->
         <template v-for="seg in contentSegments" :key="seg.key">
           <div v-if="seg.type === 'text'" class="msg-text" v-html="seg.html" />
@@ -988,6 +1056,40 @@ function formatTokens(n: number): string {
   color: var(--muted);
 }
 
+/* 重连指示器 */
+.msg-bubble--reconnecting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px dashed var(--accent);
+  border-radius: 20px;
+  padding: 10px 18px;
+  animation: reconnect-pulse 1.5s ease-in-out infinite;
+}
+
+.reconnecting-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-soft);
+  border-top-color: var(--accent);
+  border-left-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.reconnecting-text {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+@keyframes reconnect-pulse {
+  0%, 100% { opacity: 1; border-color: var(--accent); }
+  50% { opacity: 0.7; border-color: var(--accent-light); }
+}
+
 /* ===== 加载动画 ===== */
 .msg-bubble--loading {
   display: flex;
@@ -1036,6 +1138,64 @@ function formatTokens(n: number): string {
   font-size: 14px;
   color: var(--muted);
   margin-left: 8px;
+}
+
+/* ===== 结论区 ===== */
+.msg-conclusion {
+  background: var(--accent-glow-soft);
+  border: 1px solid var(--accent-light);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.msg-conclusion__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.msg-conclusion__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.msg-conclusion__copy {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.msg-conclusion__copy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow-soft);
+}
+
+.msg-conclusion__copy--done {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow-soft);
+}
+
+.msg-conclusion__text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--fg);
+  font-weight: 500;
 }
 
 /* ===== 图表引导按钮 ===== */
@@ -1231,7 +1391,6 @@ function formatTokens(n: number): string {
 .msg-text :deep(.msg-table-wrap),
 .msg-tables .msg-table-wrap {
   overflow-x: auto;
-  overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
   margin: 12px 0;
@@ -1386,7 +1545,6 @@ function formatTokens(n: number): string {
 <style>
 .msg-text .msg-table-wrap {
   overflow-x: auto;
-  overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
   margin: 12px 0;

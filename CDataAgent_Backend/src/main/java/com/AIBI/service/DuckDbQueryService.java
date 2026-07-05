@@ -120,6 +120,70 @@ public class DuckDbQueryService {
     }
 
     /**
+     * 数据预览 — 分页查询 Parquet 文件的数据行。
+     * <p>
+     * 用于前端文件点击预览场景，返回列名+数据行+分页信息。
+     *
+     * @param parquetPath Parquet 文件路径
+     * @param viewName    DuckDB 视图名
+     * @param page        页码（从 1 开始）
+     * @param size        每页行数（最大 200）
+     * @return 预览数据 VO
+     */
+    public com.AIBI.model.vo.FilePreviewVO previewData(String parquetPath, String viewName, int page, int size) {
+        if (size <= 0 || size > 200) size = 30;
+        if (page <= 0) page = 1;
+
+        try (Connection conn = duckDbConfig.createConnection(parquetPath, viewName);
+             Statement stmt = conn.createStatement()) {
+
+            stmt.setQueryTimeout(duckDbConfig.getQueryTimeoutSeconds());
+
+            // 获取总行数
+            int totalRows;
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM \"" + viewName.replace("\"", "\"\"") + "\"")) {
+                rs.next();
+                totalRows = rs.getInt(1);
+            }
+
+            // 分页查询数据
+            int offset = (page - 1) * size;
+            String sql = "SELECT * FROM \"" + viewName.replace("\"", "\"\"") + "\" LIMIT " + size + " OFFSET " + offset;
+
+            java.util.List<String> headers = new java.util.ArrayList<>();
+            java.util.List<java.util.List<Object>> rows = new java.util.ArrayList<>();
+
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                java.sql.ResultSetMetaData meta = rs.getMetaData();
+                int colCount = meta.getColumnCount();
+                for (int i = 1; i <= colCount; i++) {
+                    headers.add(meta.getColumnLabel(i));
+                }
+                while (rs.next()) {
+                    java.util.List<Object> row = new java.util.ArrayList<>();
+                    for (int i = 1; i <= colCount; i++) {
+                        row.add(rs.getObject(i));
+                    }
+                    rows.add(row);
+                }
+            }
+
+            com.AIBI.model.vo.FilePreviewVO vo = new com.AIBI.model.vo.FilePreviewVO();
+            vo.setHeaders(headers);
+            vo.setRows(rows);
+            vo.setTotalRows(totalRows);
+            vo.setPage(page);
+            vo.setPageSize(size);
+            vo.setHasMore(offset + size < totalRows);
+            return vo;
+
+        } catch (Exception e) {
+            log.error("数据预览查询失败: parquetPath={}, viewName={}", parquetPath, viewName, e);
+            throw new RuntimeException("数据预览查询失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 获取单表 schema（供 Agent getSchema 工具使用）。
      */
     public String describeTable(String parquetPath, String viewName) throws Exception {

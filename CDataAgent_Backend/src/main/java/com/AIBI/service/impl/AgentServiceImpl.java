@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -109,6 +111,10 @@ public class AgentServiceImpl implements AgentService {
     private static final long LOCK_WAIT_SECONDS = 5;
     private static final long LOCK_LEASE_SECONDS = 350;
     private static final int MAX_CONVERSATION_ROUNDS = 50;
+
+    /** 结论标记正则：##CONCLUSION##\n...\n##END##（兼容 CRLF \r\n） */
+    private static final Pattern CONCLUSION_PATTERN = Pattern.compile(
+            "##CONCLUSION##\\r?\\n([\\s\\S]*?)\\r?\\n##END##", Pattern.MULTILINE);
 
     /** 默认对话 ID 缓存（首次访问时初始化） */
     private volatile Long defaultConversationId;
@@ -377,22 +383,26 @@ public class AgentServiceImpl implements AgentService {
                     );
                 }))
                 .doOnComplete(() -> {
-                    String content = normalizeTableFormat(fullResponse.toString().trim()
+                    String raw = fullResponse.toString().trim()
                             .replaceAll("#+NEEDS_CHART#*", "")
                             .replace("【【【【【", "")
                             .replace("】】】】】", "")
-                            .trim());
+                            .trim();
+                    // 提取结论并去除标记
+                    String conclusion = extractConclusion(raw);
+                    String content = normalizeTableFormat(
+                            conclusion != null ? removeConclusionMarkers(raw) : raw);
                     String chartOption = analysisState.consumeChartOptions();
                     if (!content.isEmpty()) {
                         // 从 TokenLedger 获取本轮精确 token 消耗（非字符估算）
                         int tokenUsage = Math.toIntExact(tokenLedger.consumeRoundUsage(cid)
                                 .map(TokenLedger.RoundTokenUsage::total)
                                 .orElse(0L));
-                        saveMessage(cid, "assistant", content, fileAttachments, chartOption, tokenUsage);
+                        saveMessage(cid, "assistant", content, fileAttachments, chartOption, tokenUsage, conclusion);
                         lastChartOption = chartOption;
                         lastTokenUsage = tokenUsage;
-                        log.info("对话消息持久化成功: cid={}, hasChart={}, tokens={}",
-                                cid, chartOption != null, tokenUsage);
+                        log.info("对话消息持久化成功: cid={}, hasChart={}, tokens={}, hasConclusion={}",
+                                cid, chartOption != null, tokenUsage, conclusion != null);
                     }
                 })
                 .doFinally(signal -> {
@@ -511,14 +521,18 @@ public class AgentServiceImpl implements AgentService {
     // ======================== 对话管理 ========================
 
     private void saveMessage(Long conversationId, String role, String content, String fileAttachments) {
-        saveMessage(conversationId, role, content, fileAttachments, null, null);
+        saveMessage(conversationId, role, content, fileAttachments, null, null, null);
     }
 
     private void saveMessage(Long conversationId, String role, String content, String fileAttachments, String chartOption) {
-        saveMessage(conversationId, role, content, fileAttachments, chartOption, null);
+        saveMessage(conversationId, role, content, fileAttachments, chartOption, null, null);
     }
 
     private void saveMessage(Long conversationId, String role, String content, String fileAttachments, String chartOption, Integer tokenUsage) {
+        saveMessage(conversationId, role, content, fileAttachments, chartOption, tokenUsage, null);
+    }
+
+    private void saveMessage(Long conversationId, String role, String content, String fileAttachments, String chartOption, Integer tokenUsage, String conclusion) {
         ConversationMessage record = new ConversationMessage();
         record.setConversationId(conversationId);
         record.setRole(role);
@@ -526,6 +540,7 @@ public class AgentServiceImpl implements AgentService {
         record.setFileAttachments(fileAttachments);
         record.setChartOption(chartOption);
         record.setTokenUsage(tokenUsage);
+        record.setConclusion(conclusion);
         conversationMessageService.save(record);
         trimConversationHistory(conversationId);
     }
@@ -570,6 +585,7 @@ public class AgentServiceImpl implements AgentService {
         vo.setFileAttachments(msg.getFileAttachments());
         vo.setChartOption(msg.getChartOption());
         vo.setTokenUsage(msg.getTokenUsage());
+        vo.setConclusion(msg.getConclusion());
         return vo;
     }
 
@@ -596,6 +612,37 @@ public class AgentServiceImpl implements AgentService {
         }
         return chunks;
     }
+
+    // ─── 结论提取 ────────────────────────────────────────
+
+    /**
+     * 从 AI 回复中提取 ##CONCLUSION## ... ##END## 标记内的结论文本。
+     *
+     * @return 结论文本（无首尾空白），若未找到标记则返回 null
+     */
+    private static String extractConclusion(String content) {
+        if (content == null) return null;
+        Matcher matcher = CONCLUSION_PATTERN.matcher(content);
+        if (matcher.find()) {
+            String text = matcher.group(1).trim();
+            // 清理结论中可能混入的 markdown 标题标记（## 标题 → 标题）
+            text = text.replaceAll("^#{1,6}\\s+", "").trim();
+            return text;
+        }
+        return null;
+    }
+
+    /**
+     * 移除 ##CONCLUSION## ... ##END## 标记及内容，保留其余部分。
+     * 如果找不到标记则原样返回。
+     */
+    private static String removeConclusionMarkers(String content) {
+        if (content == null) return null;
+        return content.replaceAll(
+                "##CONCLUSION##\\r?\\n[\\s\\S]*?\\r?\\n##END##\\r?\\n?", "").trim();
+    }
+
+    // ─── 流式输出辅助 ─────────────────────────────────────
 
     /**
      * 统一表格格式：将 LLM 输出的压缩表格（同一行中用 {@code ||} 分隔多行）

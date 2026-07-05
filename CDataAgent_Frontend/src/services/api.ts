@@ -466,6 +466,11 @@ function processSSEEvent(
     return
   }
 
+  // event:ping — 心跳保活，静默消费
+  if (eventType === 'ping') {
+    return
+  }
+
   // event:chart — 图表配置事件（来自 Synthesizer 阶段）
   if (eventType === 'chart') {
     if (onChart) onChart(text)
