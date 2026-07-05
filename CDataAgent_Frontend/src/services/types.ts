@@ -40,6 +40,10 @@ export interface ChatMessageVO {
   incomplete?: boolean
   /** 本轮 AI 回复消耗的 token 数（仅 assistant 消息，来自 SSE complete 或 DB） */
   tokenUsage?: number
+  /** 分析结论（独立于推理过程的精简总结，仅 assistant 消息可能有值） */
+  conclusion?: string
+  /** SSE 断线重连中，显示重连指示器 */
+  reconnecting?: boolean
 }
 
 /** 后端持久化消息（对应后端 MessageVO） */
@@ -54,6 +58,8 @@ export interface MessageVO {
   createTime: string
   /** 本轮消耗的 token 数（仅 assistant 消息可能有值） */
   tokenUsage?: number
+  /** 分析结论（独立于推理过程的精简总结，仅 assistant 消息可能有值） */
+  conclusion?: string
 }
 
 /** SSE event:complete 结构化事件 */
@@ -67,4 +73,14 @@ export interface StructuredEvent {
   message?: string
   /** 本轮 AI 回复消耗的 token 数 */
   tokenUsage?: number
+}
+
+/** 文件数据预览（对应后端 FilePreviewVO） */
+export interface FilePreviewVO {
+  headers: string[]
+  rows: unknown[][]
+  totalRows: number
+  page: number
+  pageSize: number
+  hasMore: boolean
 }

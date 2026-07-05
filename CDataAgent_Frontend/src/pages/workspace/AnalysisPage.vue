@@ -21,6 +21,7 @@ import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
 import ChatMessage from '@/components/analysis/ChatMessage.vue'
 import ChatInput from '@/components/analysis/ChatInput.vue'
 import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
+import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
 import { useChatPersistence } from '@/composables/useChatPersistence'
 
 const message = useMessage()
@@ -70,6 +71,18 @@ function loadSelectedFiles(): Set<string> {
     return new Set()
   }
 }
+
+// ---- 文件预览 ----
+const previewFileId = ref<string | null>(null)
+const previewFileName = ref('')
+const showPreview = ref(false)
+
+function handlePreviewFile(file: DataFileVO) {
+  previewFileId.value = file.id
+  previewFileName.value = file.originalFilename
+  showPreview.value = true
+}
+
 const clearing = ref(false)
 const resetting = ref(false)
 
@@ -376,11 +389,19 @@ async function handleSend(text: string) {
     flushBuffer()
   }
 
-  try {
-    const { promise, abort: abortStream } = apiPostStream(
-      streamUrl,
+  // ---- SSE 重连状态 ----
+  let resumeToken: string | undefined
+  let eventCount = 0
+  const MAX_RETRIES = 3
+  let retryCount = 0
+  let reconnecting = false
+
+  function doStream(url: string) {
+    return apiPostStream(
+      url,
       {},
       (token: string) => {
+        eventCount++
         pendingContent += token
         if (!rafToken) {
           rafToken = requestAnimationFrame(flushBuffer)
@@ -388,9 +409,39 @@ async function handleSend(text: string) {
       },
       () => {},
       (err: Error) => {
+        // 错误回调 — 尝试重连
+        if (retryCount < MAX_RETRIES && resumeToken) {
+          retryCount++
+          reconnecting = true
+          const delay = 1000 * Math.pow(2, retryCount - 1)
+          // 显示重连状态
+          messages.value = messages.value.map((m) =>
+            m.id === streamMsgId
+              ? { ...m, content: '连接中断，正在重连…', reconnecting: true }
+              : m,
+          )
+          setTimeout(() => {
+            // 走 resume 路径：接回活跃流
+            const resumeUrl = `/agent/chat/resume?conversationId=${cid}&resumeToken=${resumeToken}&resumeSeq=${eventCount}`
+            doStream(resumeUrl).then(({ promise: p, abort: a }) => {
+              stopStream.value = a
+              return p
+            }).then(() => {
+              // resume 完成处理（下方 await promise 外的逻辑处理）
+            }).catch(() => {
+              messages.value = messages.value.map((m) =>
+                m.id === streamMsgId
+                  ? { ...m, content: `❌ ${err.message}`, status: 'error', timestamp: Date.now(), reconnecting: false }
+                  : m,
+              )
+            })
+          }, delay)
+          return
+        }
+        // 重连耗尽 → 显示错误
         messages.value = messages.value.map((m) =>
           m.id === streamMsgId
-            ? { ...m, content: m.content || `❌ ${err.message}`, status: 'error', timestamp: Date.now() }
+            ? { ...m, content: m.content || `❌ ${err.message}`, status: 'error', timestamp: Date.now(), reconnecting: false }
             : m,
         )
         scrollToBottom()
@@ -410,8 +461,19 @@ async function handleSend(text: string) {
             m.id === streamMsgId ? { ...m, tokenUsage: data.tokenUsage } : m,
           )
         }
+        // 保存 resumeToken
+        if ((data as unknown as Record<string, unknown>).resumeToken) {
+          resumeToken = (data as unknown as Record<string, unknown>).resumeToken as string
+        }
+        // 重置重连状态
+        reconnecting = false
       },
       (status: string) => {
+        // 从 status 事件中提取 resumeToken（后端在流启动时即发送）
+        if (status.startsWith('resumeToken:')) {
+          resumeToken = status.slice('resumeToken:'.length).trim()
+          return
+        }
         messages.value = messages.value.map((m) => {
           if (m.id !== streamMsgId) return m
           const isStatus = m.content === '' || STATUS_TEXTS.has(m.content)
@@ -419,7 +481,6 @@ async function handleSend(text: string) {
         })
       },
       (chartJson: string) => {
-        // event:chart — Synthesizer 阶段产生的图表配置
         const parsedOptions = parseChartOptions(chartJson)
         if (parsedOptions) {
           messages.value = messages.value.map((m) =>
@@ -428,7 +489,6 @@ async function handleSend(text: string) {
         }
       },
       (tableData: TableEventData) => {
-        // event:table — 结构化表格事件（DuckDb 查询结果）
         streamTables.push(tableData)
         messages.value = messages.value.map((m) =>
           m.id === streamMsgId
@@ -438,6 +498,10 @@ async function handleSend(text: string) {
         scrollToBottom(true)
       },
     )
+  }
+
+  try {
+    const { promise, abort: abortStream } = doStream(streamUrl)
 
     stopStream.value = abortStream
 
@@ -679,10 +743,19 @@ onBeforeUnmount(() => {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M6 4a2 2 0 012-2h7l4 4v14a2 2 0 01-2 2H8a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                   <path d="M15 2v4a1 1 0 001 1h4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                  <path d="M8.5 11h7M8.5 14.5h7M8.5 18h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
               </span>
               <span class="file-item__name">{{ file.originalFilename }}</span>
+              <button
+                class="file-item__preview"
+                title="预览数据"
+                @click.stop="handlePreviewFile(file)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" />
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
+                </svg>
+              </button>
               <button
                 class="file-item__delete"
                 :aria-label="`删除 ${file.originalFilename}`"
@@ -710,6 +783,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+
+  <!-- 文件数据预览弹窗 -->
+  <FilePreviewModal
+    :file-id="previewFileId ?? ''"
+    :file-name="previewFileName"
+    :visible="showPreview"
+    @close="showPreview = false"
+  />
 </template>
 
 <style scoped>
@@ -892,6 +973,34 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
+}
+
+/* 预览按钮 */
+.file-item__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: all 0.2s var(--ease-out-expo);
+}
+
+.file-item:hover .file-item__preview {
+  opacity: 1;
+}
+
+.file-item__preview:hover {
+  color: var(--accent);
+  background: var(--accent-glow-soft);
+  opacity: 1;
 }
 
 /* 删除按钮 */

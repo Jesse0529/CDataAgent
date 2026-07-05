@@ -34,6 +34,41 @@ function handleLocate(): void {
   }
 }
 
+/** 下载当前图表为 PNG */
+function downloadChart(): void {
+  if (!chartInstance) return
+  try {
+    const url = chartInstance.getDataURL({
+      type: 'png',
+      pixelRatio: 2,
+      backgroundColor: '#fff',
+    })
+
+    // 从 ECharts option 中提取标题作为文件名
+    const option = props.charts[activeIndex.value]?.option
+    let title = ''
+    if (option && typeof option === 'object') {
+      const t = (option as Record<string, unknown>).title
+      if (t && typeof t === 'object') {
+        title = ((t as Record<string, unknown>).text as string) ?? ''
+      }
+    }
+    const safeName = title
+      ? title.replace(/[<>:"/\\|?*]+/g, '_').trim().slice(0, 60)
+      : ''
+    const fileName = safeName ? `${safeName}.png` : `图表-${activeIndex.value + 1}.png`
+
+    const link = document.createElement('a')
+    link.download = fileName
+    link.href = url
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (e) {
+    console.error('[ChartPreviewModal] download error:', e)
+  }
+}
+
 // ---- 状态 ----
 const modalRef = ref<HTMLDivElement | null>(null)
 const chartContainer = ref<HTMLDivElement | null>(null)
@@ -189,7 +224,19 @@ onBeforeUnmount(() => {
         <!-- 头部 -->
         <div class="chart-modal__header">
           <span class="chart-modal__title">数据可视化</span>
-          <button class="chart-modal__close" @click="emit('close')" aria-label="关闭">
+          <div class="chart-modal__header-actions">
+            <button
+              class="chart-modal__download"
+              :title="'下载为 PNG'"
+              @click="downloadChart"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button class="chart-modal__close" @click="emit('close')" aria-label="关闭">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path
                 d="M18 6L6 18M6 6l12 12"
@@ -199,6 +246,7 @@ onBeforeUnmount(() => {
               />
             </svg>
           </button>
+        </div>
         </div>
 
         <!-- 图表容器 -->
@@ -313,6 +361,31 @@ onBeforeUnmount(() => {
 
 .chart-modal__locate svg {
   flex-shrink: 0;
+}
+
+.chart-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-modal__download {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.chart-modal__download:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .chart-modal__title {
