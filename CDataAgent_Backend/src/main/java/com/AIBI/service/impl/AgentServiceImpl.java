@@ -352,7 +352,7 @@ public class AgentServiceImpl implements AgentService {
                     log.info("检测到 ##NEEDS_CHART##，触发 Synthesizer: cid={}", cid);
                     String cleanText = response.replace("##NEEDS_CHART##", "").trim();
                     String synthPrompt = "用户请求: " + originalMessage + "\n\n分析结果:\n" + cleanText +
-                            "\n\n请基于以上分析结果，生成图表配置和分析结论。";
+                            "\n\n请基于以上分析结果生成图表配置。";
 
                     // 准备异步图表信号：ChartOutputTool 完成时触发
                     java.util.concurrent.CompletableFuture<String> chartFuture = analysisState.getChartReadyFuture();
@@ -367,11 +367,11 @@ public class AgentServiceImpl implements AgentService {
                     return Flux.merge(
                             // 1) 状态事件
                             Flux.just(Map.of("type", "status", "data", "正在生成图表…")),
-                            // 2) 文本流
+                            // 2) Synthesizer 仅在后台执行图表生成，文字不推给前端
                             synthesizePhase(synthPrompt, config)
-                                    .doOnNext(fullResponse::append)
-                                    .map(token -> Map.of("type", "message", "data", normalizeTableFormat(token))),
-                            // 3) 异步图表事件（ChartOutputTool 完成时发射，不阻塞文本流）
+                                    .doOnNext(token -> log.debug("Synthesizer 文字已丢弃: cid={}", cid))
+                                    .thenMany(Flux.empty()),
+                            // 3) 异步图表事件（ChartOutputTool 完成时发射）
                             chartSignal
                                     .doOnNext(chartEvent -> log.debug("图表事件已异步发射: cid={}", cid))
                     );

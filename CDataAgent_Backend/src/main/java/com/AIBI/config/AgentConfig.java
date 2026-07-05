@@ -95,7 +95,7 @@ public class AgentConfig {
         return SummarizationHook.builder()
                 .model(chatModel)
                 .tokenCounter(exactTokenCounter)
-                .maxTokensBeforeSummary(20_000)
+                .maxTokensBeforeSummary(600_000)
                 .messagesToKeep(6)
                 .keepFirstUserMessage(true)
                 .build();
