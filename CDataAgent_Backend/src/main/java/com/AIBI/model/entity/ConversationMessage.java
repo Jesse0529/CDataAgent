@@ -45,6 +45,11 @@ public class ConversationMessage implements Serializable {
     private String chartOption;
 
     /**
+     * 分析结论（从 content 中提取的纯结论文本，不含推理过程）
+     */
+    private String conclusion;
+
+    /**
      * 本轮消耗的 token 数（精确值，来自 API 响应）。
      * user 消息记录本轮输入 token，assistant 消息记录本轮输出 token，
      * 汇总可用于对话级成本追踪。

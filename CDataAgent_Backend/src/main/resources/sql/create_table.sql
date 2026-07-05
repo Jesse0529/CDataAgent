@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS conversation_message (
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS fileAttachments TEXT NULL;
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS chartOption TEXT NULL;
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS tokenUsage INT NULL;
+ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS conclusion CLOB NULL;
 CREATE INDEX IF NOT EXISTS idx_msg_conv ON conversation_message(conversationId);
 
 -- 数据文件表

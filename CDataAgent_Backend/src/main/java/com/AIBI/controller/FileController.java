@@ -9,6 +9,8 @@ import com.AIBI.exception.BusinessException;
 import com.AIBI.mapper.DataFileMapper;
 import com.AIBI.model.entity.DataFile;
 import com.AIBI.model.vo.DataFileVO;
+import com.AIBI.model.vo.FilePreviewVO;
+import com.AIBI.service.DuckDbQueryService;
 import com.AIBI.service.FileConversionService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +40,9 @@ public class FileController {
 
     @Autowired
     private AnalysisState analysisState;
+
+    @Autowired
+    private DuckDbQueryService duckDbQueryService;
 
     /**
      * 批量上传数据文件（xlsx/xls/csv），转为 Parquet 并绑定到对话。
@@ -99,6 +104,31 @@ public class FileController {
         dataFileMapper.deleteById(fileId);
         analysisState.resetByConversation(df.getConversationId().toString());
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 预览文件数据 — 分页查询 Parquet 文件的实际数据行。
+     *
+     * @param fileId 文件 ID
+     * @param page   页码（从 1 开始，默认 1）
+     * @param size   每页行数（默认 30，最大 200）
+     */
+    @GetMapping("/{fileId}/preview")
+    public BaseResponse<FilePreviewVO> previewFile(
+            @PathVariable Long fileId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "30") int size) {
+        DataFile df = dataFileMapper.selectById(fileId);
+        if (df == null)
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "文件不存在");
+        if (!"READY".equals(df.getStatus()))
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "文件尚未就绪");
+        if (df.getStoragePath() == null || df.getViewName() == null)
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "文件数据路径异常");
+
+        FilePreviewVO vo = duckDbQueryService.previewData(
+                df.getStoragePath(), df.getViewName(), page, size);
+        return ResultUtils.success(vo);
     }
 
     private DataFileVO toVO(DataFile df) {

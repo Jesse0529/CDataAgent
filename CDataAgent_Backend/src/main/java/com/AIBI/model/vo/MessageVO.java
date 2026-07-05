@@ -36,6 +36,11 @@ public class MessageVO implements Serializable {
     private String chartOption;
 
     /**
+     * 分析结论（独立于推理过程的精简总结）
+     */
+    private String conclusion;
+
+    /**
      * 本轮消耗的 token 数（来自 API 精确响应）
      */
     private Integer tokenUsage;
