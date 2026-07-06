@@ -69,6 +69,9 @@ public class AnalysisState {
     /** 意图描述 */
     private String intentSummary;
 
+    /** 输出格式偏好：table / chart / text / 空列表表示未指定 */
+    private List<String> intentOutputFormats;
+
     public void setCurrentThreadId(String threadId) {
         this.currentThreadId = threadId;
     }
@@ -353,14 +356,15 @@ public class AnalysisState {
     // ─── 意图声明 ─────────────────────────────────────────
 
     public void setIntent(String category, List<String> dimensions, List<String> metrics,
-                           String clarity, String summary) {
+                           String clarity, String summary, List<String> outputFormats) {
         this.intentCategory = category;
         this.intentDimensions = dimensions;
         this.intentMetrics = metrics;
         this.intentClarity = clarity;
         this.intentSummary = summary;
-        log.debug("意图已声明: category={}, clarity={}, dimensions={}, metrics={}",
-                category, clarity, dimensions, metrics);
+        this.intentOutputFormats = outputFormats;
+        log.debug("意图已声明: category={}, clarity={}, dimensions={}, metrics={}, outputFormats={}",
+                category, clarity, dimensions, metrics, outputFormats);
     }
 
     public String getIntentCategory() { return intentCategory; }
@@ -368,6 +372,7 @@ public class AnalysisState {
     public List<String> getIntentMetrics() { return intentMetrics; }
     public String getIntentClarity() { return intentClarity; }
     public String getIntentSummary() { return intentSummary; }
+    public List<String> getIntentOutputFormats() { return intentOutputFormats; }
 
     public boolean isAnalysisIntent() {
         return "analysis".equals(intentCategory);
@@ -382,6 +387,7 @@ public class AnalysisState {
         this.intentMetrics = null;
         this.intentClarity = null;
         this.intentSummary = null;
+        this.intentOutputFormats = null;
     }
 
     // ─── 生成上下文摘要（注入到 LLM context） ─────

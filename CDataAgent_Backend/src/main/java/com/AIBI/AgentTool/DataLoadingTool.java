@@ -56,19 +56,23 @@ public class DataLoadingTool {
             @ToolParam(description = "分析指标（category=analysis时填写），如 [\"销售额\",\"利润\",\"数量\"]。" +
                     "category=chitchat或vague时传空数组") List<String> metrics,
             @ToolParam(description = "清晰度：clear(维度和指标明确)/somewhat(有方向但不完整)/vague(模糊)") String clarity,
-            @ToolParam(description = "一句话总结用户想要什么") String summary) {
+            @ToolParam(description = "一句话总结用户想要什么") String summary,
+            @ToolParam(description = "用户指定的输出格式偏好，可多选：table(表格)/chart(图表)/text(纯文字)。" +
+                    "category=analysis且用户明确指定格式时填写，未指定或chitchat/vague时传空数组。") List<String> outputFormats) {
 
         if (category == null) category = "vague";
         if (dimensions == null) dimensions = List.of();
         if (metrics == null) metrics = List.of();
+        if (outputFormats == null) outputFormats = List.of();
 
-        analysisState.setIntent(category, dimensions, metrics, clarity, summary);
-        log.info("declareIntent: category={}, clarity={}, dims={}, metrics={}, summary={}",
-                category, clarity, dimensions, metrics, summary);
+        analysisState.setIntent(category, dimensions, metrics, clarity, summary, outputFormats);
+        log.info("declareIntent: category={}, clarity={}, dims={}, metrics={}, summary={}, outputFormats={}",
+                category, clarity, dimensions, metrics, summary, outputFormats);
 
         return "意图已记录：类别=" + category + "，清晰度=" + clarity
                 + (dimensions.isEmpty() ? "" : "，维度=" + dimensions)
-                + (metrics.isEmpty() ? "" : "，指标=" + metrics);
+                + (metrics.isEmpty() ? "" : "，指标=" + metrics)
+                + (outputFormats.isEmpty() ? "" : "，输出格式=" + outputFormats);
     }
 
     /**

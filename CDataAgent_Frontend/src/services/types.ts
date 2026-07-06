@@ -44,6 +44,8 @@ export interface ChatMessageVO {
   conclusion?: string
   /** SSE 断线重连中，显示重连指示器 */
   reconnecting?: boolean
+  /** 后端正在生成图表中，显示图表加载骨架 */
+  chartGenerating?: boolean
 }
 
 /** 后端持久化消息（对应后端 MessageVO） */
