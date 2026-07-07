@@ -450,7 +450,7 @@ async function handleSend(text: string) {
         const parsedOptions = parseChartOptions(data.chartOption)
         if (parsedOptions) {
           messages.value = messages.value.map((m) =>
-            m.id === streamMsgId ? { ...m, chartOption: parsedOptions } : m,
+            m.id === streamMsgId ? { ...m, chartOption: parsedOptions, chartGenerating: false } : m,
           )
         }
         if (data.analysis) {
@@ -474,8 +474,13 @@ async function handleSend(text: string) {
           resumeToken = status.slice('resumeToken:'.length).trim()
           return
         }
+        const chartGenStatus = '正在生成图表…'
         messages.value = messages.value.map((m) => {
           if (m.id !== streamMsgId) return m
+          // 图表生成阶段：设置 chartGenerating 标记，保持已有内容不变
+          if (status === chartGenStatus) {
+            return { ...m, chartGenerating: true }
+          }
           const isStatus = m.content === '' || STATUS_TEXTS.has(m.content)
           return isStatus ? { ...m, content: status } : m
         })
@@ -519,7 +524,7 @@ async function handleSend(text: string) {
       const finalContent = finalAnalysis || streamMsg.content
       messages.value = messages.value.map((m) =>
         m.id === streamMsgId
-          ? { ...m, content: finalContent, status: 'done' as const, timestamp: Date.now() }
+          ? { ...m, content: finalContent, status: 'done' as const, timestamp: Date.now(), chartGenerating: false }
           : m,
       )
       flushMessages()

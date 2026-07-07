@@ -528,7 +528,8 @@ const contentSegments = computed((): ContentSegment[] => {
   const segments = parseContentSegments(clean)
 
   // 流式状态：将光标插入最后一个文本段的末段 <p> 内，紧跟最后一个文字
-  if (props.message.status === 'streaming' && segments.length > 0) {
+  // 图表生成阶段不显示光标，改用「正在生成图表…」骨架提示
+  if (props.message.status === 'streaming' && !props.message.chartGenerating && segments.length > 0) {
     for (let i = segments.length - 1; i >= 0; i--) {
       const seg = segments[i]
       if (seg.type === 'text' && seg.html) {
@@ -764,11 +765,14 @@ function formatCellValue(val: unknown): string {
   return String(val)
 }
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts)
+  const Y = d.getFullYear()
+  const M = String(d.getMonth() + 1).padStart(2, '0')
+  const D = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${Y}-${M}-${D} ${h}:${m}`
 }
 
 /** Token 数量格式化：>=1000 显示 "1.2k"，否则原样显示 */
@@ -803,7 +807,6 @@ function formatTokens(n: number): string {
       </div>
       <div class="msg-text">{{ message.content }}</div>
     </div>
-    <div class="msg-time">{{ formatTime(message.timestamp) }}</div>
   </div>
 
   <!-- AI 加载中 -->
@@ -828,8 +831,8 @@ function formatTokens(n: number): string {
         <LogoIcon :size="28" />
       </div>
 
-      <!-- 无真实内容时的状态指示器（流式初期） -->
-      <div v-if="message.status === 'streaming' && !hasRealContent" class="msg-bubble msg-bubble--status">
+      <!-- 无真实内容时的状态指示器（流式初期，图表生成阶段改用骨架提示） -->
+      <div v-if="message.status === 'streaming' && !hasRealContent && !message.chartGenerating" class="msg-bubble msg-bubble--status">
         <span class="status-spinner" />
         <span class="status-text">{{ streamingDisplay() }}</span>
       </div>
@@ -905,9 +908,25 @@ function formatTokens(n: number): string {
           </div>
         </div>
 
-        <!-- 完成态：图表引导按钮 -->
+        <!-- 图表加载骨架（生成图表中，数据未就绪时显示） -->
         <div
-          v-if="message.status === 'done' && chartResult"
+          v-if="message.status === 'streaming' && message.chartGenerating && !chartResult"
+          class="chart-trigger chart-trigger--loading"
+        >
+          <span class="chart-trigger__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="14" width="4" height="7" rx="1" fill="currentColor" />
+              <rect x="10" y="9" width="4" height="12" rx="1" fill="currentColor" />
+              <rect x="17" y="4" width="4" height="17" rx="1" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="chart-trigger__text">正在生成图表…</span>
+          <span class="chart-trigger__spinner" />
+        </div>
+
+        <!-- 图表引导按钮（流式中或完成后均可显示） -->
+        <div
+          v-if="chartResult"
           class="chart-trigger"
           @click="showChartModal = true"
         >
@@ -924,14 +943,16 @@ function formatTokens(n: number): string {
           <span class="chart-trigger__arrow">→</span>
         </div>
 
-        <!-- 完成态：Token 消耗 -->
-        <div v-if="message.status === 'done' && typeof message.tokenUsage === 'number'" class="msg-token-usage">
-          <span class="msg-token-usage__label">Tokens</span>
-          <span class="msg-token-usage__value">{{ formatTokens(message.tokenUsage) }}</span>
+        <!-- 完成态：时间 + Token 消耗 -->
+        <div v-if="message.status === 'done'" class="msg-token-usage">
+          <span class="msg-token-usage__item msg-token-usage__time">{{ formatTimestamp(message.timestamp) }}</span>
+          <span v-if="typeof message.tokenUsage === 'number'" class="msg-token-usage__item">
+            <span class="msg-token-usage__label">Tokens</span>
+            <span class="msg-token-usage__value">{{ formatTokens(message.tokenUsage) }}</span>
+          </span>
         </div>
       </div>
     </div>
-    <div v-if="message.status === 'done'" class="msg-time">{{ formatTime(message.timestamp) }}</div>
 
     <!-- 图表预览弹窗（所有状态均可触发） -->
     <ChartPreviewModal
@@ -1012,9 +1033,10 @@ function formatTokens(n: number): string {
   gap: 0;
 }
 
-/* 分段渲染：文本段自适应宽度，表格段独占整行 */
+/* 分段渲染：文本段自适应宽度（短文本单行，长文本自动换行），表格段独占整行 */
 .msg-bubble--streaming > .msg-text {
-  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   animation: stream-fade-in 0.12s ease-out;
 }
 
@@ -1246,6 +1268,32 @@ function formatTokens(n: number): string {
   transition: transform 0.28s var(--spring);
 }
 
+/* 图表加载骨架 — 淡化、无交互 */
+.chart-trigger--loading {
+  cursor: default;
+  opacity: 0.65;
+  pointer-events: none;
+}
+.chart-trigger--loading:hover {
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+
+/* 图表加载旋转器 */
+.chart-trigger__spinner {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-soft);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: chart-spin 0.7s linear infinite;
+}
+
+@keyframes chart-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ===== 用户消息附件 chips ===== */
 .msg-attachments {
   display: flex;
@@ -1282,13 +1330,6 @@ function formatTokens(n: number): string {
 
 .chart-trigger:hover .chart-trigger__arrow {
   transform: translateX(4px);
-}
-
-/* ===== 时间 ===== */
-.msg-time {
-  font-size: 12px;
-  color: var(--dim-text);
-  padding: 0 4px;
 }
 
 /* ===== 内容渲染 ===== */
@@ -1488,17 +1529,23 @@ function formatTokens(n: number): string {
   text-align: center;
 }
 
-/* ===== Token 消耗徽章 ===== */
+/* ===== Token 消耗徽章 + 时间 ===== */
 .msg-token-usage {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border-inner);
   font-size: 12px;
   user-select: none;
+}
+
+.msg-token-usage__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .msg-token-usage__label {
@@ -1511,6 +1558,13 @@ function formatTokens(n: number): string {
   color: var(--accent-light);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.msg-token-usage__time {
+  color: var(--accent-light);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
 .msg-text :deep(a) {
