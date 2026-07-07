@@ -765,11 +765,14 @@ function formatCellValue(val: unknown): string {
   return String(val)
 }
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts)
+  const Y = d.getFullYear()
+  const M = String(d.getMonth() + 1).padStart(2, '0')
+  const D = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${Y}-${M}-${D} ${h}:${m}`
 }
 
 /** Token 数量格式化：>=1000 显示 "1.2k"，否则原样显示 */
@@ -804,7 +807,6 @@ function formatTokens(n: number): string {
       </div>
       <div class="msg-text">{{ message.content }}</div>
     </div>
-    <div class="msg-time">{{ formatTime(message.timestamp) }}</div>
   </div>
 
   <!-- AI 加载中 -->
@@ -941,14 +943,16 @@ function formatTokens(n: number): string {
           <span class="chart-trigger__arrow">→</span>
         </div>
 
-        <!-- 完成态：Token 消耗 -->
-        <div v-if="message.status === 'done' && typeof message.tokenUsage === 'number'" class="msg-token-usage">
-          <span class="msg-token-usage__label">Tokens</span>
-          <span class="msg-token-usage__value">{{ formatTokens(message.tokenUsage) }}</span>
+        <!-- 完成态：时间 + Token 消耗 -->
+        <div v-if="message.status === 'done'" class="msg-token-usage">
+          <span class="msg-token-usage__item msg-token-usage__time">{{ formatTimestamp(message.timestamp) }}</span>
+          <span v-if="typeof message.tokenUsage === 'number'" class="msg-token-usage__item">
+            <span class="msg-token-usage__label">Tokens</span>
+            <span class="msg-token-usage__value">{{ formatTokens(message.tokenUsage) }}</span>
+          </span>
         </div>
       </div>
     </div>
-    <div v-if="message.status === 'done'" class="msg-time">{{ formatTime(message.timestamp) }}</div>
 
     <!-- 图表预览弹窗（所有状态均可触发） -->
     <ChartPreviewModal
@@ -1328,13 +1332,6 @@ function formatTokens(n: number): string {
   transform: translateX(4px);
 }
 
-/* ===== 时间 ===== */
-.msg-time {
-  font-size: 12px;
-  color: var(--dim-text);
-  padding: 0 4px;
-}
-
 /* ===== 内容渲染 ===== */
 .msg-text :deep(p) {
   margin: 0 0 8px;
@@ -1532,17 +1529,23 @@ function formatTokens(n: number): string {
   text-align: center;
 }
 
-/* ===== Token 消耗徽章 ===== */
+/* ===== Token 消耗徽章 + 时间 ===== */
 .msg-token-usage {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border-inner);
   font-size: 12px;
   user-select: none;
+}
+
+.msg-token-usage__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .msg-token-usage__label {
@@ -1555,6 +1558,13 @@ function formatTokens(n: number): string {
   color: var(--accent-light);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.msg-token-usage__time {
+  color: var(--accent-light);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
 .msg-text :deep(a) {
