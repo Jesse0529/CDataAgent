@@ -15,10 +15,10 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class AgentPromptConfig {
 
-    @Value("classpath:prompts/agent-executor.txt")
+    @Value("classpath:prompts/agent-executor.md")
     private Resource executorPromptResource;
 
-    @Value("classpath:prompts/agent-synthesizer.txt")
+    @Value("classpath:prompts/agent-synthesizer.md")
     private Resource synthesizerPromptResource;
 
     public String getExecutorPrompt() { return readResource(executorPromptResource); }
