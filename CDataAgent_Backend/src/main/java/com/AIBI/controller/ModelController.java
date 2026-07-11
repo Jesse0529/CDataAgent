@@ -127,6 +127,11 @@ public class ModelController {
             validateBaseUrl(baseUrl);
         }
 
+        // DEEPSEEK 模式下强制使用默认地址，避免从 CUSTOM 切回时残留旧 baseUrl
+        if ("DEEPSEEK".equals(provider)) {
+            baseUrl = "";
+        }
+
         JSONObject cfg = new JSONObject();
         cfg.put("provider", provider);
         cfg.put("modelName", modelName.trim());

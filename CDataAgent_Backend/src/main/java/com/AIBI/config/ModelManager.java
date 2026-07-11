@@ -32,7 +32,6 @@ import org.springframework.stereotype.Component;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -79,14 +78,16 @@ public class ModelManager implements ChatModel {
         AesGcmUtil.init(encryptionKey);
     }
 
-    /** 模型缓存（最多 1 个，5 分钟过期） */
-    private final Cache<Long, ChatModel> modelCache = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+    /** 模型缓存（仅手动失效，对比 Redis 配置决定是否重建） */
+    private final Cache<Long, ModelCacheEntry> modelCache = Caffeine.newBuilder()
             .maximumSize(1)
             .build();
 
     private static final String REDIS_KEY = "model:config:default";
     private static final Long CACHE_KEY = 1L;
+
+    /** 缓存条目：模型实例 + 创建时的 Redis 配置 */
+    private record ModelCacheEntry(ChatModel model, String configJson) {}
 
     // ─── ChatModel 接口 ──────────────────────────
 
@@ -130,11 +131,7 @@ public class ModelManager implements ChatModel {
     // ─── 模型解析 ────────────────────────────────
 
     private ChatModel resolveModel() {
-        // 从缓存获取
-        ChatModel cached = modelCache.getIfPresent(CACHE_KEY);
-        if (cached != null) return cached;
-
-        // 从 Redis 读取配置
+        // 从 Redis 读取当前配置
         RBucket<String> bucket = redissonClient.getBucket(REDIS_KEY);
         String configJson = bucket.get();
         if (configJson == null) {
@@ -142,11 +139,20 @@ public class ModelManager implements ChatModel {
                     "请先配置模型后再使用");
         }
 
-        // 创建自定义模型
+        // 检查缓存是否存在且配置一致
+        ModelCacheEntry entry = modelCache.getIfPresent(CACHE_KEY);
+        if (entry != null && configJson.equals(entry.configJson)) {
+            log.debug("resolveModel: 缓存命中，配置未变更");
+            return entry.model;
+        }
+
+        // 缓存不存在或配置已变更 → 重建模型
         try {
             JSONObject cfg = JSON.parseObject(configJson);
+            log.info("resolveModel: 配置已变更或首次加载, provider={}, model={}",
+                    cfg.getString("provider"), cfg.getString("modelName"));
             ChatModel userModel = buildChatModel(cfg);
-            modelCache.put(CACHE_KEY, userModel);
+            modelCache.put(CACHE_KEY, new ModelCacheEntry(userModel, configJson));
             log.info("自定义模型已创建: provider={}, model={}",
                     cfg.getString("provider"), cfg.getString("modelName"));
             return userModel;
@@ -185,38 +191,13 @@ public class ModelManager implements ChatModel {
     @SuppressWarnings("deprecation")
     private ChatModel buildDeepSeek(String apiKey, String modelName, String baseUrl,
                                      Integer maxTokens, Double temperature) {
-        // 创建带日志的 WebClient（用于排查流式请求问题）
-        org.springframework.web.reactive.function.client.ExchangeFilterFunction logRequest =
-            org.springframework.web.reactive.function.client.ExchangeFilterFunction.ofRequestProcessor(
-                clientRequest -> {
-                    log.info("DeepSeek API 请求: {} {}", clientRequest.method(), clientRequest.url());
-                    clientRequest.headers().forEach((name, values) -> {
-                        if (!"Authorization".equalsIgnoreCase(name)) {
-                            log.debug("  Header: {}={}", name, values);
-                        }
-                    });
-                    return reactor.core.publisher.Mono.just(clientRequest);
-                });
-
-        org.springframework.web.reactive.function.client.ExchangeFilterFunction logResponse =
-            org.springframework.web.reactive.function.client.ExchangeFilterFunction.ofResponseProcessor(
-                clientResponse -> {
-                    log.warn("DeepSeek API 响应状态: {}", clientResponse.statusCode());
-                    return reactor.core.publisher.Mono.just(clientResponse);
-                });
-
-        org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder =
-            org.springframework.web.reactive.function.client.WebClient.builder()
-                .filter(logRequest)
-                .filter(logResponse);
-
         DeepSeekApi api = DeepSeekApi.builder()
                 .apiKey(apiKey)
                 .baseUrl(baseUrl != null && !baseUrl.isBlank() ? baseUrl : "https://api.deepseek.com")
                 .restClientBuilder(org.springframework.web.client.RestClient.builder()
                     .requestFactory(new org.springframework.http.client.JdkClientHttpRequestFactory(
                         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build())))
-                .webClientBuilder(webClientBuilder)
+                .webClientBuilder(org.springframework.web.reactive.function.client.WebClient.builder())
                 .build();
         return DeepSeekChatModel.builder()
                 .deepSeekApi(api)
