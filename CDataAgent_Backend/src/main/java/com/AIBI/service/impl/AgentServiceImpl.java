@@ -275,11 +275,11 @@ public class AgentServiceImpl implements AgentService {
             // 设置本轮 active 文件（前端传递的文件绑定）
             analysisState.setCurrentThreadId(cid.toString());
             String fileAttachments = null;
+            List<String> fileNames = new ArrayList<>();
             if (fileIds != null && !fileIds.isEmpty()) {
                 analysisState.setActiveFileIds(fileIds);
                 // 文件切换时清空旧加载缓存，下次 loadData 重新加载
                 analysisState.setLoadedFiles(new ArrayList<>());
-                log.info("本轮消息绑定文件: fileIds={}", fileIds);
 
                 // 构建文件附件 JSON（用于持久化到消息表）
                 List<DataFile> dataFiles = dataFileMapper.selectBatchIds(fileIds);
@@ -289,6 +289,7 @@ public class AgentServiceImpl implements AgentService {
                     item.put("id", df.getId().toString());
                     item.put("name", df.getOriginalFilename());
                     arr.add(item);
+                    fileNames.add(df.getOriginalFilename());
                 }
                 if (!arr.isEmpty()) {
                     fileAttachments = arr.toJSONString();
@@ -300,7 +301,7 @@ public class AgentServiceImpl implements AgentService {
 
             String effectiveMessage = injectContext(userMessage, cid, fileIds);
 
-            log.info("Agent 对话开始: cid={}, fileIds={}", cid, fileIds);
+            log.info("Agent 对话开始: cid={}, files={}", cid, fileNames);
 
             modelManager.setCurrentConversationId(cid);
             exactTokenCounter.setCurrentConversationId(cid);

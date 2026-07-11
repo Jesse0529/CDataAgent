@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 数据加载工具：供 ExecutorAgent 使用。
@@ -123,7 +124,6 @@ public class DataLoadingTool {
                 QueryWrapper<DataFile> qw = new QueryWrapper<>();
                 qw.in("id", activeIds).eq("status", "READY");
                 files = dataFileMapper.selectList(qw);
-                log.info("loadData: 按 activeFileIds 加载 {} 个文件: {}", files.size(), activeIds);
             } else {
                 // 2. 无 activeFileIds → 检查已有 loadedFiles（附言时复用）
                 List<AnalysisState.LoadedFileRecord> existing = analysisState.getLoadedFiles();
@@ -184,8 +184,11 @@ public class DataLoadingTool {
             result.put("files", fileInfos);
             result.put("note", "以上是本次查询可用的文件。SQL 中通过 viewName 引用文件。");
 
-            log.info("loadData: conversationId={}, {} 个文件已加载 (activeFileIds={})",
-                    conversationId, files.size(), analysisState.getActiveFileIds());
+            List<String> names = files.stream()
+                    .map(DataFile::getOriginalFilename)
+                    .collect(Collectors.toList());
+            log.info("loadData: conversationId={}, {} 个文件已加载: {}",
+                    conversationId, files.size(), names);
             return result.toJSONString();
         } catch (Exception e) {
             log.error("loadData 失败: conversationId={}", conversationId, e);

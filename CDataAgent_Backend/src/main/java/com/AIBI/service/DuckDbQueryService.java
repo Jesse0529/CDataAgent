@@ -73,7 +73,7 @@ public class DuckDbQueryService {
                 finalSql += " LIMIT " + maxRows;
             }
 
-            log.info("DuckDB 查询: {} 个视图, SQL={}",
+            log.debug("DuckDB 查询: {} 个视图, SQL={}",
                     files.size(),
                     finalSql.length() > 200 ? finalSql.substring(0, 200) + "..." : finalSql);
 
@@ -164,7 +164,7 @@ public class DuckDbQueryService {
                 finalSql += " LIMIT " + maxRows;
             }
 
-            log.info("DuckDB 查询: {} 个视图, SQL={}",
+            log.debug("DuckDB 查询: {} 个视图, SQL={}",
                     files.size(),
                     finalSql.length() > 200 ? finalSql.substring(0, 200) + "..." : finalSql);
 
