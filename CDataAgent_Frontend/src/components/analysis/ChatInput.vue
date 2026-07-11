@@ -117,8 +117,8 @@ function handleFileChange(event: Event) {
       continue
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      message.warning(`「${file.name}」超过 10MB 上限，已跳过`)
+    if (file.size > 60 * 1024 * 1024) {
+      message.warning(`「${file.name}」超过 60MB 上限，已跳过`)
       continue
     }
 

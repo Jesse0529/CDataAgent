@@ -7,6 +7,7 @@ import com.AIBI.exception.ThrowUtils;
 import com.AIBI.config.ExactTokenCounter;
 import com.AIBI.config.ModelManager;
 import com.AIBI.config.TtlRedisSaver;
+import com.AIBI.config.DuckDbConnectionManager;
 import com.AIBI.manager.RedisLimiterManager;
 import com.AIBI.manager.TokenLedger;
 import com.AIBI.mapper.DataFileMapper;
@@ -100,6 +101,9 @@ public class AgentServiceImpl implements AgentService {
 
     @Autowired
     private ExactTokenCounter exactTokenCounter;
+
+    @Autowired
+    private DuckDbConnectionManager duckDbConnectionManager;
 
     @Value("${agent.global-timeout-seconds:300}")
     private int agentTimeoutSeconds;
@@ -406,7 +410,9 @@ public class AgentServiceImpl implements AgentService {
                     }
                 })
                 .doFinally(signal -> {
+                    String cidStr = cid.toString();
                     analysisState.clear();
+                    duckDbConnectionManager.close(cidStr);
                     modelManager.clearCurrentConversationId();
                     exactTokenCounter.clear();
                     try {

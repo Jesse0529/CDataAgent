@@ -90,7 +90,7 @@ public class DuckDbConfig {
     /**
      * 创建并配置基础 DuckDB 连接。
      */
-    private Connection createBaseConnection() throws Exception {
+    public Connection createBaseConnection() throws Exception {
         Connection conn = DriverManager.getConnection("jdbc:duckdb:");
         try {
             try (Statement stmt = conn.createStatement()) {

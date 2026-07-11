@@ -14,7 +14,7 @@ spring:
     timeout: ${REDIS_TIMEOUT:5000}
   servlet:
     multipart:
-      max-file-size: 10MB
+      max-file-size: 60MB
 
 mybatis-plus:
   configuration:
@@ -28,7 +28,7 @@ mybatis-plus:
 data:
   file:
     storage-dir: ${DATA_STORAGE_DIR}
-    max-file-size: 10485760
+    max-file-size: 62914560
     allowed-extensions: xlsx,xls,csv
     retention-days: 7
     cleanup:

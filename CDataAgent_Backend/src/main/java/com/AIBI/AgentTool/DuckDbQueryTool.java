@@ -73,7 +73,7 @@ public class DuckDbQueryTool {
     @Tool(description = "对已加载的数据执行 SQL 查询（仅 SELECT）。" +
             "✅ 聚合/筛选/排序/统计/JOIN ❌ 不用于建表/删表。" +
             "多文件时用 viewName 引用具体文件，支持跨文件 JOIN。" +
-            "查询前先用 getSchema 确认列名。SQL 自动追加 LIMIT。结果自动保存到分析状态。")
+            "loadData 已返回列信息，直接使用。SQL 自动追加 LIMIT。结果自动保存到分析状态。")
     public String runDuckdb(
             @ToolParam(description = "SELECT 查询语句。表名用 loadData 返回的 viewName，支持 JOIN") String sql,
             @ToolParam(description = "结果引用的名称（后续步骤用此名称引用数据），如 monthly_sales") String outputKey) {
@@ -127,12 +127,13 @@ public class DuckDbQueryTool {
                 return summary.toJSONString();
             }
 
-            String result = duckDbQueryService.executeQuery(refs, sql);
+            String conversationId = analysisState.getCurrentThreadId();
+            String result = duckDbQueryService.executeQuery(conversationId, refs, sql);
 
             // 瞬态错误自动重试一次（system/timeout）
             if (result != null && ToolResultUtils.isTransientError(result)) {
                 log.warn("runDuckdb: 瞬态错误，重试一次: sql={}", sql);
-                result = duckDbQueryService.executeQuery(refs, sql);
+                result = duckDbQueryService.executeQuery(conversationId, refs, sql);
             }
 
             if (result != null && result.contains("\"error\"")) {
@@ -224,12 +225,13 @@ public class DuckDbQueryTool {
                 sqlCache.put(cacheKey, cachedResult);
                 return cachedResult;
             }
-            String result = duckDbQueryService.executeQuery(refs, querySql);
+            String conversationId = analysisState.getCurrentThreadId();
+            String result = duckDbQueryService.executeQuery(conversationId, refs, querySql);
 
             // 瞬态错误自动重试一次
             if (result != null && ToolResultUtils.isTransientError(result)) {
                 log.warn("queryStatistics: 瞬态错误，重试一次: columns={}", columns);
-                result = duckDbQueryService.executeQuery(refs, sqlBuilder.toString());
+                result = duckDbQueryService.executeQuery(conversationId, refs, sqlBuilder.toString());
             }
 
             if (result != null && result.contains("\"error\"")) return result;

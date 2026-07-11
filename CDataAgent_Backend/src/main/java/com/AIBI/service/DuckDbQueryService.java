@@ -1,6 +1,7 @@
 package com.AIBI.service;
 
 import com.AIBI.config.DuckDbConfig;
+import com.AIBI.config.DuckDbConnectionManager;
 import com.AIBI.utils.ToolResultUtils;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -31,8 +32,108 @@ public class DuckDbQueryService {
     @Autowired
     private DuckDbConfig duckDbConfig;
 
+    @Autowired
+    private DuckDbConnectionManager connectionManager;
+
     /**
-     * 执行 DuckDB SQL 查询（多文件）。
+     * 执行 DuckDB SQL 查询（多文件，复用连接）。
+     * <p>
+     * 使用 DuckDbConnectionManager 缓存连接，避免每轮重复创建 DuckDB 实例。
+     * 视图每次重新注册（CREATE OR REPLACE VIEW 是幂等操作），确保文件切换后视图一致。
+     *
+     * @param conversationId 对话 ID（用于缓存连接）
+     * @param files          Parquet 文件引用列表（路径 + 视图名）
+     * @param sql            SQL 查询语句（仅允许 SELECT）
+     * @return JSON 数组字符串，失败时返回 {"error":"type","message":"..."}
+     */
+    public String executeQuery(String conversationId, List<DuckDbConfig.FileRef> files, String sql) {
+        if (files == null || files.isEmpty()) {
+            return ToolResultUtils.jsonTypedError("syntax", "没有可用的数据文件");
+        }
+
+        // 安全校验
+        String validationError = validateSql(sql);
+        if (validationError != null) {
+            return ToolResultUtils.jsonTypedError("syntax", validationError);
+        }
+
+        Connection conn = connectionManager.getOrCreate(conversationId);
+        connectionManager.ensureViews(conn, files);
+
+        try (Statement stmt = conn.createStatement()) {
+
+            stmt.setQueryTimeout(duckDbConfig.getQueryTimeoutSeconds());
+            int maxRows = duckDbConfig.getMaxResultRows();
+
+            // 自动追加 LIMIT
+            String finalSql = sql.trim();
+            String upperSql = finalSql.toUpperCase();
+            if (upperSql.startsWith("SELECT") && !upperSql.contains("LIMIT")) {
+                finalSql = finalSql.replaceAll(";\\s*$", "");
+                finalSql += " LIMIT " + maxRows;
+            }
+
+            log.info("DuckDB 查询: {} 个视图, SQL={}",
+                    files.size(),
+                    finalSql.length() > 200 ? finalSql.substring(0, 200) + "..." : finalSql);
+
+            try (ResultSet rs = stmt.executeQuery(finalSql)) {
+                ResultSetMetaData meta = rs.getMetaData();
+                int colCount = meta.getColumnCount();
+
+                JSONArray result = new JSONArray();
+                int rowCount = 0;
+                while (rs.next() && rowCount < maxRows) {
+                    JSONObject row = new JSONObject();
+                    for (int i = 1; i <= colCount; i++) {
+                        String colName = meta.getColumnLabel(i);
+                        String value = rs.getString(i);
+                        row.put(colName, value == null ? null : coerceNumber(value));
+                    }
+                    result.add(row);
+                    rowCount++;
+                }
+
+                log.debug("DuckDB 查询结果: {} 行, {} 列", rowCount, colCount);
+                return result.toJSONString();
+            }
+        } catch (java.sql.SQLTimeoutException e) {
+            log.warn("DuckDB 查询超时: {}", sql, e);
+            return ToolResultUtils.jsonTypedError("timeout", "查询超时（超过" + duckDbConfig.getQueryTimeoutSeconds() + "秒），" +
+                    "建议：① 减少数据量 ② 添加 WHERE 筛选 ③ 分步查询");
+        } catch (java.sql.SQLSyntaxErrorException e) {
+            log.warn("DuckDB 查询语法错误: {}", sql, e);
+            String msg = e.getMessage();
+            return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                    (msg != null ? ": " + msg : "") +
+                    "。请确认列名后重试");
+        } catch (java.sql.SQLException e) {
+            log.error("DuckDB 查询异常: {}", sql, e);
+            String msg = e.getMessage();
+            if (msg == null) msg = "";
+            if (msg.contains("Parser Error") || msg.contains("syntax error")
+                    || msg.contains("Binder Error")) {
+                return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                        ": " + msg + "。请确认后重试");
+            }
+            if (msg.contains("not found") || msg.contains("does not exist")
+                    || msg.contains("Table") || msg.contains("Column")) {
+                return ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
+                        ": " + msg + "。请确认后重试");
+            }
+            return ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
+                    (msg != null ? ": " + msg : "") + "，请重试");
+        } catch (Exception e) {
+            log.error("DuckDB 连接/系统异常: {}", sql, e);
+            return ToolResultUtils.jsonTypedError("system", "数据引擎异常: " + e.getMessage() + "，请重试");
+        }
+    }
+
+    /**
+     * 执行 DuckDB SQL 查询（多文件，每次都新建连接）。
+     * <p>
+     * 与 {@link #executeQuery(String, List, String)} 的区别是不缓存连接，
+     * 用于 {@link #previewData} 等非 Agent 工具调用场景。
      *
      * @param files Parquet 文件引用列表（路径 + 视图名）
      * @param sql   SQL 查询语句（仅允许 SELECT）

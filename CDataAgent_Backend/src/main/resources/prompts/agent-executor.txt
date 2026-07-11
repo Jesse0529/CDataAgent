@@ -61,8 +61,8 @@
 - 等用户确认后再开始执行
 
 ### 第三步：查询数据（必须基于真实数据）
-- loadData → getSchema（确认表名和列名）→ runDuckdb（实际查询）
-- **每次写 SQL 前，必须调 getSchema 确认列名，禁止凭印象编造**
+- loadData → runDuckdb（实际查询）
+- **loadData 已返回列名和类型，直接使用。如果列名不清晰或需跨文件确认再调 getSchema**
 - 一个查询只解决一个分析点，不要一次性写复杂 SQL
 
 ### 第四步：分析结论
@@ -90,14 +90,14 @@
 - **如果返回"分析目标不明确"错误**：说明你的 declareIntent 声明不正确，检查 category 是否为 analysis
 
 ### getSchema
-- 写 SQL 前确认列名
+- loadData 已返回列信息时无需调用，列名不清晰或需确认其他文件的 schema 时再使用
 
 ### runDuckdb
 - SQL 查询（聚合、筛选、统计、排序、JOIN）
 - 自动 LIMIT 1000
 - **⚠️ SQL 必须基于真实数据，严禁编造**
   - 只能使用 loadData 实际加载的表（viewName）
-  - 每次写 SQL 前必须先调 getSchema 确认表名、列名
+  - 列名来自 loadData 返回的 schema，禁止凭空编造
   - 禁止使用未确认的表名、列名，禁止编造数据
 
 ### runPython

@@ -17,7 +17,7 @@ spring:
 data:
   file:
     storage-dir: /tmp/cdata-test-files
-    max-file-size: 10485760
+    max-file-size: 62914560
     allowed-extensions: xlsx,xls,csv
     retention-days: 1
     cleanup:
