@@ -1,6 +1,7 @@
 package com.AIBI.service;
 
 import com.AIBI.config.DuckDbConfig;
+import com.AIBI.config.DuckDbConnectionManager;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -27,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * DuckDbQueryService 单元测试。
  * 使用嵌入式 DuckDB 创建真实 Parquet 文件进行测试。
  */
-@SpringBootTest(classes = {DuckDbConfig.class, DuckDbQueryService.class})
+@SpringBootTest(classes = {DuckDbConfig.class, DuckDbQueryService.class, DuckDbConnectionManager.class})
 @TestPropertySource(properties = {
         "duckdb.query.max-result-rows=1000",
         "duckdb.query.timeout-seconds=30",
@@ -37,17 +38,27 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("DuckDbQueryService 查询服务测试")
 class DuckDbQueryServiceTest {
 
+    private static final String TEST_CID = "test-cid";
+
     @Autowired
     private DuckDbQueryService queryService;
 
     @Autowired
     private DuckDbConfig duckDbConfig;
 
+    @Autowired
+    private DuckDbConnectionManager connectionManager;
+
     @TempDir
     static Path tempDir;
 
     private static DuckDbConfig.FileRef fileRef;
     private static DuckDbConfig.FileRef multiFileRef;
+
+    @AfterEach
+    void cleanup() {
+        connectionManager.close(TEST_CID);
+    }
 
     @BeforeAll
     static void createTestParquet() throws Exception {
@@ -331,6 +342,60 @@ class DuckDbQueryServiceTest {
     void commentOnlySqlShouldBeRejected() {
         String result = queryService.executeQuery(List.of(fileRef), "-- 纯注释");
         assertErrorType(result, "syntax");
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DQS-15: 错误消息增强 — buildSyntaxHint / buildColumnHint
+    // ═══════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("DQS-15a: GROUP BY 缺失时 hint 应提示补全非聚合列")
+    void missingGroupByShouldContainHint() {
+        // SELECT 含聚合函数 SUM 但无 GROUP BY — DuckDB 抛出 Binder Error
+        String result = queryService.executeQuery(TEST_CID, List.of(fileRef),
+                "SELECT category, SUM(sales) FROM sales_view");
+        assertErrorType(result, "syntax");
+        assertMessageContains(result, "GROUP BY");
+    }
+
+    @Test
+    @DisplayName("DQS-15b: 函数名错误时 hint 应提示检查函数名")
+    void badFunctionNameShouldContainHint() {
+        String result = queryService.executeQuery(TEST_CID, List.of(fileRef),
+                "SELECT SUMM(category) FROM sales_view");
+        assertErrorType(result, "syntax");
+        assertMessageContains(result, "函数名不正确");
+    }
+
+    @Test
+    @DisplayName("DQS-15c: 列名不存在时 hint 应提取出错的列名")
+    void nonExistentColumnShouldExtractName() {
+        String result = queryService.executeQuery(TEST_CID, List.of(fileRef),
+                "SELECT bad_col FROM sales_view");
+        assertErrorType(result, "syntax");
+        // 应包含被提取的列名「bad_col」
+        assertMessageContains(result, "bad_col");
+        assertMessageContains(result, "getSchema");
+    }
+
+    @Test
+    @DisplayName("DQS-15d: 表名不存在时 hint 应提示 loadData 确认 viewName")
+    void nonExistentTableShouldContainHint() {
+        String result = queryService.executeQuery(TEST_CID, List.of(fileRef),
+                "SELECT * FROM non_existent_view");
+        assertErrorType(result, "syntax");
+        assertMessageContains(result, "loadData");
+        assertMessageContains(result, "viewName");
+    }
+
+    @Test
+    @DisplayName("DQS-15e: SQL 结构不完整时 hint 应提示检查关键字/语法")
+    void incompleteSqlShouldContainHint() {
+        String result = queryService.executeQuery(TEST_CID, List.of(fileRef),
+                "SELECT * FROM sales_view WHERE");
+        assertErrorType(result, "syntax");
+        // DuckDB 抛出 Parser Error → buildSyntaxHint 的默认兜底
+        assertMessageContains(result, "语法");
     }
 
     // ═══════════════════════════════════════════════════════════

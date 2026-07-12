@@ -117,6 +117,12 @@ public class DuckDbQueryService {
                 return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
                         ": " + msg + "。" + hint);
             }
+            // 函数不存在（Catalog Error: Scalar Function ... does not exist!）
+            if (msg.contains("Catalog Error") && msg.contains("Scalar Function")) {
+                String hint = buildSyntaxHint(msg);
+                return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                        ": " + msg + "。" + hint);
+            }
             if (msg.contains("not found") || msg.contains("does not exist")
                     || msg.contains("Table") || msg.contains("Column")) {
                 String hint = buildColumnHint(msg);
@@ -452,7 +458,7 @@ public class DuckDbQueryService {
         if (lowMsg.contains("group by") || lowMsg.contains("must appear in")) {
             return "GROUP BY 子句缺少非聚合列，请将 SELECT 中的非聚合列全部添加到 GROUP BY 中。";
         }
-        if (lowMsg.contains("function") && (lowMsg.contains("not recognized") || lowMsg.contains("not found"))) {
+        if (lowMsg.contains("function") && (lowMsg.contains("not recognized") || lowMsg.contains("not found") || lowMsg.contains("does not exist"))) {
             return "函数名不正确，请确认使用的 DuckDB 函数名是否正确（如 SUM/AVG/COUNT/MIN/MAX）。";
         }
         if (lowMsg.contains("unterminated")) {
