@@ -423,10 +423,9 @@ async function handleSend(text: string) {
           setTimeout(() => {
             // 走 resume 路径：接回活跃流
             const resumeUrl = `/agent/chat/resume?conversationId=${cid}&resumeToken=${resumeToken}&resumeSeq=${eventCount}`
-            doStream(resumeUrl).then(({ promise: p, abort: a }) => {
-              stopStream.value = a
-              return p
-            }).then(() => {
+            const r = doStream(resumeUrl)
+            stopStream.value = r.abort
+            r.promise.then(() => {
               // resume 完成处理（下方 await promise 外的逻辑处理）
             }).catch(() => {
               messages.value = messages.value.map((m) =>
@@ -835,13 +834,13 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   min-width: 0;
-  padding: 0 clamp(12px, 2.5vw, 40px);
+  padding: 0 8px 0 clamp(12px, 2.5vw, 40px);
   transition: padding 0.35s var(--ease-out-expo);
 }
 
 .analysis-page__chat-inner {
   width: 100%;
-  max-width: min(840px, 100%);
+  max-width: min(clamp(720px, 75%, 1300px), 100%);
   display: flex;
   flex-direction: column;
 }
@@ -849,12 +848,13 @@ onBeforeUnmount(() => {
 .analysis-page__messages {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 6px 16px 0;
+  padding: 8px 0 16px 0;
+  scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .analysis-page__messages::-webkit-scrollbar {
-  width: 7px;
+  width: 10px;
 }
 
 .analysis-page__messages::-webkit-scrollbar-track {
@@ -863,7 +863,8 @@ onBeforeUnmount(() => {
 
 .analysis-page__messages::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
+  border-radius: 5px;
+  min-height: 60px;
 }
 
 .analysis-page__messages::-webkit-scrollbar-thumb:hover {

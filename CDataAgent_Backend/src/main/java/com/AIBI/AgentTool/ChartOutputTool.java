@@ -151,13 +151,13 @@ public class ChartOutputTool {
         if (cached != null) return cached;
 
         try {
-            if (optionJson == null || optionJson.isBlank()) return ToolResultUtils.jsonValidResult(false, "option JSON 为空");
+            if (optionJson == null || optionJson.isBlank()) return ToolResultUtils.jsonTypedError("syntax", "option JSON 为空");
 
             String cleaned = optionJson.trim()
                     .replaceAll("(?s)^```[a-z]*\\n?", "")
                     .replaceAll("\\n```\\s*$", "").trim();
 
-            if (!cleaned.startsWith("{")) return ToolResultUtils.jsonValidResult(false, "不是有效的 JSON 对象");
+            if (!cleaned.startsWith("{")) return ToolResultUtils.jsonTypedError("syntax", "不是有效的 JSON 对象");
 
             JSONObject option = JSON.parseObject(cleaned);
             List<String> issues = new ArrayList<>();
@@ -185,13 +185,16 @@ public class ChartOutputTool {
             if (!option.containsKey("tooltip")) issues.add("缺少 tooltip");
             if (!option.containsKey("legend")) issues.add("缺少 legend");
 
-            String result = issues.isEmpty()
-                    ? ToolResultUtils.jsonValidResult(true, "校验通过")
-                    : ToolResultUtils.jsonValidResult(false, String.join("; ", issues));
+            String result;
+            if (issues.isEmpty()) {
+                result = "校验通过";
+            } else {
+                result = ToolResultUtils.jsonTypedError("syntax", "图表结构不完整: " + String.join("; ", issues));
+            }
             cacheManager.put(cacheKey, result, 600);
             return result;
         } catch (Exception e) {
-            return ToolResultUtils.jsonValidResult(false, "校验异常: " + e.getMessage());
+            return ToolResultUtils.jsonTypedError("system", "校验异常: " + e.getMessage());
         }
     }
 

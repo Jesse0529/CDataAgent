@@ -104,22 +104,24 @@ public class DuckDbQueryService {
         } catch (java.sql.SQLSyntaxErrorException e) {
             log.warn("DuckDB 查询语法错误: {}", sql, e);
             String msg = e.getMessage();
+            String hint = buildSyntaxHint(msg);
             return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                    (msg != null ? ": " + msg : "") +
-                    "。请确认列名后重试");
+                    (msg != null ? ": " + msg : "") + "。" + hint);
         } catch (java.sql.SQLException e) {
             log.error("DuckDB 查询异常: {}", sql, e);
             String msg = e.getMessage();
             if (msg == null) msg = "";
             if (msg.contains("Parser Error") || msg.contains("syntax error")
                     || msg.contains("Binder Error")) {
+                String hint = buildSyntaxHint(msg);
                 return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。请确认后重试");
+                        ": " + msg + "。" + hint);
             }
             if (msg.contains("not found") || msg.contains("does not exist")
                     || msg.contains("Table") || msg.contains("Column")) {
+                String hint = buildColumnHint(msg);
                 return ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
-                        ": " + msg + "。请确认后重试");
+                        ": " + msg + "。" + hint);
             }
             return ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
                     (msg != null ? ": " + msg : "") + "，请重试");
@@ -434,6 +436,59 @@ public class DuckDbQueryService {
         } catch (NumberFormatException e) {
             return value;
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SQL 错误提示增强（帮助 LLM 快速定位并修正 SQL）
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * 解析 DuckDB 语法错误消息，返回针对 LLM 的可行动提示。
+     */
+    private static String buildSyntaxHint(String errorMsg) {
+        if (errorMsg == null) return "请检查 SQL 语句中的括号、逗号、关键字拼写，确认后重试。";
+        String lowMsg = errorMsg.toLowerCase();
+
+        if (lowMsg.contains("group by") || lowMsg.contains("must appear in")) {
+            return "GROUP BY 子句缺少非聚合列，请将 SELECT 中的非聚合列全部添加到 GROUP BY 中。";
+        }
+        if (lowMsg.contains("function") && (lowMsg.contains("not recognized") || lowMsg.contains("not found"))) {
+            return "函数名不正确，请确认使用的 DuckDB 函数名是否正确（如 SUM/AVG/COUNT/MIN/MAX）。";
+        }
+        if (lowMsg.contains("unterminated")) {
+            return "字符串或标识符未正确闭合，请检查单引号和双引号是否成对出现。";
+        }
+        if (lowMsg.contains("expected")) {
+            return "SQL 语法结构不完整，请检查关键字顺序和括号是否匹配。";
+        }
+        return "请检查 SQL 语句的语法（括号匹配、逗号位置、关键字拼写），如有疑问请先调用 getSchema 确认列名和类型。";
+    }
+
+    /**
+     * 解析 DuckDB "列名/表名不存在" 错误，返回指向 getSchema 的提示。
+     */
+    private static String buildColumnHint(String errorMsg) {
+        if (errorMsg == null) return "请先调用 getSchema 确认正确的列名和 viewName，再重新编写 SQL。";
+
+        String lowMsg = errorMsg.toLowerCase();
+        // 提取出错的列名或表名
+        String badName = null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"([^\"]+)\"").matcher(errorMsg);
+        if (m.find()) badName = m.group(1);
+
+        if (lowMsg.contains("column")) {
+            return (badName != null
+                    ? "列名「" + badName + "」不存在。"
+                    : "列名不存在。")
+                    + "请先调用 getSchema 确认当前表中真实的列名（注意大小写和特殊字符），再按正确的列名重写 SQL。";
+        }
+        if (lowMsg.contains("table") || lowMsg.contains("view")) {
+            return (badName != null
+                    ? "表/视图「" + badName + "」不存在。"
+                    : "表或视图不存在。")
+                    + "请先调用 loadData 确认当前的 viewName，再使用正确的 viewName 重写 SQL。";
+        }
+        return "请先调用 getSchema 确认正确的列名和表名，再重新编写 SQL。";
     }
 
 }

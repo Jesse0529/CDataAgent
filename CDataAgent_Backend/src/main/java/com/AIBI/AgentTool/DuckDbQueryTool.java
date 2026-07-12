@@ -276,4 +276,5 @@ public class DuckDbQueryTool {
     private static String truncateSql(String sql) {
         return sql != null && sql.length() > 200 ? sql.substring(0, 200) + "..." : sql;
     }
+
 }
