@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const message = useMessage()
 

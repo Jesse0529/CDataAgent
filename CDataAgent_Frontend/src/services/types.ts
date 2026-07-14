@@ -75,6 +75,8 @@ export interface StructuredEvent {
   message?: string
   /** 本轮 AI 回复消耗的 token 数 */
   tokenUsage?: number
+  /** 用于断线重连的后端会话令牌 */
+  resumeToken?: string
 }
 
 /** 文件数据预览（对应后端 FilePreviewVO） */

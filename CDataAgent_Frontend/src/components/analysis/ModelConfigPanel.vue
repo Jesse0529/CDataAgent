@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
-import { NSelect, NInput, NButton, useMessage, useDialog } from 'naive-ui'
-import { apiGet, apiGetChecked, apiPost, apiDelete, ApiError } from '@/services/api'
+import { NButton, NInput, NSelect, useDialog, useMessage } from 'naive-ui'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { ApiError, apiDelete, apiGet, apiGetChecked, apiPost } from '@/services/api'
 import type { MessageVO } from '@/services/types'
+import { parseChartOptions, parseFileNames } from '@/utils/messageParser'
 import LogoIcon from './LogoIcon.vue'
-import ChartPreviewModal from './ChartPreviewModal.vue'
+
+const ChartPreviewModal = defineAsyncComponent(() => import('./ChartPreviewModal.vue'))
 
 const message = useMessage()
 const dialog = useDialog()
@@ -62,42 +64,20 @@ const selectedChart = ref<{
 const showChartModal = ref(false)
 
 /** 解析 chartOption JSON 字符串 → 图表配置数组 */
-function parseChartOptions(raw?: string | null): Record<string, unknown>[] | undefined {
-  if (!raw) return undefined
-  try {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed as Record<string, unknown>[]
-    }
-  } catch { /* ignore */ }
-  return undefined
-}
-
 /** 解析 fileAttachments JSON 字符串 → 文件名列表 */
-function parseFileNames(raw?: string | null): string[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) {
-      return parsed.map((f: Record<string, unknown>) => String(f.name || '')).filter(Boolean)
-    }
-  } catch { /* ignore */ }
-  return []
-}
-
 /** 截取内容预览（去 JSON 残留，取前 120 字符） */
 function getContentPreview(text: string): string {
   if (!text) return ''
   // 去掉可能的 chart JSON 残留
   let clean = text
     .replace(/```[\s\S]*?```/g, '')
-    .replace(/\{[^]*?\}/g, '')
+    .replace(/\{[\s\S]*?\}/g, '')
     .replace(/#{1,6}\s*NEEDS_CHART#*/gi, '')
     .replace(/现在为您生成可视化图表[！!]?/g, '')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .trim()
   if (!clean) clean = text
-  return clean.length > 120 ? clean.slice(0, 120) + '…' : clean
+  return clean.length > 120 ? `${clean.slice(0, 120)}…` : clean
 }
 
 /** 格式化时间 */
@@ -131,7 +111,9 @@ async function fetchChartMessages() {
   try {
     const cid = await ensureConversationId()
     fetchingCharts.value = true
-    chartMessages.value = await apiGetChecked<MessageVO[]>(`/agent/conversations/${cid}/chart-messages`)
+    chartMessages.value = await apiGetChecked<MessageVO[]>(
+      `/agent/conversations/${cid}/chart-messages`,
+    )
   } catch (err: unknown) {
     const msg = err instanceof ApiError ? err.message : '加载失败'
     message.error(msg)

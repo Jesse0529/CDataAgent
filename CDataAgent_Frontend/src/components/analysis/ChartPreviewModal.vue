@@ -11,8 +11,8 @@
  */
 
 <script setup lang="ts">
-import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
+import * as echarts from 'echarts'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -54,7 +54,10 @@ function downloadChart(): void {
       }
     }
     const safeName = title
-      ? title.replace(/[<>:"/\\|?*]+/g, '_').trim().slice(0, 60)
+      ? title
+          .replace(/[<>:"/\\|?*]+/g, '_')
+          .trim()
+          .slice(0, 60)
       : ''
     const fileName = safeName ? `${safeName}.png` : `图表-${activeIndex.value + 1}.png`
 
@@ -80,10 +83,7 @@ let resizeTimer: ReturnType<typeof setTimeout> | null = null
 // ===== "Taste Soft" 自定义主题 =====
 const TASTE_SOFT_THEME = {
   backgroundColor: 'transparent',
-  color: [
-    '#BC694A', '#E8A87C', '#D4895E', '#A85D3E',
-    '#CF7A55', '#9C4E32', '#C4704D', '#B0603C',
-  ],
+  color: ['#BC694A', '#E8A87C', '#D4895E', '#A85D3E', '#CF7A55', '#9C4E32', '#C4704D', '#B0603C'],
   title: {
     textStyle: { color: '#2D2824', fontSize: 17, fontWeight: 600 },
     subtextStyle: { color: '#7A7268', fontSize: 13 },

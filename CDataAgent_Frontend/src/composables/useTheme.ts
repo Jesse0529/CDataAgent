@@ -1,5 +1,5 @@
-import { computed } from 'vue'
 import type { GlobalThemeOverrides } from 'naive-ui'
+import { computed } from 'vue'
 import { tasteSoftThemeOverrides } from '@/styles/naive-theme'
 
 /** Naive UI theme（浅色 = null，即不启用暗色主题） */

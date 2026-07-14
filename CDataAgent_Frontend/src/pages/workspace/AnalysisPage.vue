@@ -1,76 +1,48 @@
 <script setup lang="ts">
+import { useDialog, useMessage } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useMessage, useDialog } from 'naive-ui'
+import ChatInput from '@/components/analysis/ChatInput.vue'
+import ChatMessage from '@/components/analysis/ChatMessage.vue'
+import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
+import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
+import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
+import { useAgentStream } from '@/composables/useAgentStream'
+import { useChatPersistence } from '@/composables/useChatPersistence'
+import { useFiles } from '@/composables/useFiles'
 import {
+  ApiError,
+  apiDeleteChecked,
   apiGetChecked,
   apiPostChecked,
-  apiPostStream,
-  apiUpload,
-  apiDeleteChecked,
-  ApiError,
   withRetry,
 } from '@/services/api'
-import type {
-  ChatMessageVO,
-  DataFileVO,
-  MessageVO,
-  StructuredEvent,
-  TableEventData,
-} from '@/services/types'
-import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
-import ChatMessage from '@/components/analysis/ChatMessage.vue'
-import ChatInput from '@/components/analysis/ChatInput.vue'
-import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
-import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
-import { useChatPersistence } from '@/composables/useChatPersistence'
+import type { ChatMessageVO, DataFileVO, MessageVO } from '@/services/types'
+import { parseChartOptions, parseFileAttachments } from '@/utils/messageParser'
 
 const message = useMessage()
 const dialog = useDialog()
 
-// ---- 常量 ----
-const MAX_FILES = 8
-
 // ---- 对话状态 ----
 const activeConversationId = ref<string | null>(null)
 const messages = ref<ChatMessageVO[]>([])
-const chatting = ref(false)
-const stopStream = ref<(() => void) | null>(null)
 const configCollapsed = ref(false)
 
-// ---- 文件状态 ----
-const files = ref<DataFileVO[]>([])
-const fetchingFiles = ref(true)
-const uploading = ref(false)
-/** 用户选中的文件 ID 集合，传给后端分析用 */
-const selectedFileIds = ref<Set<string>>(loadSelectedFiles())
-
-function toggleFile(fileId: string) {
-  const s = new Set(selectedFileIds.value)
-  s.has(fileId) ? s.delete(fileId) : s.add(fileId)
-  selectedFileIds.value = s
-  saveSelectedFiles()
-}
-
-// ---- 文件选择持久化 ----
-const SELECTED_FILES_KEY = 'aibi:selectedFiles'
-
-function saveSelectedFiles(): void {
-  try {
-    const ids = [...selectedFileIds.value]
-    localStorage.setItem(SELECTED_FILES_KEY, JSON.stringify(ids))
-  } catch { /* 静默 */ }
-}
-
-function loadSelectedFiles(): Set<string> {
-  try {
-    const raw = localStorage.getItem(SELECTED_FILES_KEY)
-    if (!raw) return new Set()
-    const ids = JSON.parse(raw)
-    return Array.isArray(ids) ? new Set(ids) : new Set()
-  } catch {
-    return new Set()
-  }
-}
+const {
+  files,
+  fetchingFiles,
+  uploading,
+  selectedFileIds,
+  toggleFile,
+  fetchFiles,
+  uploadFiles,
+  deleteFile,
+} = useFiles(activeConversationId)
+const {
+  chatting,
+  flushPending: flushAgentStream,
+  start: startAgentStream,
+  stop: stopAgentStream,
+} = useAgentStream()
 
 // ---- 文件预览 ----
 const previewFileId = ref<string | null>(null)
@@ -142,119 +114,40 @@ const hasMessages = computed(() => messages.value.length > 0)
 // ---- 滚动 ----
 const chatAreaRef = ref<HTMLDivElement | null>(null)
 const scrollAnchorRef = ref<HTMLDivElement | null>(null)
+const autoScrollEnabled = ref(true)
+const AUTO_SCROLL_THRESHOLD = 48
 
-function scrollToBottom(instant = false) {
+function updateAutoScrollState(): void {
+  const el = chatAreaRef.value
+  if (!el) return
+  autoScrollEnabled.value =
+    el.scrollHeight - el.scrollTop - el.clientHeight <= AUTO_SCROLL_THRESHOLD
+}
+
+function scrollToBottom(instant = false, force = false) {
+  if (!force && !autoScrollEnabled.value) return
   nextTick(() => {
     scrollAnchorRef.value?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
   })
 }
 
-/** 将后端返回的 fileAttachments JSON 字符串解析为对象数组 */
-function parseFileAttachments(raw?: string): { id: string; name: string }[] | undefined {
-  if (!raw) return undefined
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined
-  } catch {
-    return undefined
-  }
-}
-
-/** 安全 JSON 解析，失败返回 null */
-function tryParseJson(raw: string): unknown | null {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
-/** 将后端返回的 chartOption JSON 数组字符串解析为对象数组 */
-function parseChartOptions(raw?: string | null): Record<string, unknown>[] | undefined {
-  if (!raw) return undefined
-  const parsed = tryParseJson(raw)
-  if (Array.isArray(parsed) && parsed.length > 0) {
-    return parsed as Record<string, unknown>[]
-  }
-  return undefined
-}
-
 // ---- 文件管理 ----
 
-async function fetchFiles() {
-  if (!activeConversationId.value) {
-    files.value = []
-    fetchingFiles.value = false
-    return
-  }
-
-  fetchingFiles.value = true
-  try {
-    const newList = await withRetry(() =>
-      apiGetChecked<DataFileVO[]>(`/file/list?conversationId=${activeConversationId.value}`),
-    )
-    files.value = newList || []
-    // 不再自动选中文件，由用户手动选择
-  } catch (err: unknown) {
-    console.warn('[AnalysisPage] fetchFiles failed', err)
-  } finally {
-    fetchingFiles.value = false
-  }
-}
-
 async function handleUpload(incoming: File[]) {
-  if (!activeConversationId.value) {
-    message.error('请等待对话初始化完成')
-    return
-  }
-
-  if (files.value.length + incoming.length > MAX_FILES) {
-    message.warning(`最多同时上传 ${MAX_FILES} 个文件，当前已 ${files.value.length} 个`)
-    return
-  }
-
-  uploading.value = true
   try {
-    const formData = new FormData()
-    for (const file of incoming) {
-      formData.append('files', file)
-    }
-    const res = await apiUpload<DataFileVO[]>(
-      `/file/upload?conversationId=${activeConversationId.value}&replaceIfExists=false`,
-      formData,
-    )
-
-    if (res.code !== 0) {
-      message.error(res.message || '上传失败')
-      return
-    }
-
-    const uploaded = res.data || []
-    // 按文件名去重：已存在的文件不再追加
-    const existingNames = new Set(files.value.map(f => f.originalFilename))
-    const deduped = uploaded.filter(f => !existingNames.has(f.originalFilename))
-    files.value = [...files.value, ...deduped]
-
-    // 新文件自动勾选，且已有勾选不清除
-    const s = new Set(selectedFileIds.value)
-    for (const file of deduped) s.add(file.id)
-    selectedFileIds.value = s
-    saveSelectedFiles()
-
-    const addedCount = deduped.length
-    const skippedCount = uploaded.length - deduped.length
+    const { addedCount, skippedCount } = await uploadFiles(incoming)
     if (addedCount > 0) {
-      message.success(skippedCount > 0
-        ? `上传了 ${addedCount} 个文件（${skippedCount} 个重复已跳过）`
-        : `${addedCount} 个文件已上传`)
+      message.success(
+        skippedCount > 0
+          ? `上传了 ${addedCount} 个文件（${skippedCount} 个重复已跳过）`
+          : `${addedCount} 个文件已上传`,
+      )
     } else if (skippedCount > 0) {
       message.warning('文件已存在，请勿重复上传')
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '上传失败'
     message.error(msg)
-  } finally {
-    uploading.value = false
   }
 }
 
@@ -267,12 +160,7 @@ async function handleDeleteFile(fileId: string) {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await withRetry(() => apiDeleteChecked<boolean>(`/file/${fileId}`))
-        files.value = files.value.filter((f) => f.id !== fileId)
-        const s = new Set(selectedFileIds.value)
-        s.delete(fileId)
-        selectedFileIds.value = s
-        saveSelectedFiles()
+        await deleteFile(fileId)
         message.success('文件已删除')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '删除失败'
@@ -313,11 +201,7 @@ async function loadMessages() {
 // ---- 发送消息 ----
 
 function handleStop() {
-  if (stopStream.value) {
-    stopStream.value()
-    stopStream.value = null
-  }
-  chatting.value = false
+  stopAgentStream()
 }
 
 async function handleSend(text: string) {
@@ -335,7 +219,7 @@ async function handleSend(text: string) {
       .map((f) => ({ id: f.id, name: f.originalFilename })),
   }
   messages.value = [...messages.value, userMsg]
-  scrollToBottom()
+  scrollToBottom(false, true)
 
   const streamMsgId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   const streamMsg: ChatMessageVO = {
@@ -346,209 +230,21 @@ async function handleSend(text: string) {
     status: 'streaming',
   }
   messages.value = [...messages.value, streamMsg]
+  const activeStreamMessage = messages.value[messages.value.length - 1]
+  if (!activeStreamMessage) return
 
-  chatting.value = true
-  const cid = activeConversationId.value ?? '0'
-
-  // 构建流式 URL，附带用户选中的文件 ID
-  let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${cid}`
-  const selFiles = [...selectedFileIds.value]
-  if (selFiles.length > 0) {
-    streamUrl += `&fileIds=${selFiles.join(',')}`
-  }
-
-  let finalAnalysis = ''
-  const STATUS_TEXTS = new Set(['正在分析数据…', '正在生成图表…'])
-
-  // 本轮的表格事件累加器
-  const streamTables: TableEventData[] = []
-
-  // ---- rAF 批处理：合并逐 token 更新为一帧一次 ----
-  let pendingContent = ''
-  let rafToken: number | null = null
-
-  function flushBuffer() {
-    rafToken = null
-    if (!pendingContent) return
-
-    messages.value = messages.value.map((m) => {
-      if (m.id !== streamMsgId) return m
-      const prev = STATUS_TEXTS.has(m.content) ? '' : m.content
-      return { ...m, content: prev + pendingContent }
-    })
-    pendingContent = ''
-    scrollToBottom(true) // auto 模式，无 smooth 动画
-  }
-
-  // 暴露给 handleBeforeUnload：刷新前先把缓冲区刷入 messages.value
-  flushPendingStream.value = () => {
-    if (rafToken !== null) {
-      cancelAnimationFrame(rafToken)
-      rafToken = null
-    }
-    flushBuffer()
-  }
-
-  // ---- SSE 重连状态 ----
-  let resumeToken: string | undefined
-  let eventCount = 0
-  const MAX_RETRIES = 3
-  let retryCount = 0
-  let reconnecting = false
-
-  function doStream(url: string) {
-    return apiPostStream(
-      url,
-      {},
-      (token: string) => {
-        eventCount++
-        pendingContent += token
-        if (!rafToken) {
-          rafToken = requestAnimationFrame(flushBuffer)
-        }
-      },
-      () => {},
-      (err: Error) => {
-        // 错误回调 — 尝试重连
-        if (retryCount < MAX_RETRIES && resumeToken) {
-          retryCount++
-          reconnecting = true
-          const delay = 1000 * Math.pow(2, retryCount - 1)
-          // 显示重连状态
-          messages.value = messages.value.map((m) =>
-            m.id === streamMsgId
-              ? { ...m, content: '连接中断，正在重连…', reconnecting: true }
-              : m,
-          )
-          setTimeout(() => {
-            // 走 resume 路径：接回活跃流
-            const resumeUrl = `/agent/chat/resume?conversationId=${cid}&resumeToken=${resumeToken}&resumeSeq=${eventCount}`
-            const r = doStream(resumeUrl)
-            stopStream.value = r.abort
-            r.promise.then(() => {
-              // resume 完成处理（下方 await promise 外的逻辑处理）
-            }).catch(() => {
-              messages.value = messages.value.map((m) =>
-                m.id === streamMsgId
-                  ? { ...m, content: `❌ ${err.message}`, status: 'error', timestamp: Date.now(), reconnecting: false }
-                  : m,
-              )
-            })
-          }, delay)
-          return
-        }
-        // 重连耗尽 → 显示错误
-        messages.value = messages.value.map((m) =>
-          m.id === streamMsgId
-            ? { ...m, content: m.content || `❌ ${err.message}`, status: 'error', timestamp: Date.now(), reconnecting: false }
-            : m,
-        )
-        scrollToBottom()
-      },
-      (data: StructuredEvent) => {
-        const parsedOptions = parseChartOptions(data.chartOption)
-        if (parsedOptions) {
-          messages.value = messages.value.map((m) =>
-            m.id === streamMsgId ? { ...m, chartOption: parsedOptions, chartGenerating: false } : m,
-          )
-        }
-        if (data.analysis) {
-          finalAnalysis = data.analysis
-        }
-        if (typeof data.tokenUsage === 'number') {
-          messages.value = messages.value.map((m) =>
-            m.id === streamMsgId ? { ...m, tokenUsage: data.tokenUsage } : m,
-          )
-        }
-        // 保存 resumeToken
-        if ((data as unknown as Record<string, unknown>).resumeToken) {
-          resumeToken = (data as unknown as Record<string, unknown>).resumeToken as string
-        }
-        // 重置重连状态
-        reconnecting = false
-      },
-      (status: string) => {
-        // 从 status 事件中提取 resumeToken（后端在流启动时即发送）
-        if (status.startsWith('resumeToken:')) {
-          resumeToken = status.slice('resumeToken:'.length).trim()
-          return
-        }
-        const chartGenStatus = '正在生成图表…'
-        messages.value = messages.value.map((m) => {
-          if (m.id !== streamMsgId) return m
-          // 图表生成阶段：设置 chartGenerating 标记，保持已有内容不变
-          if (status === chartGenStatus) {
-            return { ...m, chartGenerating: true }
-          }
-          const isStatus = m.content === '' || STATUS_TEXTS.has(m.content)
-          return isStatus ? { ...m, content: status } : m
-        })
-      },
-      (chartJson: string) => {
-        const parsedOptions = parseChartOptions(chartJson)
-        if (parsedOptions) {
-          messages.value = messages.value.map((m) =>
-            m.id === streamMsgId ? { ...m, chartOption: parsedOptions } : m,
-          )
-        }
-      },
-      (tableData: TableEventData) => {
-        streamTables.push(tableData)
-        messages.value = messages.value.map((m) =>
-          m.id === streamMsgId
-            ? { ...m, tables: [...(m.tables || []), tableData] }
-            : m,
-        )
-        scrollToBottom(true)
-      },
-    )
-  }
-
-  try {
-    const { promise, abort: abortStream } = doStream(streamUrl)
-
-    stopStream.value = abortStream
-
-    await promise
-
-    // 流完成前 flush 剩余缓冲区，防止丢失最后一批 token
-    if (rafToken !== null) {
-      cancelAnimationFrame(rafToken)
-      rafToken = null
-    }
-    flushBuffer()
-
-    const streamMsg = messages.value.find((m) => m.id === streamMsgId)
-    if (streamMsg?.status === 'streaming') {
-      const finalContent = finalAnalysis || streamMsg.content
-      messages.value = messages.value.map((m) =>
-        m.id === streamMsgId
-          ? { ...m, content: finalContent, status: 'done' as const, timestamp: Date.now(), chartGenerating: false }
-          : m,
-      )
-      flushMessages()
-      scrollToBottom()
-    }
-  } catch (err) {
-    const errorText = err instanceof Error ? err.message : '分析请求失败'
-    messages.value = messages.value.map((m) =>
-      m.id === streamMsgId
-        ? { ...m, content: `❌ ${errorText}`, status: 'error', timestamp: Date.now() }
-        : m,
-    )
-    flushMessages()
-    scrollToBottom()
-  } finally {
-    chatting.value = false
-    stopStream.value = null
-  }
+  await startAgentStream({
+    conversationId: activeConversationId.value ?? '0',
+    text,
+    fileIds: [...selectedFileIds.value],
+    message: activeStreamMessage,
+    onScrollToBottom: scrollToBottom,
+    onPersist: flushMessages,
+  })
 }
 
 // ---- 持久化 ----
 const { saveMessages } = useChatPersistence()
-
-/** 暴露给 handleBeforeUnload：把 rAF 缓冲区积压的 token 刷入 messages.value */
-const flushPendingStream = ref<(() => void) | null>(null)
 
 function flushMessages(): void {
   if (saveTimer) {
@@ -561,7 +257,7 @@ function flushMessages(): void {
 
 function handleBeforeUnload(): void {
   // 先把流式缓冲区刷进 messages.value，否则最新 token 会丢失
-  flushPendingStream.value?.()
+  flushAgentStream()
   if (messages.value.length === 0) return
   saveMessages(messages.value)
 }
@@ -626,27 +322,23 @@ async function handleLocateMessage(msgId: string): Promise<void> {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
-watch(
-  messages,
-  () => {
-    if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-      saveMessages(messages.value)
-    }, 500)
-  },
-)
+watch(messages, () => {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveMessages(messages.value)
+  }, 500)
+})
 
 // ---- 初始化 ----
 const { loadMessages: loadLocalMessages, clearMessages } = useChatPersistence()
 
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
+  chatAreaRef.value?.addEventListener('scroll', updateAutoScrollState, { passive: true })
 
   // 1. 获取默认对话 ID
   try {
-    const convId = await withRetry(() =>
-      apiGetChecked<string>('/agent/conversation'),
-    )
+    const convId = await withRetry(() => apiGetChecked<string>('/agent/conversation'))
     activeConversationId.value = convId
 
     // 2. 优先从 localStorage 恢复消息（含表格、图表等完整前端状态）
@@ -676,6 +368,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  handleStop()
+  flushAgentStream()
+  if (saveTimer) clearTimeout(saveTimer)
+  chatAreaRef.value?.removeEventListener('scroll', updateAutoScrollState)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
