@@ -47,12 +47,10 @@ public class AnalysisStateStore {
     public void init() {
         available = properties.isEnabled() && redissonClient != null;
         if (available) {
-            log.info("AnalysisStateStore: 已启用 (metaTTL={}d, dataTTL={}m, maxDataEntries={}, maxEntryBytes={})",
-                    properties.getMetaTtlDays(), properties.getDataTtlMinutes(),
-                    properties.getMaxDataEntries(), properties.getMaxDataEntryBytes());
+            log.info("状态持久化已启用：metaTTL={}d、dataTTL={}m、maxEntries={}",
+                    properties.getMetaTtlDays(), properties.getDataTtlMinutes(), properties.getMaxDataEntries());
         } else {
-            log.info("AnalysisStateStore: 已禁用 (enabled={}, redisson={})",
-                    properties.isEnabled(), redissonClient != null);
+            log.info("状态持久化已禁用");
         }
     }
 
@@ -85,14 +83,8 @@ public class AnalysisStateStore {
             List<Long> activeIds = state.getActiveFileIds();
             meta.put("activeFileIds", activeIds.isEmpty() ? "[]" : JSON.toJSONString(activeIds));
 
-            // intent
-            JSONObject intent = new JSONObject();
-            intent.put("category", state.getIntentCategory());
-            intent.put("dimensions", state.getIntentDimensions());
-            intent.put("metrics", state.getIntentMetrics());
-            intent.put("clarity", state.getIntentClarity());
-            intent.put("summary", state.getIntentSummary());
-            meta.put("intent", intent.toJSONString());
+            // intent 已迁移至 RunContext（请求级，不跨轮持久化），不再保存到 Redis
+            meta.put("intent", "{}");
 
             meta.put("updatedAt", java.time.Instant.now().toString());
 
@@ -103,10 +95,9 @@ public class AnalysisStateStore {
             // ── 2. 保存 dataIndex（SQL 结果）─────────────
             saveDataIndex(conversationId, state);
 
-            log.debug("AnalysisStateStore: 已保存 conversationId={}, files={}, steps={}, dataEntries={}",
-                    conversationId, files.size(), steps.size(), state.getAvailableKeys().size());
+            log.debug("状态已保存：文件={}、步骤={}、数据键数={}", files.size(), steps.size(), state.getAvailableKeys().size());
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 保存失败 (conversationId={}), 降级为纯内存模式", conversationId, e);
+            log.warn("状态保存失败，降级为纯内存模式", e);
         }
     }
 
@@ -158,15 +149,14 @@ public class AnalysisStateStore {
                     ? JSON.parseArray(truncatedStr, String.class)
                     : Collections.emptyList();
             if (!truncated.isEmpty()) {
-                log.warn("AnalysisStateStore: 以下 key 因体积过大未持久化: {}", truncated);
+                log.warn("以下键因体积过大未持久化：{}", truncated);
             }
 
-            log.info("AnalysisStateStore: 已恢复 conversationId={}, files={}, steps={}, dataEntries={}",
-                    conversationId, files.size(), steps.size(), dataIndex.size());
+            log.info("状态已恢复：文件={}、步骤={}、数据键数={}", files.size(), steps.size(), dataIndex.size());
 
             return new StateSnapshot(files, steps, dataIndex, activeIds);
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 恢复失败 (conversationId={}), 从头开始", conversationId, e);
+            log.warn("状态恢复失败，从头开始", e);
             return null;
         }
     }
@@ -182,9 +172,9 @@ public class AnalysisStateStore {
         try {
             redissonClient.getMap(META_KEY_PREFIX + conversationId).delete();
             redissonClient.getMap(DATA_KEY_PREFIX + conversationId).delete();
-            log.info("AnalysisStateStore: 已删除 conversationId={}", conversationId);
+            log.info("状态数据已删除");
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 删除失败 (conversationId={})", conversationId, e);
+            log.warn("状态数据删除失败", e);
         }
     }
 
@@ -224,8 +214,7 @@ public class AnalysisStateStore {
             int byteSize = value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
             if (byteSize > properties.getMaxDataEntryBytes()) {
                 truncatedKeys.add(key);
-                log.warn("AnalysisStateStore: 条目 {}/{} 超限 ({} > {}), 不持久化",
-                        conversationId, key, byteSize, properties.getMaxDataEntryBytes());
+                log.warn("条目超限不持久化：键={}、大小={}、上限={}", key, byteSize, properties.getMaxDataEntryBytes());
                 continue;
             }
             dataMap.put(key, value);
@@ -240,7 +229,7 @@ public class AnalysisStateStore {
                 it.next();
                 it.remove();
             }
-            log.warn("AnalysisStateStore: dataIndex 超限 FIFO 淘汰 {} 条", excess);
+            log.warn("数据索引超限，FIFO淘汰{}条", excess);
         }
 
         // ── 写入 Redis ─────────────────────────────────

@@ -68,10 +68,10 @@ public class FileController {
             analysisState.resetByConversation(conversationId.toString());
 
             List<DataFileVO> vos = dataFiles.stream().map(this::toVO).collect(Collectors.toList());
-            log.info("文件批量上传完成: conversationId={}, {} 个文件", conversationId, dataFiles.size());
+            log.info("文件批量上传完成：{}个文件", dataFiles.size());
             return ResultUtils.success(vos);
         } catch (Exception e) {
-            log.error("文件批量上传失败: conversationId={}", conversationId, e);
+            log.error("文件批量上传失败", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理失败: " + e.getMessage());
         }
     }
@@ -99,7 +99,7 @@ public class FileController {
         try {
             java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(df.getStoragePath()));
         } catch (Exception e) {
-            log.warn("删除物理文件失败: {}", df.getStoragePath());
+            log.warn("物理文件删除失败：{}", df.getStoragePath());
         }
         dataFileMapper.deleteById(fileId);
         analysisState.resetByConversation(df.getConversationId().toString());

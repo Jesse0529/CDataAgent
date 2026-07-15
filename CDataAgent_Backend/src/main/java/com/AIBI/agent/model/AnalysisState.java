@@ -1,5 +1,7 @@
 package com.AIBI.agent.model;
 
+import com.AIBI.agent.run.RunContext;
+import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.config.AnalysisStateStore;
 import com.AIBI.model.entity.DataFile;
 import com.AIBI.service.FileConversionService;
@@ -9,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -42,35 +43,14 @@ public class AnalysisState {
 
     private String currentThreadId;
 
-    /** 暂存本轮生成的图表 JSON 列表（由 ChartOutputTool 追加，doOnComplete 消费） */
-    private final List<String> chartOptions = new ArrayList<>();
-
-    /** 图表就绪信号（ChartOutputTool 完成时触发，Synthesizer 流中异步发射 chart 事件） */
-    private CompletableFuture<String> chartReadyFuture = new CompletableFuture<>();
-
     /** Redis 持久化存储（可选，不可用时静默降级为纯内存模式） */
     @Autowired(required = false)
     private AnalysisStateStore analysisStateStore;
 
-    // ─── 意图声明（三层架构 Layer 2 结构化输出） ──────────
-
-    /** 意图分类：analysis / chitchat / vague */
-    private String intentCategory;
-
-    /** 分析维度列表（analysis 时填写） */
-    private List<String> intentDimensions;
-
-    /** 分析指标列表（analysis 时填写） */
-    private List<String> intentMetrics;
-
-    /** 清晰度：clear / somewhat / vague */
-    private String intentClarity;
-
-    /** 意图描述 */
-    private String intentSummary;
-
-    /** 输出格式偏好：table / chart / text / 空列表表示未指定 */
-    private List<String> intentOutputFormats;
+    // ─── 图表和意图字段已迁移至 RunContext ───
+    // chartOptions, chartReadyFuture → RunContext.addChartOption() / consumeChartOptions()
+    // intentCategory, intentDimensions, intentMetrics, intentClarity, intentSummary, intentOutputFormats → RunContext.setIntent()
+    // 工具代码应通过 RunContextHolder.get() 访问上述字段。
 
     public void setCurrentThreadId(String threadId) {
         this.currentThreadId = threadId;
@@ -142,8 +122,7 @@ public class AnalysisState {
         }
         files.add(record);
 
-        log.info("AnalysisState: 文件已加载: {} ({}行, {}列), 当前共 {} 个文件",
-                record.viewName, record.rowCount, record.columns.size(), files.size());
+        log.debug("文件已加载：视图={}、行数={}、列数={}", record.viewName, record.rowCount, record.columns.size());
     }
 
     /**
@@ -199,9 +178,9 @@ public class AnalysisState {
         if (steps.size() > MAX_RECENT_STEPS) steps.remove(0);
 
         if ("FAILED".equals(status)) {
-            log.warn("AnalysisState: 步骤失败: {} → {} (error={})", toolName, outputKey, errorMessage);
+            log.warn("步骤失败：工具={}、键={}、错误={}", toolName, outputKey, brief(errorMessage));
         } else {
-            log.info("AnalysisState: 步骤完成: {} → {} ({}行)", toolName, outputKey, rowCount);
+            log.debug("步骤完成：工具={}、键={}、行数={}", toolName, outputKey, rowCount);
         }
     }
 
@@ -210,6 +189,12 @@ public class AnalysisState {
      */
     public void addStepResultFailed(String outputKey, String toolName, String errorMessage) {
         addStepResult(outputKey, toolName, 0, null, "FAILED", errorMessage);
+    }
+
+    private static String brief(String message) {
+        if (message == null || message.isBlank()) return "-";
+        String compact = message.replaceAll("\\s+", " ").trim();
+        return compact.length() <= 160 ? compact : compact.substring(0, 157) + "...";
     }
 
     public void addData(String outputKey, String dataJson) {
@@ -238,6 +223,8 @@ public class AnalysisState {
      * <p>
      * 清除前先将关键数据持久化到 Redis（如果 Store 可用），
      * 使下一轮对话能从 Redis 恢复已加载文件、步骤和 SQL 结果。
+     * <p>
+     * 图表和意图字段已迁移至 RunContext，由 RunContext.clear() 负责清理。
      */
     public void clear() {
         // 持久化到 Redis（在清空之前）
@@ -248,10 +235,7 @@ public class AnalysisState {
         stepResults.remove(currentThreadId);
         dataIndex.remove(currentThreadId);
         activeFileIds.remove(currentThreadId);
-        chartOptions.clear();
-        chartReadyFuture = new CompletableFuture<>();
-        clearIntent();
-        log.debug("AnalysisState: 已清理 threadId={}", currentThreadId);
+        log.debug("分析状态已清理");
     }
 
     /**
@@ -278,8 +262,8 @@ public class AnalysisState {
         // activeFileIds 由前端每轮传入，始终以当前请求为准
         restore(conversationId, snapshot.files(), snapshot.steps(),
                 snapshot.dataIndex(), null);
-        log.info("AnalysisState: 已从 Redis 恢复 conversationId={}, files={}, steps={}, dataEntries={}",
-                conversationId, snapshot.files().size(), snapshot.steps().size(), snapshot.dataIndex().size());
+        log.debug("状态已恢复：文件={}、步骤={}、数据={}",
+                snapshot.files().size(), snapshot.steps().size(), snapshot.dataIndex().size());
         return true;
     }
 
@@ -293,12 +277,10 @@ public class AnalysisState {
         stepResults.remove(conversationId);
         dataIndex.remove(conversationId);
         activeFileIds.remove(conversationId);
-        chartOptions.clear();
-        chartReadyFuture = new CompletableFuture<>();
         if (analysisStateStore != null) {
             analysisStateStore.delete(conversationId);
         }
-        log.info("AnalysisState: 已重置 conversationId={}", conversationId);
+        log.info("分析状态已重置");
     }
 
     /**
@@ -314,81 +296,8 @@ public class AnalysisState {
         if (fileIds != null && !fileIds.isEmpty()) activeFileIds.put(conversationId, new ArrayList<>(fileIds));
     }
 
-    // ─── 图表 JSON 暂存（tool result → state → 持久化） ─────
-
-    /**
-     * 追加本轮 ChartOutputTool 生成的图表 JSON。
-     * 支持多图表：每次 buildChart 调用追加一条。
-     */
-    public void addChartOption(String option) {
-        chartOptions.add(option);
-        // 信号通知：图表已就绪，Streaming 管道可以发射 chart 事件
-        chartReadyFuture.complete(option);
-    }
-
-    /**
-     * 获取图表就绪信号（用于 Synthesizer 流中异步发射 chart 事件）。
-     * 每次调用返回新实例（一次性的）。
-     */
-    public CompletableFuture<String> getChartReadyFuture() {
-        return chartReadyFuture;
-    }
-
-    /**
-     * 消费并清除本轮所有图表 JSON，返回 JSON 数组字符串（如 [{...}, {...}]）。
-     * 无图表时返回 null。
-     */
-    public String consumeChartOptions() {
-        if (chartOptions.isEmpty()) return null;
-        String result = "[" + String.join(",", chartOptions) + "]";
-        chartOptions.clear();
-        return result;
-    }
-
-    /**
-     * 非消费性查看是否有图表 JSON（用于在 Synthesizer 文本流中先发 chart 事件）。
-     */
-    public String peekChartOptions() {
-        if (chartOptions.isEmpty()) return null;
-        return "[" + String.join(",", chartOptions) + "]";
-    }
-
-    // ─── 意图声明 ─────────────────────────────────────────
-
-    public void setIntent(String category, List<String> dimensions, List<String> metrics,
-                           String clarity, String summary, List<String> outputFormats) {
-        this.intentCategory = category;
-        this.intentDimensions = dimensions;
-        this.intentMetrics = metrics;
-        this.intentClarity = clarity;
-        this.intentSummary = summary;
-        this.intentOutputFormats = outputFormats;
-        log.debug("意图已声明: category={}, clarity={}, dimensions={}, metrics={}, outputFormats={}",
-                category, clarity, dimensions, metrics, outputFormats);
-    }
-
-    public String getIntentCategory() { return intentCategory; }
-    public List<String> getIntentDimensions() { return intentDimensions; }
-    public List<String> getIntentMetrics() { return intentMetrics; }
-    public String getIntentClarity() { return intentClarity; }
-    public String getIntentSummary() { return intentSummary; }
-    public List<String> getIntentOutputFormats() { return intentOutputFormats; }
-
-    public boolean isAnalysisIntent() {
-        return "analysis".equals(intentCategory);
-    }
-
-    /**
-     * 清除当前 intent（用于守卫拦截后让 Agent 重声明）。
-     */
-    public void clearIntent() {
-        this.intentCategory = null;
-        this.intentDimensions = null;
-        this.intentMetrics = null;
-        this.intentClarity = null;
-        this.intentSummary = null;
-        this.intentOutputFormats = null;
-    }
+    // ─── 图表和意图方法已迁移至 RunContext ─────
+    // 请使用 RunContextHolder.get().addChartOption() / consumeChartOptions() / setIntent() 等
 
     // ─── 生成上下文摘要（注入到 LLM context） ─────
 

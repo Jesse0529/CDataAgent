@@ -1,6 +1,8 @@
 package com.AIBI.AgentTool;
 
 import com.AIBI.agent.model.AnalysisState;
+import com.AIBI.agent.run.RunContext;
+import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.config.DuckDbConfig;
 import com.AIBI.service.DuckDbQueryService;
 import com.AIBI.utils.ToolResultUtils;
@@ -51,7 +53,8 @@ public class DuckDbQueryTool {
     // ─── 意图守卫 ─────────────────────────────────────────
 
     private String checkIntentGuard() {
-        String category = analysisState.getIntentCategory();
+        RunContext ctx = RunContextHolder.require();
+        String category = ctx.getIntentCategory();
         if (category == null) {
             return ToolResultUtils.jsonTypedError("syntax",
                     "请先调用 declareIntent 声明意图后再查询数据。");
@@ -99,7 +102,7 @@ public class DuckDbQueryTool {
                 summary.put("cached", true);
                 summary.put("sample", existingData != null && existingData.size() > 0
                         ? existingData.subList(0, Math.min(3, existingData.size())) : JSONArray.of());
-                log.info("runDuckdb: 命中缓存 outputKey={}, rows={}", outputKey, existingCount);
+                log.info("DuckDB查询：命中缓存 输出键={} 行数={}", outputKey, existingCount);
                 return summary.toJSONString();
             }
 
@@ -116,8 +119,7 @@ public class DuckDbQueryTool {
                 int cachedCount = cachedData != null ? cachedData.size() : 0;
                 analysisState.addStepResult(outputKey, "runDuckdb", cachedCount, sql);
                 analysisState.addData(outputKey, cachedResult);
-                log.info("runDuckdb: Caffeine 缓存命中, outputKey={}, rows={}, sql={}",
-                        outputKey, cachedCount, truncateSql(sql));
+                log.info("DuckDB查询：Caffeine缓存命中 输出键={} 行数={}", outputKey, cachedCount);
                 JSONObject summary = new JSONObject();
                 summary.put("outputKey", outputKey);
                 summary.put("rows", cachedCount);
@@ -132,7 +134,7 @@ public class DuckDbQueryTool {
 
             // 瞬态错误自动重试一次（system/timeout）
             if (result != null && ToolResultUtils.isTransientError(result)) {
-                log.warn("runDuckdb: 瞬态错误，重试一次: sql={}", sql);
+                log.warn("DuckDB查询：瞬态错误，重试一次");
                 result = duckDbQueryService.executeQuery(conversationId, refs, sql);
             }
 
@@ -155,11 +157,10 @@ public class DuckDbQueryTool {
             summary.put("sample", data != null && data.size() > 0
                     ? data.subList(0, Math.min(3, data.size())) : JSONArray.of());
 
-            log.info("runDuckdb: cid={}, outputKey={}, rows={}, {} 个视图",
-                    analysisState.getCurrentThreadId(), outputKey, rowCount, files.size());
+            log.info("DuckDB查询：输出键={}、行数={}、视图数={}", outputKey, rowCount, files.size());
             return summary.toJSONString();
         } catch (Exception e) {
-            log.error("runDuckdb 失败: sql={}", sql, e);
+            log.error("DuckDB查询失败", e);
             analysisState.addStepResultFailed(outputKey, "runDuckdb", e.getMessage());
             return ToolResultUtils.jsonTypedError("system", "查询异常: " + e.getMessage());
         }
@@ -186,7 +187,7 @@ public class DuckDbQueryTool {
             // 回合内去重
             String existing = analysisState.getDataByKey(statsKey);
             if (existing != null) {
-                log.info("queryStatistics: 命中缓存 columns={}", columns);
+                log.info("统计查询：命中缓存 列={}", columns);
                 return existing;
             }
 
@@ -218,7 +219,7 @@ public class DuckDbQueryTool {
             String cacheKey = buildCacheKey(refs, querySql);
             String cachedResult = sqlCache.getIfPresent(cacheKey);
             if (cachedResult != null) {
-                log.info("queryStatistics: Caffeine 缓存命中, columns={}", columns);
+                log.info("统计查询：Caffeine缓存命中 列={}", columns);
                 analysisState.addData(statsKey, cachedResult);
                 analysisState.addStepResult(statsKey, "queryStatistics",
                         JSON.parseArray(cachedResult).size(), null);
@@ -230,7 +231,7 @@ public class DuckDbQueryTool {
 
             // 瞬态错误自动重试一次
             if (result != null && ToolResultUtils.isTransientError(result)) {
-                log.warn("queryStatistics: 瞬态错误，重试一次: columns={}", columns);
+                log.warn("统计查询：瞬态错误，重试一次 列={}", columns);
                 result = duckDbQueryService.executeQuery(conversationId, refs, sqlBuilder.toString());
             }
 
@@ -243,7 +244,7 @@ public class DuckDbQueryTool {
 
             return result;
         } catch (Exception e) {
-            log.error("queryStatistics 失败", e);
+            log.error("统计查询失败", e);
             analysisState.addStepResultFailed(statsKey, "queryStatistics", e.getMessage());
             return ToolResultUtils.jsonTypedError("system", "统计查询异常: " + e.getMessage());
         }

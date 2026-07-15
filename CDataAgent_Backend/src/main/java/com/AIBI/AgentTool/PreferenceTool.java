@@ -37,7 +37,7 @@ public class PreferenceTool {
         if (value.equals(existing)) return "该偏好已保存，无需重复设置";
 
         preferenceManager.setPreference(key.trim(), value.trim());
-        log.info("savePreference: key={}", key);
+        log.info("用户偏好已保存：键={}", key);
         return "偏好已保存";
     }
 }

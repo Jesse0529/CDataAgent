@@ -81,12 +81,12 @@ public class PythonRunnerTool {
             result.put("type", "python_result");
             result.put("result", output);
 
-            log.info("runPython: outputKey={}, outputSize={}", outputKey,
+            log.info("Python执行：输出键={}、输出大小={}", outputKey,
                     output != null ? output.length() : 0);
             return result.toJSONString();
 
         } catch (Exception e) {
-            log.error("runPython 失败", e);
+            log.error("Python执行失败", e);
             analysisState.addStepResultFailed(outputKey, "runPython", e.getMessage());
             return jsonError("Python 执行失败: " + e.getMessage());
         }

@@ -35,7 +35,7 @@ public class DuckDbConnectionManager {
         return connections.computeIfAbsent(conversationId, k -> {
             try {
                 Connection conn = duckDbConfig.createBaseConnection();
-                log.debug("DuckDB 连接已创建: conversationId={}", conversationId);
+                log.debug("DuckDB连接已创建");
                 return conn;
             } catch (Exception e) {
                 throw new RuntimeException("创建 DuckDB 连接失败: " + e.getMessage(), e);
@@ -69,9 +69,9 @@ public class DuckDbConnectionManager {
         if (conn != null) {
             try {
                 conn.close();
-                log.debug("DuckDB 连接已关闭: conversationId={}", conversationId);
+                log.debug("DuckDB连接已关闭");
             } catch (SQLException e) {
-                log.warn("DuckDB 连接关闭失败: conversationId={}", conversationId, e);
+                log.warn("DuckDB连接关闭失败", e);
             }
         }
     }

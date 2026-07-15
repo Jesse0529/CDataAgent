@@ -1,6 +1,7 @@
 package com.AIBI.config;
 
 import com.AIBI.AgentTool.*;
+import com.AIBI.agent.hook.ContextWindowHook;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolerror.ToolErrorInterceptor;
@@ -84,21 +85,26 @@ public class AgentConfig {
                 .redisson(redissonClient)
                 .stateSerializer(new SpringAIStateSerializer())
                 .build();
-        log.info("RedisSaver: 初始化，TTL=3天");
+        log.info("RedisSaver已初始化，TTL=3天");
         return new TtlRedisSaver(inner, redissonClient, Duration.ofDays(3));
     }
 
     @Bean
     public SummarizationHook summarizationHook(ChatModel chatModel,
                                                ExactTokenCounter exactTokenCounter) {
-        log.info("SummarizationHook: 初始化，阈值 600k tokens，使用精确 TokenCounter");
+        log.info("摘要钩子已初始化，阈值128k tokens");
         return SummarizationHook.builder()
                 .model(chatModel)
                 .tokenCounter(exactTokenCounter)
-                .maxTokensBeforeSummary(600_000)
+                .maxTokensBeforeSummary(128_000)
                 .messagesToKeep(6)
                 .keepFirstUserMessage(true)
                 .build();
+    }
+
+    @Bean
+    public ContextWindowHook contextWindowHook(ExactTokenCounter exactTokenCounter) {
+        return new ContextWindowHook(exactTokenCounter);
     }
 
     // ─── Executor Agent — 自主执行分析或对话 ──────────────────────
@@ -114,21 +120,23 @@ public class AgentConfig {
                                     DuckDbQueryTool duckDbQueryTool,
                                     PythonRunnerTool pythonRunnerTool,
                                     PreferenceTool preferenceTool,
+                                    PresentationSubmissionTool presentationSubmissionTool,
                                     BaseCheckpointSaver redisSaver,
-                                    SummarizationHook summarizationHook) {
+                                    SummarizationHook summarizationHook,
+                                    ContextWindowHook contextWindowHook) {
         ReactAgent agent = ReactAgent.builder()
                 .name("Executor")
                 .description("数据分析助手——自主决策，与用户对话并执行数据分析")
                 .model(chatModel)
                 .systemPrompt(promptConfig.getExecutorPrompt())
                 .saver(redisSaver)
-                .hooks(summarizationHook)
-                .methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool, preferenceTool)
+                .hooks(contextWindowHook, summarizationHook)
+                .methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool, preferenceTool, presentationSubmissionTool)
                 .toolExecutionTimeout(Duration.ofSeconds(executorTimeout))
                 .interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler())
                 .build();
 
-        log.info("ExecutorAgent: 就绪（5 个数据工具）");
+        log.info("执行器Agent就绪（6个工具）");
         return agent;
     }
 
@@ -141,22 +149,18 @@ public class AgentConfig {
     @Bean
     public ReactAgent synthesizerAgent(ChatModel chatModel,
                                        ChartOutputTool chartOutputTool,
-                                       PreferenceTool preferenceTool,
-                                       BaseCheckpointSaver redisSaver,
-                                       SummarizationHook summarizationHook) {
+                                       PreferenceTool preferenceTool) {
         ReactAgent agent = ReactAgent.builder()
                 .name("Synthesizer")
                 .description("数据分析报告专家——生成图表配置和分析结论")
                 .model(chatModel)
                 .systemPrompt(promptConfig.getSynthesizerPrompt())
-                .saver(redisSaver)
-                .hooks(summarizationHook)
                 .methodTools(chartOutputTool, preferenceTool)
                 .toolExecutionTimeout(Duration.ofSeconds(synthesizerTimeout))
                 .interceptors(toolErrorHandler())
                 .build();
 
-        log.info("SynthesizerAgent: 就绪（2 个输出工具）");
+        log.info("合成器Agent就绪（2个工具）");
         return agent;
     }
 }

@@ -12,11 +12,7 @@ import org.springframework.stereotype.Component;
 /**
  * 工具调用统计切面 — 记录每次 {@code @Tool} 方法的调用结果。
  * <p>
- * 日志格式统一为 {@code ToolStat: tool=ClassName.method, status=SUCCESS|FAILED, ...}，
- * 方便通过 grep 聚合统计调用成功率。
- * <p>
- * 覆盖范围：所有通过 {@code .methodTools()} 注册的 {@code @Tool} 方法，
- * 包括 DataLoadingTool、DuckDbQueryTool、ChartOutputTool、PythonRunnerTool、PreferenceTool。
+ * 格式：工具调用情况：工具={工具名}、状态={成功/失败/异常}、耗时={X}ms
  */
 @Aspect
 @Component
@@ -35,7 +31,7 @@ public class ToolCallAspect {
             result = pjp.proceed();
         } catch (Exception e) {
             long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-            log.warn("ToolStat: tool={}, status=EXCEPTION, error=\"{}\", elapsed={}ms",
+            log.warn("工具调用异常：工具={}、错误=\"{}\"、耗时={}ms",
                     toolName, e.getMessage(), elapsedMs);
             throw e;
         }
@@ -44,10 +40,10 @@ public class ToolCallAspect {
         // 检查返回值是否为结构化错误
         if (result instanceof String resultStr && ToolResultUtils.isError(resultStr)) {
             String errType = extractErrorType(resultStr);
-            log.warn("ToolStat: tool={}, status=FAILED, errType={}, elapsed={}ms",
+            log.warn("工具调用失败：工具={}、错误类型={}、耗时={}ms",
                     toolName, errType, elapsedMs);
         } else {
-            log.info("ToolStat: tool={}, status=SUCCESS, elapsed={}ms",
+            log.info("工具调用成功：工具={}、耗时={}ms",
                     toolName, elapsedMs);
         }
 

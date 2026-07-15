@@ -467,8 +467,8 @@ public class FileConversionService {
         }
 
         if (!files.isEmpty()) {
-            log.info("已清理对话文件: conversationId={}, {} 个文件（排除 {} 个复用）",
-                    conversationId, files.size(), excludeIds.size());
+            log.info("已清理文件：{}个文件（排除{}个复用）",
+                    files.size(), excludeIds.size());
         }
     }
 

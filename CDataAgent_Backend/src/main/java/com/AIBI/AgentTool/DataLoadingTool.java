@@ -9,6 +9,8 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.AIBI.agent.model.AnalysisState;
+import com.AIBI.agent.run.RunContext;
+import com.AIBI.agent.run.RunContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -66,9 +68,11 @@ public class DataLoadingTool {
         if (metrics == null) metrics = List.of();
         if (outputFormats == null) outputFormats = List.of();
 
-        analysisState.setIntent(category, dimensions, metrics, clarity, summary, outputFormats);
-        log.info("declareIntent: category={}, clarity={}, dims={}, metrics={}, summary={}, outputFormats={}",
-                category, clarity, dimensions, metrics, summary, outputFormats);
+        // 意图声明写入 RunContext（替代 AnalysisState.setIntent）
+        RunContext ctx = RunContextHolder.require();
+        ctx.setIntent(category, dimensions, metrics, clarity, summary, outputFormats);
+        log.info("意图声明：分类={}、清晰度={}、维度={}、指标={}",
+                category, clarity, dimensions, metrics);
 
         return "意图已记录：类别=" + category + "，清晰度=" + clarity
                 + (dimensions.isEmpty() ? "" : "，维度=" + dimensions)
@@ -80,7 +84,8 @@ public class DataLoadingTool {
      * 意图守卫 — 在 loadData 执行前检查 intent 是否为 analysis。
      */
     private String checkIntentGuard() {
-        String category = analysisState.getIntentCategory();
+        RunContext ctx = RunContextHolder.require();
+        String category = ctx.getIntentCategory();
         if (category == null) {
             return ToolResultUtils.jsonTypedError("syntax",
                     "请先调用 declareIntent 声明意图后再加载数据。");
@@ -187,11 +192,10 @@ public class DataLoadingTool {
             List<String> names = files.stream()
                     .map(DataFile::getOriginalFilename)
                     .collect(Collectors.toList());
-            log.info("loadData: conversationId={}, {} 个文件已加载: {}",
-                    conversationId, files.size(), names);
+            log.info("数据加载：{}个文件已加载：{}", files.size(), names);
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("loadData 失败: conversationId={}", conversationId, e);
+            log.error("数据加载失败", e);
             analysisState.addStepResultFailed("loadData", "loadData", e.getMessage());
             return ToolResultUtils.jsonTypedError("system", "文件加载失败: " + e.getMessage() + "。请确认文件状态后重试或重新上传。");
         }
@@ -278,7 +282,7 @@ public class DataLoadingTool {
             result.put("columns", cols);
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("getSchema 失败: fileRef={}", fileRef, e);
+            log.error("获取表结构失败：文件引用={}", fileRef, e);
             analysisState.addStepResultFailed(fileRef, "getSchema", e.getMessage());
             return ToolResultUtils.jsonTypedError("syntax", "获取 schema 失败: " + e.getMessage() + "。请确认 viewName 或 fileId 是否正确。");
         }
