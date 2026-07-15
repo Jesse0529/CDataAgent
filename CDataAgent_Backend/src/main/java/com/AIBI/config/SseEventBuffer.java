@@ -37,6 +37,9 @@ public class SseEventBuffer {
     /** 最后写入的序号 */
     private final AtomicLong lastSeq = new AtomicLong(-1);
 
+    /** 关联的 runId（请求级运行标识，用于防止跨运行事件串扰） */
+    private volatile String runId;
+
     /** 流是否已结束 */
     private volatile boolean streamEnded = false;
 
@@ -53,6 +56,20 @@ public class SseEventBuffer {
     public SseEventBuffer(int maxEvents, long maxBytes) {
         this.maxEvents = maxEvents;
         this.maxBytes = maxBytes;
+    }
+
+    /**
+     * 设置关联的 runId。
+     */
+    public void setRunId(String runId) {
+        this.runId = runId;
+    }
+
+    /**
+     * 获取关联的 runId。
+     */
+    public String getRunId() {
+        return runId;
     }
 
     /**
@@ -101,15 +118,13 @@ public class SseEventBuffer {
         }
 
         List<BufferedEvent> result = new ArrayList<>();
-        boolean found = false;
         for (BufferedEvent event : buffer) {
-            if (found || event.seq() > seq) {
+            if (event.seq() > seq) {
                 result.add(event);
-                found = true;
             }
         }
         // 如果 seq 完全不在缓冲区（太旧），返回全部
-        if (!found && !buffer.isEmpty()) {
+        if (!buffer.isEmpty() && seq < buffer.peekFirst().seq()) {
             result = new ArrayList<>(buffer);
         }
         return result;
@@ -127,7 +142,7 @@ public class SseEventBuffer {
     public void markStreamEnd() {
         this.streamEnded = true;
         this.expireAt = Instant.now().plus(30, ChronoUnit.SECONDS);
-        log.debug("SseEventBuffer 标记流结束，30s 后过期: seq={}, size={}", lastSeq.get(), buffer.size());
+        log.debug("事件缓冲区标记流结束，30s后过期: seq={}, size={}", lastSeq.get(), buffer.size());
     }
 
     /** 缓冲区是否仍有效（流进行中，或流结束但未超期） */
@@ -152,7 +167,7 @@ public class SseEventBuffer {
         buffer.clear();
         currentBytes.set(0);
         expireAt = Instant.now();
-        log.debug("SseEventBuffer 已强制失效");
+        log.debug("事件缓冲区已强制失效");
     }
 
     // ── 内部记录类型 ──

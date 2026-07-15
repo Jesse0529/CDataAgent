@@ -3,7 +3,7 @@
  *
  * 当 AI 响应包含 ECharts v5 图表配置时：
  *  - 流式过程中自动过滤 raw JSON，只展示分析文本
- *  - 完成后显示「查看可视化图表」引导按钮
+ *  - 图表流程结束并持久化后显示「查看可视化图表」引导按钮
  *  - 点击按钮打开全屏弹窗清晰展示图表
  *
  * 当 AI 响应包含结论（conclusion）时：
@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
-import { computed, defineAsyncComponent, ref } from 'vue'
+import { type Component, computed, defineAsyncComponent, ref } from 'vue'
 import type { ChatMessageVO } from '@/services/types'
 import { extractChartOption } from '@/utils/chartParser'
 import {
@@ -23,7 +23,26 @@ import {
   renderCellContent,
   streamingMarkdown,
 } from '@/utils/messageRenderer'
+import { isValidRenderDocument } from '@/utils/renderDocument'
+import BulletListBlockVue from './blocks/BulletListBlock.vue'
+import DataTableBlockVue from './blocks/DataTableBlock.vue'
+import NoticeBlockVue from './blocks/NoticeBlock.vue'
+import ParagraphBlockVue from './blocks/ParagraphBlock.vue'
+import SummaryBlockVue from './blocks/SummaryBlock.vue'
 import LogoIcon from './LogoIcon.vue'
+
+// 文档区块很小，静态加载可避免最终文档首次挂载时出现空白帧。
+
+const blockCompMap: Record<string, Component> = {
+  summary: SummaryBlockVue,
+  paragraph: ParagraphBlockVue,
+  bullets: BulletListBlockVue,
+  table: DataTableBlockVue,
+  notice: NoticeBlockVue,
+}
+function blockComponent(type: string) {
+  return blockCompMap[type] ?? NoticeBlockVue
+}
 
 const msg = useMessage()
 
@@ -32,6 +51,11 @@ const ChartPreviewModal = defineAsyncComponent(() => import('./ChartPreviewModal
 const props = defineProps<{
   message: ChatMessageVO
 }>()
+
+const renderDocument = computed(() => {
+  const document = props.message.renderDocument
+  return isValidRenderDocument(document) ? document : null
+})
 
 const showChartModal = ref(false)
 const copySuccess = ref(false)
@@ -92,6 +116,23 @@ const chartResult = computed((): Record<string, unknown>[] | null => {
   return null
 })
 
+/** 流式阶段仅展示统一的不可点击图表入口，持久化刷新后才开放预览。 */
+const chartPending = computed(
+  () =>
+    props.message.status === 'streaming' &&
+    (props.message.chartGenerating || Boolean(chartResult.value)),
+)
+const canPreviewChart = computed(
+  () =>
+    props.message.status === 'done' &&
+    props.message.chartPreviewAvailable === true &&
+    Boolean(chartResult.value),
+)
+
+function openChartPreview(): void {
+  if (canPreviewChart.value) showChartModal.value = true
+}
+
 /**
  * 获取展示文本：过滤掉可能的图表 JSON，只保留分析文本。
  * 新消息 content 已不含 JSON 和分隔符（ChartOutputTool 存 chartOption，
@@ -133,11 +174,7 @@ const contentSegments = computed((): ContentSegment[] => {
 
   // 流式状态：将光标插入最后一个文本段的末段 <p> 内，紧跟最后一个文字
   // 图表生成阶段不显示光标，改用「正在生成图表…」骨架提示
-  if (
-    props.message.status === 'streaming' &&
-    !props.message.chartGenerating &&
-    segments.length > 0
-  ) {
+  if (props.message.status === 'streaming' && !chartPending.value && segments.length > 0) {
     for (let i = segments.length - 1; i >= 0; i--) {
       const seg = segments[i]
       if (seg.type === 'text' && seg.html) {
@@ -229,7 +266,7 @@ function formatTokens(n: number): string {
         <span class="loading-dot" />
         <span class="loading-dot" />
         <span class="loading-dot" />
-        <span class="loading-text">正在分析…</span>
+        <span class="loading-text">思考中…</span>
       </div>
     </div>
   </div>
@@ -241,7 +278,7 @@ function formatTokens(n: number): string {
         <LogoIcon :size="28" />
       </div>
 
-      <!-- 无真实内容时的状态指示器（流式初期，图表生成阶段改用骨架提示） -->
+      <!-- 无真实内容时的状态指示器（图表流程改用统一入口） -->
       <div v-if="message.status === 'streaming' && !hasRealContent && !message.chartGenerating" class="msg-bubble msg-bubble--status">
         <span class="status-spinner" />
         <span class="status-text">{{ streamingDisplay() }}</span>
@@ -277,8 +314,24 @@ function formatTokens(n: number): string {
           <div class="msg-conclusion__text">{{ conclusion }}</div>
         </div>
 
+        <!-- v1 协议：RenderDocument 区块渲染 -->
+        <template v-if="renderDocument">
+          <TransitionGroup name="render-block" tag="div" class="render-document">
+            <component
+              v-for="(block, index) in renderDocument.blocks.filter((item) => item.type !== 'chart')"
+              :key="block.id"
+              :is="blockComponent(block.type)"
+              :block="block"
+              :style="{ '--render-block-delay': `${index * 45}ms` }"
+            />
+          </TransitionGroup>
+          <div v-if="renderDocument.degraded" class="degraded-notice">
+            ⚠️ 回答已降级
+          </div>
+        </template>
+
         <!-- 内容段：文本段 v-html 更新，表格段 v-for 固定骨架 + 增量行 -->
-        <template v-for="seg in contentSegments" :key="seg.key">
+        <template v-if="!renderDocument" v-for="seg in contentSegments" :key="seg.key">
           <div v-if="seg.type === 'text'" class="msg-text" v-html="seg.html" />
           <div v-else-if="seg.type === 'table' && seg.headers" class="msg-tables">
             <div class="msg-table-wrap">
@@ -299,7 +352,7 @@ function formatTokens(n: number): string {
         </template>
 
         <!-- event:table 结构化表格（流式 + 完成态均可能） -->
-        <div v-if="message.tables && message.tables.length > 0" class="msg-tables">
+        <div v-if="!renderDocument && message.tables && message.tables.length > 0" class="msg-tables">
           <div v-for="table in message.tables" :key="table.outputKey" class="msg-table-wrap">
             <table>
               <thead>
@@ -318,27 +371,16 @@ function formatTokens(n: number): string {
           </div>
         </div>
 
-        <!-- 图表加载骨架（生成图表中，数据未就绪时显示） -->
+        <!-- 图表入口：流式阶段与完成后的布局、图标和样式保持一致。 -->
         <div
-          v-if="message.status === 'streaming' && message.chartGenerating && !chartResult"
-          class="chart-trigger chart-trigger--loading"
-        >
-          <span class="chart-trigger__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="14" width="4" height="7" rx="1" fill="currentColor" />
-              <rect x="10" y="9" width="4" height="12" rx="1" fill="currentColor" />
-              <rect x="17" y="4" width="4" height="17" rx="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span class="chart-trigger__text">正在生成图表…</span>
-          <span class="chart-trigger__spinner" />
-        </div>
-
-        <!-- 图表引导按钮（流式中或完成后均可显示） -->
-        <div
-          v-if="chartResult"
+          v-if="chartPending || canPreviewChart"
           class="chart-trigger"
-          @click="showChartModal = true"
+          :class="{ 'chart-trigger--pending': chartPending }"
+          :role="canPreviewChart ? 'button' : undefined"
+          :tabindex="canPreviewChart ? 0 : undefined"
+          :aria-disabled="canPreviewChart ? undefined : true"
+          @click="openChartPreview"
+          @keydown.enter.prevent="openChartPreview"
         >
           <span class="chart-trigger__icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -348,7 +390,9 @@ function formatTokens(n: number): string {
             </svg>
           </span>
           <span class="chart-trigger__text">
-            {{ chartResult.length === 1 ? '查看可视化图表' : `查看可视化图表（${chartResult.length} 张）` }}
+            {{ canPreviewChart
+              ? (chartResult?.length === 1 ? '查看可视化图表' : `查看可视化图表（${chartResult?.length} 张）`)
+              : '正在生成图表…' }}
           </span>
           <span class="chart-trigger__arrow">→</span>
         </div>
@@ -364,10 +408,10 @@ function formatTokens(n: number): string {
       </div>
     </div>
 
-    <!-- 图表预览弹窗（所有状态均可触发） -->
+    <!-- 图表预览弹窗仅在持久化完成后按需挂载。 -->
     <ChartPreviewModal
-      v-if="chartResult"
-      :charts="chartResult.map((opt) => ({ option: opt }))"
+      v-if="canPreviewChart && showChartModal"
+      :charts="(chartResult ?? []).map((opt) => ({ option: opt }))"
       :visible="showChartModal"
       @close="showChartModal = false"
     />
@@ -456,6 +500,29 @@ function formatTokens(n: number): string {
 }
 .msg-bubble--streaming > .msg-tables {
   width: 100%;
+}
+
+.render-document {
+  display: grid;
+  gap: 2px;
+}
+
+.render-block-enter-active {
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms var(--ease-out-expo);
+  transition-delay: var(--render-block-delay, 0ms);
+}
+
+.render-block-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .render-block-enter-active {
+    transition: none;
+  }
 }
 
 /* 状态气泡（图表生成 / 思考中） */
@@ -653,6 +720,11 @@ function formatTokens(n: number): string {
   box-shadow: 0 2px 16px var(--accent-glow);
 }
 
+.chart-trigger--pending {
+  cursor: default;
+  pointer-events: none;
+}
+
 .chart-trigger__icon {
   flex-shrink: 0;
   width: 36px;
@@ -678,32 +750,6 @@ function formatTokens(n: number): string {
   transition: transform 0.28s var(--spring);
 }
 
-/* 图表加载骨架 — 淡化、无交互 */
-.chart-trigger--loading {
-  cursor: default;
-  opacity: 0.65;
-  pointer-events: none;
-}
-.chart-trigger--loading:hover {
-  border-color: var(--border-soft);
-  box-shadow: none;
-}
-
-/* 图表加载旋转器 */
-.chart-trigger__spinner {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border-soft);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: chart-spin 0.7s linear infinite;
-}
-
-@keyframes chart-spin {
-  to { transform: rotate(360deg); }
-}
-
 /* ===== 用户消息附件 chips ===== */
 .msg-attachments {
   display: flex;
@@ -715,26 +761,27 @@ function formatTokens(n: number): string {
 .msg-attach-chip {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 10px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
-  max-width: 180px;
   user-select: none;
   -webkit-user-select: none;
+  max-width: 100%;
 }
 
 .msg-attach-chip__icon {
-  font-size: 12px;
+  flex-shrink: 0;
+  font-size: 13px;
   line-height: 1;
 }
 
 .msg-attach-chip__name {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.85);
 }
 

@@ -25,6 +25,8 @@ ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS fileAttachments TEXT N
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS chartOption TEXT NULL;
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS tokenUsage INT NULL;
 ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS conclusion CLOB NULL;
+ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS renderDocument TEXT NULL;
+ALTER TABLE conversation_message ADD COLUMN IF NOT EXISTS renderVersion INT NULL;
 CREATE INDEX IF NOT EXISTS idx_msg_conv ON conversation_message(conversationId);
 
 -- 数据文件表

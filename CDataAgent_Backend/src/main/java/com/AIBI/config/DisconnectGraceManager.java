@@ -59,7 +59,7 @@ public class DisconnectGraceManager {
         cancelled.put(cid, new AtomicBoolean(false));
         sinks.put(cid, sink);
         buffers.put(cid, buffer);
-        log.debug("GraceManager 注册流: cid={}", cid);
+        log.debug("SSE流已注册");
         return sink;
     }
 
@@ -82,12 +82,12 @@ public class DisconnectGraceManager {
         if (existing != null && !existing.isDone()) return; // 已有活跃定时器
 
         ScheduledFuture<?> timer = scheduler.schedule(() -> {
-            log.warn("优雅窗格到期，强制终止流: cid={}", cid);
+            log.warn("优雅窗格到期，强制终止流");
             forceCancel(cid);
         }, GRACE_SECONDS, TimeUnit.SECONDS);
 
         timers.put(cid, timer);
-        log.info("SSE 断连，启动 {}s 优雅窗格: cid={}", GRACE_SECONDS, cid);
+        log.info("SSE断连，启动{}s优雅窗格", GRACE_SECONDS);
     }
 
     /**
@@ -98,11 +98,11 @@ public class DisconnectGraceManager {
     public Flux<Map<String, String>> onReconnect(String cid) {
         AtomicBoolean flag = cancelled.get(cid);
         if (flag != null && flag.get()) {
-            log.warn("重连失败，流已取消: cid={}", cid);
+            log.warn("重连失败，流已取消");
             return null;
         }
         if (flag == null) {
-            log.warn("重连失败，无活跃流: cid={}", cid);
+            log.warn("重连失败，无活跃流");
             return null;
         }
 
@@ -115,7 +115,7 @@ public class DisconnectGraceManager {
         Sinks.Many<Map<String, String>> sink = sinks.get(cid);
         if (sink == null) return null;
 
-        log.info("SSE 重连成功，接回活跃流: cid={}", cid);
+        log.info("SSE重连成功，接回活跃流");
         return sink.asFlux();
     }
 
@@ -154,7 +154,7 @@ public class DisconnectGraceManager {
             buf.markStreamEnd();
         }
 
-        log.info("SSE 流已强制取消: cid={}", cid);
+        log.info("SSE流已强制取消");
     }
 
     /**

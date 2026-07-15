@@ -18,6 +18,7 @@ import {
 } from '@/services/api'
 import type { ChatMessageVO, DataFileVO, MessageVO } from '@/services/types'
 import { parseChartOptions, parseFileAttachments } from '@/utils/messageParser'
+import { safeParseRenderDocument } from '@/utils/renderDocument'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -26,6 +27,15 @@ const dialog = useDialog()
 const activeConversationId = ref<string | null>(null)
 const messages = ref<ChatMessageVO[]>([])
 const configCollapsed = ref(false)
+
+function parseRenderDocument(value: string | null | undefined) {
+  if (!value) return null
+  try {
+    return safeParseRenderDocument(JSON.parse(value))
+  } catch {
+    return null
+  }
+}
 
 const {
   files,
@@ -43,6 +53,12 @@ const {
   start: startAgentStream,
   stop: stopAgentStream,
 } = useAgentStream()
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
 
 // ---- 文件预览 ----
 const previewFileId = ref<string | null>(null)
@@ -189,12 +205,49 @@ async function loadMessages() {
       timestamp: new Date(m.createTime).getTime(),
       status: 'done' as const,
       chartOption: parseChartOptions(m.chartOption),
+      chartPreviewAvailable: m.role === 'assistant',
       fileAttachments: parseFileAttachments(m.fileAttachments),
       tokenUsage: m.tokenUsage ?? undefined,
+      renderDocument: m.renderVersion === 1 ? parseRenderDocument(m.renderDocument) : null,
+      renderVersion: m.renderVersion ?? null,
     }))
     scrollToBottom(true)
   } catch (err: unknown) {
     console.warn('[AnalysisPage] loadMessages failed', err)
+  }
+}
+
+async function syncMessagesAfterStream(): Promise<void> {
+  flushMessages()
+  const conversationId = activeConversationId.value
+  if (!conversationId) return
+
+  try {
+    const persistedMessages = await withRetry(() =>
+      apiGetChecked<MessageVO[]>(`/agent/conversations/${conversationId}/messages`),
+    )
+    const persisted = [...(persistedMessages || [])]
+      .reverse()
+      .find((item) => item.role === 'assistant')
+    const liveMessage = [...messages.value]
+      .reverse()
+      .find((item) => item.role === 'ai' && item.status === 'done')
+    if (!persisted || !liveMessage) return
+
+    const persistedDocument =
+      persisted.renderVersion === 1 ? parseRenderDocument(persisted.renderDocument) : null
+    const persistedCharts = parseChartOptions(persisted.chartOption)
+
+    if (!liveMessage.renderDocument && persistedDocument) {
+      liveMessage.renderDocument = persistedDocument
+      liveMessage.renderVersion = persisted.renderVersion ?? null
+    }
+    if (!liveMessage.chartOption && persistedCharts) liveMessage.chartOption = persistedCharts
+    if (liveMessage.tokenUsage === undefined)
+      liveMessage.tokenUsage = persisted.tokenUsage ?? undefined
+    liveMessage.chartPreviewAvailable = true
+  } catch (err: unknown) {
+    console.warn('[AnalysisPage] stream message reconciliation failed', err)
   }
 }
 
@@ -239,7 +292,7 @@ async function handleSend(text: string) {
     fileIds: [...selectedFileIds.value],
     message: activeStreamMessage,
     onScrollToBottom: scrollToBottom,
-    onPersist: flushMessages,
+    onPersist: syncMessagesAfterStream,
   })
 }
 
@@ -286,8 +339,11 @@ async function handleLocateMessage(msgId: string): Promise<void> {
         timestamp: new Date(m.createTime).getTime(),
         status: 'done' as const,
         chartOption: parseChartOptions(m.chartOption),
+        chartPreviewAvailable: m.role === 'assistant',
         fileAttachments: parseFileAttachments(m.fileAttachments),
         tokenUsage: m.tokenUsage ?? undefined,
+        renderDocument: m.renderVersion === 1 ? parseRenderDocument(m.renderDocument) : null,
+        renderVersion: m.renderVersion ?? null,
       }))
     } catch (err: unknown) {
       console.warn('[AnalysisPage] reload for locate failed', err)
@@ -424,25 +480,19 @@ onBeforeUnmount(() => {
         <div v-if="files.length > 0" class="file-box">
           <div class="file-box__grid">
             <div
-              v-for="file in files"
+              v-for="file in files.slice(0, 8)"
               :key="file.id"
               class="file-item"
               :class="{ 'file-item--on': selectedFileIds.has(file.id) }"
               @click="toggleFile(file.id)"
             >
               <span class="file-item__check">
-                <svg v-if="selectedFileIds.has(file.id)" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <svg v-if="selectedFileIds.has(file.id)" width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" fill="var(--accent)" stroke="none" />
                   <path d="M16 8l-6.5 7.5L6 12" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
-                <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
-                </svg>
-              </span>
-              <span class="file-item__icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 4a2 2 0 012-2h7l4 4v14a2 2 0 01-2 2H8a2 2 0 01-2-2V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                  <path d="M15 2v4a1 1 0 001 1h4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                 </svg>
               </span>
               <span class="file-item__name">{{ file.originalFilename }}</span>
@@ -465,6 +515,14 @@ onBeforeUnmount(() => {
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
                 </svg>
               </button>
+              <div class="file-item__tooltip">
+                <div class="file-item__tooltip-name">{{ file.originalFilename }}</div>
+                <div class="file-item__tooltip-row">
+                  <span>{{ formatSize(file.fileSize) }}</span>
+                  <span>{{ file.rowCount.toLocaleString() }} 行</span>
+                  <span :class="file.status === 'READY' ? 'status-ready' : 'status-processing'">{{ file.status }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -603,24 +661,25 @@ onBeforeUnmount(() => {
 
 .file-box__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   position: relative;
   z-index: 1;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .file-box__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 /* ===== 单个文件气泡 ===== */
 .file-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px 8px 8px;
+  padding: 8px 10px;
   border-radius: 14px;
   background: var(--surface-raised);
   border: 1px solid var(--border-inner);
@@ -655,35 +714,25 @@ onBeforeUnmount(() => {
   color: var(--accent);
 }
 
-/* 文件图标 */
-.file-item__icon {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  color: var(--muted);
-}
-
-.file-item--on .file-item__icon {
-  color: var(--accent);
-}
-
 /* 文件名 */
 .file-item__name {
   flex: 1;
-  min-width: 0;
+  min-width: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
+  font-size: 14px;
+  color: var(--fg);
 }
 
-/* 预览按钮 */
+/* 预览按钮 — 淡入淡出，不改变布局 */
 .file-item__preview {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -692,7 +741,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   padding: 0;
   opacity: 0;
-  transition: all 0.2s var(--ease-out-expo);
+  transition: opacity 0.2s var(--ease-out-expo);
 }
 
 .file-item:hover .file-item__preview {
@@ -702,16 +751,15 @@ onBeforeUnmount(() => {
 .file-item__preview:hover {
   color: var(--accent);
   background: var(--accent-glow-soft);
-  opacity: 1;
 }
 
-/* 删除按钮 */
+/* 删除按钮 — 淡入淡出，不改变布局 */
 .file-item__delete {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -720,7 +768,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   padding: 0;
   opacity: 0;
-  transition: all 0.2s var(--ease-out-expo);
+  transition: opacity 0.2s var(--ease-out-expo);
 }
 
 .file-item:hover .file-item__delete {
@@ -730,7 +778,52 @@ onBeforeUnmount(() => {
 .file-item__delete:hover {
   color: #e05555;
   background: rgba(224, 85, 85, 0.12);
+}
+
+/* ===== hover 信息气泡 ===== */
+.file-item__tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 100%;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s var(--ease-out-expo);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.file-item:hover .file-item__tooltip {
   opacity: 1;
+}
+
+.file-item__tooltip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-item__tooltip-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.file-item__tooltip-row .status-ready {
+  color: #4caf50;
+}
+
+.file-item__tooltip-row .status-processing {
+  color: var(--accent);
 }
 
 /* 当文件少于一整行时，让卡片不用撑满 */

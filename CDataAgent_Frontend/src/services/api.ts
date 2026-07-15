@@ -9,7 +9,14 @@
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 const BASE_URL = (configuredBaseUrl || '/apis').replace(/\/$/, '')
 
-import type { StructuredEvent, TableEventData } from './types'
+import { safeParseRenderDocument } from '@/utils/renderDocument'
+import type {
+  MetaEvent,
+  ProgressEvent,
+  RenderDocument,
+  StructuredEvent,
+  TableEventData,
+} from './types'
 
 // ---- 错误码常量 ----
 
@@ -271,6 +278,9 @@ export function apiPostStream(
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
 ): { promise: Promise<StreamResult>; abort: () => void } {
   const { controller: abortController, timer } = createTimeout(STREAM_TIMEOUT)
   let userAborted = false
@@ -316,7 +326,17 @@ export function apiPostStream(
         if (done) {
           buffer += decoder.decode()
           // 处理缓冲区中可能残留的最后一个事件
-          processBuffer(buffer, onToken, onStructured, onStatus, onChart, onTable)
+          processBuffer(
+            buffer,
+            onToken,
+            onStructured,
+            onStatus,
+            onChart,
+            onTable,
+            onMeta,
+            onDocument,
+            onProgress,
+          )
           return { status: 'completed' }
         }
 
@@ -332,7 +352,17 @@ export function apiPostStream(
 
           if (rawEvent.length === 0) continue
 
-          processSSEEvent(rawEvent, onToken, onStructured, onStatus, onChart, onTable)
+          processSSEEvent(
+            rawEvent,
+            onToken,
+            onStructured,
+            onStatus,
+            onChart,
+            onTable,
+            onMeta,
+            onDocument,
+            onProgress,
+          )
         }
       }
     } catch (err: unknown) {
@@ -374,10 +404,23 @@ function processBuffer(
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
 ): void {
   const trimmed = buffer.trim()
   if (trimmed.length === 0) return
-  processSSEEvent(trimmed, onToken, onStructured, onStatus, onChart, onTable)
+  processSSEEvent(
+    trimmed,
+    onToken,
+    onStructured,
+    onStatus,
+    onChart,
+    onTable,
+    onMeta,
+    onDocument,
+    onProgress,
+  )
 }
 
 /**
@@ -390,15 +433,21 @@ function processSSEEvent(
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
 ): void {
   const dataLines: string[] = []
   let eventType = ''
+  let eventId: string | null = null
 
   for (const line of rawEvent.split(/\r?\n/)) {
     if (line.startsWith('data:')) {
       dataLines.push(line.slice(5).replace(/^ /, ''))
     } else if (line.startsWith('event:')) {
       eventType = line.slice(6).trim()
+    } else if (line.startsWith('id:')) {
+      eventId = line.slice(3).trim()
     }
   }
 
@@ -410,6 +459,44 @@ function processSSEEvent(
   }
 
   const text = dataLines.join('\n')
+
+  // ── 新事件：meta ──
+  if (eventType === 'meta') {
+    try {
+      const meta = JSON.parse(text) as MetaEvent
+      onMeta?.(meta, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  // ── 新事件：document ──
+  if (eventType === 'document') {
+    try {
+      const doc = JSON.parse(text)
+      const parsed = safeParseRenderDocument(doc)
+      if (parsed) onDocument?.(parsed, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  if (eventType === 'progress') {
+    try {
+      const progress = JSON.parse(text) as ProgressEvent
+      if (progress.stage && progress.label && progress.state) onProgress?.(progress, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  if (eventType === 'preview') {
+    onToken(text)
+    return
+  }
 
   if (eventType === 'status') {
     if (onStatus) onStatus(text)
@@ -449,8 +536,8 @@ function processSSEEvent(
       } else if (onStructured) {
         onStructured(parsed)
       }
-    } catch {
-      onToken(text)
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('无效的完成事件')
     }
     return
   }
@@ -460,7 +547,7 @@ function processSSEEvent(
   }
 
   // event:message / 无 event 字段 → 文本 token
-  if (text) {
+  if ((eventType === 'message' || eventType === '') && text) {
     onToken(text)
   }
 }

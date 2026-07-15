@@ -1,6 +1,13 @@
 import { ref } from 'vue'
 import { apiPostStream } from '@/services/api'
-import type { ChatMessageVO, StructuredEvent, TableEventData } from '@/services/types'
+import type {
+  ChatMessageVO,
+  MetaEvent,
+  ProgressEvent,
+  RenderDocument,
+  StructuredEvent,
+  TableEventData,
+} from '@/services/types'
 import { parseChartOptions } from '@/utils/messageParser'
 
 const MAX_RETRIES = 3
@@ -30,19 +37,23 @@ export function useAgentStream() {
 
   async function start(options: StartAgentStreamOptions): Promise<void> {
     const { conversationId, text, fileIds, message, onScrollToBottom, onPersist } = options
-    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}`
+    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1`
     if (fileIds.length > 0) streamUrl += `&fileIds=${fileIds.join(',')}`
 
     let finalAnalysis = ''
     let pendingContent = ''
     let rafToken: number | null = null
     let resumeToken: string | undefined
-    let eventCount = 0
     let retryCount = 0
     let retryTimer: ReturnType<typeof setTimeout> | null = null
     let resolveRetryWait: ((shouldRetry: boolean) => void) | null = null
     let currentAbort: (() => void) | null = null
     let cancelled = false
+
+    // v1 协议状态
+    let currentRunId: string | null = null
+    let lastEventId: string | null = null
+    const seenEventIds = new Set<string>()
 
     function flushBuffer(): void {
       rafToken = null
@@ -91,7 +102,6 @@ export function useAgentStream() {
         url,
         {},
         (token) => {
-          eventCount++
           pendingContent += token
           if (!rafToken) rafToken = requestAnimationFrame(flushBuffer)
         },
@@ -99,7 +109,6 @@ export function useAgentStream() {
           const chartOptions = parseChartOptions(data.chartOption)
           if (chartOptions) {
             message.chartOption = chartOptions
-            message.chartGenerating = false
           }
           if (data.analysis) finalAnalysis = data.analysis
           if (typeof data.tokenUsage === 'number') message.tokenUsage = data.tokenUsage
@@ -118,10 +127,42 @@ export function useAgentStream() {
         },
         (chartJson) => {
           const chartOptions = parseChartOptions(chartJson)
-          if (chartOptions) message.chartOption = chartOptions
+          if (chartOptions) {
+            message.chartOption = chartOptions
+          }
         },
         (tableData: TableEventData) => {
           message.tables = [...(message.tables || []), tableData]
+          onScrollToBottom(true)
+        },
+        (meta: MetaEvent, eventId: string | null) => {
+          currentRunId = meta.runId
+          lastEventId = eventId
+          resumeToken = meta.resumeToken
+          message.runId = meta.runId
+          message.lastEventId = eventId
+        },
+        (doc: RenderDocument, eventId: string | null) => {
+          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
+          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          message.renderDocument = doc
+          message.renderVersion = 1
+          message.lastEventId = eventId
+          if (eventId) lastEventId = eventId
+          onScrollToBottom(true)
+        },
+        (progress: ProgressEvent, eventId: string | null) => {
+          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
+          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          message.progress = progress
+          message.lastEventId = eventId
+          if (eventId) lastEventId = eventId
+          if (progress.stage === 'chart') {
+            message.chartGenerating = progress.state === 'running'
+          }
+          if (progress.stage !== 'analysis' && !pendingContent && !message.renderDocument) {
+            message.content = progress.label
+          }
           onScrollToBottom(true)
         },
       )
@@ -143,7 +184,8 @@ export function useAgentStream() {
           retryCount++
           message.reconnecting = true
           if (!(await waitForRetry(1000 * 2 ** (retryCount - 1)))) return
-          url = `/agent/chat/resume?conversationId=${encodeURIComponent(conversationId)}&resumeToken=${encodeURIComponent(resumeToken)}&resumeSeq=${eventCount}`
+          if (!currentRunId || !lastEventId) throw error
+          url = `/agent/chat/resume?runId=${encodeURIComponent(currentRunId)}&resumeToken=${encodeURIComponent(resumeToken)}&lastEventId=${encodeURIComponent(lastEventId)}`
         } finally {
           currentAbort = null
         }
@@ -161,6 +203,7 @@ export function useAgentStream() {
         message.status = 'done'
         message.timestamp = Date.now()
         message.chartGenerating = false
+        message.chartPreviewAvailable = true
         message.reconnecting = false
         onPersist()
         onScrollToBottom()
@@ -170,6 +213,8 @@ export function useAgentStream() {
       message.content = message.content || `❌ ${errorText}`
       message.status = 'error'
       message.timestamp = Date.now()
+      message.chartGenerating = false
+      message.chartPreviewAvailable = false
       message.reconnecting = false
       onPersist()
       onScrollToBottom()

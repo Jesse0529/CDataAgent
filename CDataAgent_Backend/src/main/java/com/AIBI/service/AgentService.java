@@ -35,6 +35,20 @@ public interface AgentService {
     Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds);
 
     /**
+     * 执行 Agent 对话（流式），绑定指定数据文件，支持协议协商。
+     * @param userMessage 用户消息文本
+     * @param fileIds 本次消息绑定的数据文件 ID 列表
+     * @param renderProtocol 前端渲染协议（null = 旧协议, "render-document.v1" = 新协议）
+     */
+    Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds, String renderProtocol);
+
+    /**
+     * 使用调用方分配的运行标识执行流。runId 是事件恢复和状态隔离的主键。
+     */
+    Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds,
+                                         String renderProtocol, String runId);
+
+    /**
      * 获取对话的消息历史（按时间正序）。
      */
     List<MessageVO> getConversationMessages(Long conversationId);
@@ -64,15 +78,4 @@ public interface AgentService {
      */
     void resetConversation(Long conversationId);
 
-    /**
-     * 获取上一轮 AI 回复的图表配置 JSON（ECharts option），
-     * 用于 SSE complete 事件推送到前端。
-     */
-    String getLastChartOption();
-
-    /**
-     * 获取上一轮 AI 回复的 token 消耗量，
-     * 用于 SSE complete 事件推送到前端。
-     */
-    Integer getLastTokenUsage();
 }
