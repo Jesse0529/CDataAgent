@@ -100,8 +100,9 @@ public class ModelManager implements ChatModel {
 
     @Override
     public reactor.core.publisher.Flux<org.springframework.ai.chat.model.ChatResponse> stream(Prompt prompt) {
+        StreamingUsageAccumulator usageAccumulator = new StreamingUsageAccumulator();
         return resolveModel().stream(prompt)
-                .doOnNext(this::recordUsage);
+                .doOnNext(response -> recordUsage(response, usageAccumulator));
     }
 
     // ─── Token 记录 ────────────────────────────────
@@ -111,6 +112,10 @@ public class ModelManager implements ChatModel {
      * 当 currentConversationId 未设置（非对话场景的模型调用）时静默跳过。
      */
     private void recordUsage(ChatResponse response) {
+        recordUsage(response, null);
+    }
+
+    private void recordUsage(ChatResponse response, StreamingUsageAccumulator usageAccumulator) {
         long cid = currentConversationId.get();
         if (cid <= 0L) return;
 
@@ -121,10 +126,19 @@ public class ModelManager implements ChatModel {
         Integer completionTokens = usage.getCompletionTokens();
         if (promptTokens == null || completionTokens == null) return;
 
+        if (usageAccumulator != null) {
+            StreamingUsageAccumulator.UsageDelta delta = usageAccumulator
+                    .accept(response.getMetadata().getId(), promptTokens, completionTokens)
+                    .orElse(null);
+            if (delta == null) return;
+            promptTokens = delta.inputTokens();
+            completionTokens = delta.outputTokens();
+        }
+
         try {
             tokenLedger.recordRoundModelCall(cid, promptTokens, completionTokens);
         } catch (Exception e) {
-            log.warn("ModelManager token 记录失败: cid={}", cid, e);
+            log.warn("Token记录失败", e);
         }
     }
 
@@ -142,18 +156,18 @@ public class ModelManager implements ChatModel {
         // 检查缓存是否存在且配置一致
         ModelCacheEntry entry = modelCache.getIfPresent(CACHE_KEY);
         if (entry != null && configJson.equals(entry.configJson)) {
-            log.debug("resolveModel: 缓存命中，配置未变更");
+            log.debug("模型缓存命中，配置未变更");
             return entry.model;
         }
 
         // 缓存不存在或配置已变更 → 重建模型
         try {
             JSONObject cfg = JSON.parseObject(configJson);
-            log.info("resolveModel: 配置已变更或首次加载, provider={}, model={}",
+            log.info("模型解析：配置已变更或首次加载, provider={}, model={}",
                     cfg.getString("provider"), cfg.getString("modelName"));
             ChatModel userModel = buildChatModel(cfg);
             modelCache.put(CACHE_KEY, new ModelCacheEntry(userModel, configJson));
-            log.info("自定义模型已创建: provider={}, model={}",
+            log.info("自定义模型已创建：provider={}、model={}",
                     cfg.getString("provider"), cfg.getString("modelName"));
             return userModel;
         } catch (Exception e) {

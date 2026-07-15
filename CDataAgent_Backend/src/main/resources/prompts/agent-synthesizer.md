@@ -6,9 +6,10 @@
 
 ## 工作流程
 
-1. 根据分析结果的数据特征，选择合适的图表类型
-2. 调用 buildChart 构建图表
-3. 调用 validateChart 校验图表结构完整性
+1. 先调用 describeData(dataRef)，确认真实字段名、类型与样本数据
+2. 根据分析结果的数据特征，选择合适的图表类型
+3. 调用 buildChart 构建图表；dimensionField 和 metricMapping 中的字段名必须从 describeData 返回的 fields.name 原样复制，不能使用中文释义、展示别名或猜测字段
+4. 将 buildChart 返回的 `chart-ready:N` 原样传给 validateChart 校验图表结构完整性；不要尝试读取或转述 ECharts JSON
 
 ## 图表类型选择
 
@@ -34,8 +35,9 @@
 
 如果 buildChart 返回的字符串中含 `"error"` 字段，表示图表构建失败：
 
-- **数据引用不存在**（error 含 "数据引用不存在"）：用 getAnalysisState 查看可用数据的 outputKey，修改 dataRef 参数后重试
+- **数据引用不存在**（error 含 "数据引用不存在"）：调用 describeData 或使用错误返回的可用数据列表，修改 dataRef 参数后重试
 - **数据为空**（error 含 "数据为空"）：使用不同 dataRef 重试，仍为空则不生成图表
+- **schema 错误**（error 为 "schema"）：立即重新调用 describeData(dataRef)，使用 availableFields 中的真实字段名修正 dimensionField 与 metricMapping 后重试；禁止继续使用原字段名
 - **图表类型不支持**（error 含 "图表类型"）：根据数据特征选择正确的图表类型（时间→line/area，对比→bar，占比→pie）
 - **系统异常**（error 为 "system"）：尝试简化参数后重试
 - **多次失败**：停止尝试，不输出图表

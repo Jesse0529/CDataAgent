@@ -117,8 +117,7 @@ public class TokenLedger {
             stringRedisTemplate.opsForHash().increment(key, "roundOutputTokens", outputTokens);
             stringRedisTemplate.expire(key, TTL);
         } catch (Exception e) {
-            log.warn("TokenLedger 记录失败: cid={}, input={}, out={}",
-                    conversationId, inputTokens, outputTokens, e);
+            log.warn("Token记录失败: input={}, out={}", inputTokens, outputTokens, e);
         }
     }
 
@@ -130,10 +129,22 @@ public class TokenLedger {
     public void initRound(Long conversationId) {
         String key = KEY_PREFIX + conversationId;
         try {
-            stringRedisTemplate.opsForHash().putIfAbsent(key, "roundInputTokens", "0");
-            stringRedisTemplate.opsForHash().putIfAbsent(key, "roundOutputTokens", "0");
+            stringRedisTemplate.opsForHash().put(key, "roundInputTokens", "0");
+            stringRedisTemplate.opsForHash().put(key, "roundOutputTokens", "0");
         } catch (Exception e) {
-            log.warn("TokenLedger initRound 失败: cid={}", conversationId, e);
+            log.warn("Token轮次初始化失败", e);
+        }
+    }
+
+    /**
+     * 丢弃未正常持久化的轮次计数，防止取消、超时或异常请求串入下一轮。
+     */
+    public void discardRound(Long conversationId) {
+        try {
+            stringRedisTemplate.opsForHash().delete(KEY_PREFIX + conversationId,
+                    "roundInputTokens", "roundOutputTokens");
+        } catch (Exception e) {
+            log.warn("Token轮次清理失败", e);
         }
     }
 
@@ -143,9 +154,9 @@ public class TokenLedger {
     public void reset(Long conversationId) {
         try {
             stringRedisTemplate.delete(KEY_PREFIX + conversationId);
-            log.debug("TokenLedger 已重置: cid={}", conversationId);
+            log.debug("Token用量已重置");
         } catch (Exception e) {
-            log.warn("TokenLedger 重置失败: cid={}", conversationId, e);
+            log.warn("Token用量重置失败", e);
         }
     }
 
