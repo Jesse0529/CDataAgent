@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import { extractChartOption } from './chartParser'
 
 export interface ContentSegment {
@@ -6,6 +8,33 @@ export interface ContentSegment {
   html?: string
   headers?: string[]
   rows?: string[][]
+}
+
+const UNSUPPORTED_DIAGRAM_FENCE = /```\s*(?:mermaid|plantuml|puml|dot|graphviz)\b/gi
+const UNSUPPORTED_DIAGRAM_DIRECTIVE =
+  /^\s*(?:(?:graph|flowchart)\s+(?:TD|TB|BT|RL|LR)\b|sequenceDiagram\b|classDiagram\b|stateDiagram(?:-v2)?\b|erDiagram\b|mindmap\b|journey\b|gantt\b).*?(?=\n\s*\n|$)/gims
+const DIAGRAM_PLACEHOLDER = '（关系图谱和流程图不支持直接展示，请使用表格或要点描述。）'
+
+/**
+ * 图谱 DSL 不属于当前受控展示能力。流式时先隐藏未闭合代码块，避免撑开布局；
+ * 最终结果由后端同一策略转换为文本说明。
+ */
+function removeUnsupportedDiagramBlocks(text: string): string {
+  let result = ''
+  let cursor = 0
+  UNSUPPORTED_DIAGRAM_FENCE.lastIndex = 0
+  let match = UNSUPPORTED_DIAGRAM_FENCE.exec(text)
+  while (match) {
+    result += text.slice(cursor, match.index)
+    const bodyStart = UNSUPPORTED_DIAGRAM_FENCE.lastIndex
+    const closing = text.indexOf('```', bodyStart)
+    result += DIAGRAM_PLACEHOLDER
+    if (closing < 0) return result
+    cursor = closing + 3
+    UNSUPPORTED_DIAGRAM_FENCE.lastIndex = cursor
+    match = UNSUPPORTED_DIAGRAM_FENCE.exec(text)
+  }
+  return (result + text.slice(cursor)).replace(UNSUPPORTED_DIAGRAM_DIRECTIVE, DIAGRAM_PLACEHOLDER)
 }
 export function getDisplayText(text: string): string {
   if (!text) return ''
@@ -426,7 +455,7 @@ function normalizeMarkdown(text: string): string {
 export function streamingMarkdown(text: string): string {
   if (!text) return ''
 
-  let raw = text
+  let raw = removeUnsupportedDiagramBlocks(text)
     // 过滤图表确认文本（已有独立图表按钮，不应在文本中重复）
     .replace(/现在为您生成可视化图表[！!]?/g, '')
     .replace(/✅图表已生成并校验通过[！!]?/g, '')
@@ -449,153 +478,40 @@ export function streamingMarkdown(text: string): string {
   // 合并断行表格：|2020\n| 2.463 | → |2020| 2.463 |
   raw = mergeBrokenTableRows(raw)
 
-  // 1. 转义 HTML（必须在表格转换前，否则会转义 <table> 标签）
-  const escaped = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-  // 2. 行内格式
-  let html = escaped
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__(.+?)__/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/_(.+?)_/g, '<em>$1</em>')
-    // 清理流式中未配对的 ** 标记（避免显示裸符号）
-    .replace(/\*{2,}/g, '')
-
-  // 3. 管道表格块 → HTML（在转义后执行，| 不受转义影响）
-  html = applyTableBlocks(html)
-
-  // 4. 块级格式（逐行）
-  const lines = html.split('\n')
-  const processed = lines.map((line) => {
-    const t = line.trim()
-    // 标准标题：## 文本（含空格）
-    const hm = t.match(/^(#{1,6})\s+(.+)$/)
-    if (hm) return `<h${hm[1].length}>${hm[2]}</h${hm[1].length}>`
-    // 兜底：## 开头的行都视为标题（无空格、emoji、特殊字符等情况）
-    const hm2 = t.match(/^(#{2,6})(.+)$/)
-    if (hm2) return `<h${hm2[1].length}>${hm2[2]}</h${hm2[1].length}>`
-    if (/^<table/i.test(t)) return t
-    // 分隔线：---/*** → <hr>
-    if (/^-{3,}$/.test(t) || /^\*{3,}$/.test(t)) return '<hr>'
-    // 游离 # 号行（非标题内容）→ 移除
-    if (/^#+$/.test(t)) return ''
-    return line
+  return DOMPurify.sanitize(marked.parse(raw, { async: false, breaks: true, gfm: true }), {
+    ALLOWED_ATTR: ['href', 'title'],
+    ALLOWED_TAGS: [
+      'a',
+      'blockquote',
+      'br',
+      'code',
+      'del',
+      'em',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'hr',
+      'li',
+      'ol',
+      'p',
+      'pre',
+      'strong',
+      'table',
+      'tbody',
+      'td',
+      'th',
+      'thead',
+      'tr',
+      'ul',
+    ],
   })
-  html = processed.join('\n')
-
-  // 5. 双换行分段
-  const paragraphs = html.split(/\n\n+/).filter(Boolean)
-  return paragraphs
-    .map((p) => {
-      const tp = p.trim()
-      if (/^<(h[1-6]|table|hr)/i.test(tp)) return tp
-      return `<p>${tp.replace(/\n/g, '<br>')}</p>`
-    })
-    .join('')
-}
-
-/** 将管道表格行数组转为 HTML <table>（单元格内容已 HTML 转义）。 */
-function pipeTableToHtml(rows: string[]): string {
-  if (rows.length === 0) return ''
-  if (rows.length === 1) {
-    // 流式过程中仅表头到达 → 渲染为仅有表头的表格骨架，避免原始管道文本闪烁
-    const cells = splitPipeRow(rows[0])
-    if (cells.length >= 2) {
-      let html = '<table class="msg-table-wrap">'
-      html += '<thead><tr>'
-      for (const c of cells) html += `<th>${escapeHtml(c) || '&nbsp;'}</th>`
-      html += '</tr></thead><tbody></tbody></table>'
-      return html
-    }
-    return rows[0] || ''
-  }
-
-  // 判断第一行是否为对齐行（无表头的情况）
-  const firstIsAlign = isAlignmentRow(rows[0])
-
-  let headerIdx = firstIsAlign ? -1 : 0 // -1 = 无表头
-  let bodyStart = firstIsAlign ? 1 : 1
-
-  // 若第一行是表头，检查第二行是否为对齐行（标准表格）
-  if (!firstIsAlign && rows.length > 1 && isAlignmentRow(rows[1])) {
-    bodyStart = 2
-  }
-
-  // 修复：对齐行在表头前面的非标准情况
-  if (firstIsAlign && rows.length > 1 && !isAlignmentRow(rows[1])) {
-    headerIdx = 1
-    bodyStart = 2
-  }
-
-  // 确定列数
-  const sampleRow = headerIdx >= 0 ? rows[headerIdx] : rows[bodyStart]
-  const colCount = sampleRow ? splitPipeRow(sampleRow).length : 1
-
-  let html = '<table class="msg-table-wrap">'
-
-  // 表头
-  if (colCount > 0) {
-    html += '<thead><tr>'
-    if (headerIdx >= 0) {
-      const headers = splitPipeRow(rows[headerIdx])
-      for (const h of headers) html += `<th>${escapeHtml(h) || '&nbsp;'}</th>`
-    } else if (bodyStart < rows.length) {
-      const headers = splitPipeRow(rows[bodyStart])
-      for (const h of headers) html += `<th>${escapeHtml(h) || '&nbsp;'}</th>`
-      bodyStart++
-    } else {
-      // 无表头行：生成占位列名
-      for (let c = 0; c < colCount; c++) html += `<th>&nbsp;</th>`
-    }
-    html += '</tr></thead>'
-  }
-
-  // 表体
-  html += '<tbody>'
-  for (let i = bodyStart; i < rows.length; i++) {
-    const cells = splitPipeRow(rows[i])
-    // 列数归一化：确保每行与表头列数一致
-    const normCells =
-      cells.length < colCount
-        ? [...cells, ...Array(colCount - cells.length).fill('')]
-        : cells.slice(0, colCount)
-    html += '<tr>'
-    for (const c of normCells) html += `<td>${escapeHtml(c) || '&nbsp;'}</td>`
-    html += '</tr>'
-  }
-  html += '</tbody></table>'
-  return html
 }
 
 /** 拆分管道表格行。 */
 function splitPipeRow(line: string): string[] {
   const t = line.trim().replace(/^\|+/, '').replace(/\|+$/, '')
   return t.split('|').map((c) => c.trim())
-}
-
-/** 将连续管道行替换为 HTML <table>。 */
-function applyTableBlocks(text: string): string {
-  const lines = text.split('\n')
-  const result: string[] = []
-  let i = 0
-  while (i < lines.length) {
-    const t = lines[i].trim()
-    if (t.startsWith('|')) {
-      const rows: string[] = [t]
-      i++
-      while (i < lines.length) {
-        const n = lines[i].trim()
-        if (n.startsWith('|')) {
-          rows.push(n)
-          i++
-        } else break
-      }
-      result.push(rows.length >= 2 ? pipeTableToHtml(rows) : rows.join('\n'))
-    } else {
-      result.push(lines[i])
-      i++
-    }
-  }
-  return result.join('\n')
 }

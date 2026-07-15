@@ -1,13 +1,14 @@
 <template>
-  <p class="block-paragraph">{{ block.text }}</p>
+  <RichTextContent class="block-paragraph" :text="block.text" />
 </template>
 
 <script setup lang="ts">
 import type { ParagraphBlock } from '@/services/types'
+import RichTextContent from '../RichTextContent.vue'
 
 defineProps<{ block: ParagraphBlock }>()
 </script>
 
 <style scoped>
-.block-paragraph { color: var(--fg); line-height: 1.6; margin-bottom: 8px; white-space: pre-wrap; }
+.block-paragraph { margin-bottom: 8px; }
 </style>

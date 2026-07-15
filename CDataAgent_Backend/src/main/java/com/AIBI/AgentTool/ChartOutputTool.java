@@ -235,7 +235,10 @@ public class ChartOutputTool {
 
             String cacheKey = cacheManager.buildKey("validateChart", cleaned);
             String cached = cacheManager.get(cacheKey);
-            if (cached != null) return cached;
+            if (cached != null) {
+                markValidatedReference(optionJson, cached);
+                return cached;
+            }
 
             if (!cleaned.startsWith("{")) return ToolResultUtils.jsonTypedError("syntax", "不是有效的 JSON 对象");
 
@@ -267,6 +270,7 @@ public class ChartOutputTool {
             String result;
             if (issues.isEmpty()) {
                 result = "校验通过";
+                markValidatedReference(optionJson, result);
             } else {
                 result = ToolResultUtils.jsonTypedError("syntax", "图表结构不完整: " + String.join("; ", issues));
             }
@@ -287,6 +291,16 @@ public class ChartOutputTool {
         int chartIndex = Integer.parseInt(cleaned.substring("chart-ready:".length()));
         RunContext context = RunContextHolder.get();
         return context == null ? null : context.getChartOption(chartIndex);
+    }
+
+    private void markValidatedReference(String reference, String validationResult) {
+        if (!"校验通过".equals(validationResult) || reference == null) return;
+        String cleaned = reference.trim();
+        if (!cleaned.matches("chart-ready:[1-9]\\d*")) return;
+        RunContext context = RunContextHolder.get();
+        if (context != null) {
+            context.markChartValidated(Integer.parseInt(cleaned.substring("chart-ready:".length())));
+        }
     }
 
     private String readTitle(JSONObject option) {

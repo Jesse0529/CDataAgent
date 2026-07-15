@@ -109,7 +109,7 @@ public class PresentationSubmissionTool {
         if (chartOutputKeys != null && !chartOutputKeys.isEmpty()) order.add(PresentationPlan.BlockOrder.CHART);
         plan.setBlockOrder(order);
 
-        ctx.setPresentationPlan(plan);
+        ctx.publishPresentationPlan(plan);
     }
 
     private static boolean isBlank(String s) {

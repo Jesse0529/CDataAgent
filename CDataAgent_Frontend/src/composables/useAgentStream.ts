@@ -1,10 +1,12 @@
 import { ref } from 'vue'
 import { apiPostStream } from '@/services/api'
 import type {
+  ArtifactEvent,
   ChatMessageVO,
   MetaEvent,
   ProgressEvent,
   RenderDocument,
+  RunActivity,
   StructuredEvent,
   TableEventData,
 } from '@/services/types'
@@ -54,6 +56,7 @@ export function useAgentStream() {
     let currentRunId: string | null = null
     let lastEventId: string | null = null
     const seenEventIds = new Set<string>()
+    let lastDocumentRevision = message.renderDocument?.revision ?? 0
 
     function flushBuffer(): void {
       rafToken = null
@@ -145,6 +148,10 @@ export function useAgentStream() {
         (doc: RenderDocument, eventId: string | null) => {
           if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
           if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          if (currentRunId && doc.runId !== currentRunId) return
+          const revision = doc.revision ?? lastDocumentRevision + 1
+          if (revision <= lastDocumentRevision) return
+          lastDocumentRevision = revision
           message.renderDocument = doc
           message.renderVersion = 1
           message.lastEventId = eventId
@@ -163,6 +170,35 @@ export function useAgentStream() {
           if (progress.stage !== 'analysis' && !pendingContent && !message.renderDocument) {
             message.content = progress.label
           }
+          onScrollToBottom(true)
+        },
+        (activity: RunActivity, eventId: string | null) => {
+          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
+          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          const activities = message.activities ? [...message.activities] : []
+          const index = activities.findIndex((item) => item.id === activity.id)
+          if (index >= 0) activities[index] = activity
+          else activities.push(activity)
+          message.activities = activities
+          message.lastEventId = eventId
+          if (eventId) lastEventId = eventId
+          if (activity.stage === 'chart' || activity.stage === 'validate') {
+            message.chartGenerating = activity.state === 'running'
+          }
+          onScrollToBottom(true)
+        },
+        (artifact: ArtifactEvent, eventId: string | null) => {
+          if (currentRunId && artifact.runId !== currentRunId) return
+          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
+          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          const existing = message.liveBlocks ? [...message.liveBlocks] : []
+          const existingIds = new Set(existing.map((block) => block.id))
+          message.liveBlocks = [
+            ...existing,
+            ...artifact.blocks.filter((block) => !existingIds.has(block.id)),
+          ]
+          message.lastEventId = eventId
+          if (eventId) lastEventId = eventId
           onScrollToBottom(true)
         },
       )

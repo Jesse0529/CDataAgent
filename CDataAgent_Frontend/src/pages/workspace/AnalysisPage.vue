@@ -55,9 +55,9 @@ const {
 } = useAgentStream()
 
 function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 // ---- 文件预览 ----
@@ -238,7 +238,8 @@ async function syncMessagesAfterStream(): Promise<void> {
       persisted.renderVersion === 1 ? parseRenderDocument(persisted.renderDocument) : null
     const persistedCharts = parseChartOptions(persisted.chartOption)
 
-    if (!liveMessage.renderDocument && persistedDocument) {
+    // 当前运行已展示增量产物时，不再用持久化快照替换节点，避免结束时闪屏。
+    if (!liveMessage.renderDocument && !liveMessage.liveBlocks?.length && persistedDocument) {
       liveMessage.renderDocument = persistedDocument
       liveMessage.renderVersion = persisted.renderVersion ?? null
     }

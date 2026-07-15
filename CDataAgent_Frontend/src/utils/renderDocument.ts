@@ -14,6 +14,12 @@ export function isValidRenderDocument(doc: unknown): doc is RenderDocument {
   if (d.version !== 1) return false
   if (typeof d.runId !== 'string' || !d.runId) return false
   if (!Array.isArray(d.blocks)) return false
+  if (d.phase !== undefined && d.phase !== 'snapshot' && d.phase !== 'final') return false
+  if (
+    d.revision !== undefined &&
+    (typeof d.revision !== 'number' || !Number.isInteger(d.revision) || d.revision < 1)
+  )
+    return false
   return d.blocks.every(isValidBlock)
 }
 

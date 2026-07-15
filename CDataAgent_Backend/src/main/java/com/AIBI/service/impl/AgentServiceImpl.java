@@ -4,9 +4,9 @@ import com.AIBI.agent.model.AnalysisState;
 import com.AIBI.agent.model.PresentationPlan;
 import com.AIBI.agent.model.RenderDocument;
 import com.AIBI.agent.model.RenderDocumentAssembler;
-import com.AIBI.agent.assembler.PlainTextPolicy;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
+import com.AIBI.agent.run.RunActivity;
 import com.AIBI.common.ErrorCode;
 import com.AIBI.exception.BusinessException;
 import com.AIBI.exception.ThrowUtils;
@@ -323,6 +323,7 @@ public class AgentServiceImpl implements AgentService {
         RunnableConfig config = RunnableConfig.builder().threadId("executor:" + cid).build();
         Duration totalTimeout = Duration.ofSeconds(agentTimeoutSeconds);
         StringBuilder fullResponse = new StringBuilder();
+        String thinkingActivityId = runContext.beginActivity("thinking", "正在理解你的问题");
         log.info("Agent阶段 runId={} stage=executor", runContext.getRunId());
 
         Flux<String> executorFlux;
@@ -340,36 +341,59 @@ public class AgentServiceImpl implements AgentService {
 
         boolean isV1 = "render-document.v1".equals(runContext.getRenderProtocol());
 
-        return Flux.concat(
-                isV1 ? Flux.just(progressEvent("analysis", "正在分析数据", "running")) : Flux.empty(),
+        Flux<Map<String, String>> executorEvents = executorFlux
+                .take(totalTimeout)
+                .doOnNext(fullResponse::append)
+                .doOnComplete(() -> runContext.finishActivity(thinkingActivityId, "thinking",
+                        "已完成需求理解", RunActivity.State.SUCCEEDED))
+                .onErrorResume(Exception.class, e -> {
+                    runContext.finishActivity(thinkingActivityId, "thinking",
+                            "需求理解未完成", RunActivity.State.FAILED);
+                    log.error("运行失败 runId={}", runContext.getRunId(), e);
+                    if (e instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                        var wce = (org.springframework.web.reactive.function.client.WebClientResponseException) e;
+                        log.warn("模型错误：状态码={}、响应体长度={}",
+                                wce.getStatusCode(), wce.getResponseBodyAsString().length());
+                    }
+                    String errMsg = "【系统】处理失败: " + e.getMessage();
+                    fullResponse.append(errMsg);
+                    return Flux.just(errMsg);
+                })
+                .flatMap(token -> {
+                    // 分析型请求只交付受控产物；普通对话保留实时 Markdown token。
+                    if (isV1 && runContext.isAnalysisIntent()) return Flux.empty();
+                    String clean = token
+                            .replaceAll("#+NEEDS_CHART#*", "")
+                            .replace("【【【【【", "")
+                            .replace("】】】】】", "")
+                            .trim();
+                    if (clean.isEmpty()) return Flux.empty();
+                    return Flux.just(Map.of("type", "message", "data", normalizeTableFormat(clean)));
+                });
 
-                executorFlux
-                    .take(totalTimeout)
-                    .doOnNext(fullResponse::append)
-                    .onErrorResume(Exception.class, e -> {
-                        log.error("运行失败 runId={}", runContext.getRunId(), e);
-                        if (e instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
-                            var wce = (org.springframework.web.reactive.function.client.WebClientResponseException) e;
-                            log.warn("模型错误：状态码={}、响应体长度={}",
-                                    wce.getStatusCode(), wce.getResponseBodyAsString().length());
-                        }
-                        String errMsg = "【系统】处理失败: " + e.getMessage();
-                        fullResponse.append(errMsg);
-                        return Flux.just(errMsg);
-                    })
-                    .flatMap(token -> {
-                        // v1 协议：不发送自由文本 token（只保留状态事件）
-                        if (isV1) return Flux.empty();
-                        // 旧协议：过滤内部标记，正常发送 message 事件
-                        String clean = token
-                                .replaceAll("#+NEEDS_CHART#*", "")
-                                .replace("【【【【【", "")
-                                .replace("】】】】】", "")
-                                .trim();
-                        if (clean.isEmpty()) return Flux.empty();
-                        return Flux.just(Map.of("type", "message", "data", normalizeTableFormat(clean)));
-                    })
-        )
+        Flux<Map<String, String>> planSnapshot = isV1
+                ? reactor.core.publisher.Mono.fromFuture(runContext.getPresentationPlanReadyFuture())
+                .filter(java.util.Objects::nonNull)
+                .filter(plan -> StringUtils.isNotBlank(plan.getSummary())
+                        || (plan.getBulletItems() != null && !plan.getBulletItems().isEmpty())
+                        || plan.hasTables())
+                .flatMapMany(plan -> {
+                    int tableCount = plan.getTableOutputKeys() == null ? 0 : plan.getTableOutputKeys().size();
+                    int chartCount = plan.getChartOutputKeys() == null ? 0 : plan.getChartOutputKeys().size();
+                    log.info("Agent阶段 runId={} stage=plan_submitted tables={} charts={}",
+                            runContext.getRunId(), tableCount, chartCount);
+                    RenderDocument doc = renderDocumentAssembler.assembleWithoutCharts(plan, runContext.getRunId());
+                    return artifactEvents(doc);
+                })
+                : Flux.empty();
+
+        Flux<Map<String, String>> initialEvents = executorEvents.publish(shared ->
+                Flux.merge(shared, planSnapshot.takeUntilOther(shared.ignoreElements())));
+
+        Flux<Map<String, String>> activityEvents = runContext.activityEvents().map(AgentServiceImpl::activityEvent);
+
+        return Flux.merge(
+                Flux.concat(initialEvents)
         .concatWith(Flux.defer(() -> {
                     String response = fullResponse.toString().trim();
                     RunContext ctx = runContext;
@@ -416,35 +440,17 @@ public class AgentServiceImpl implements AgentService {
                         }
                     }
 
-                    if (!needsChart) return previewFlux(ctx, response);
+                    if (!needsChart) return isV1 ? Flux.empty() : previewFlux(ctx, response);
                     log.info("Agent阶段 runId={} stage=synthesizer charts={}",
                             runContext.getRunId(), chartCount);
 
-                    // 准备异步图表信号：ChartOutputTool 完成时触发
-                    java.util.concurrent.CompletableFuture<String> chartFuture = ctx != null
-                            ? ctx.getChartReadyFuture()
-                            : java.util.concurrent.CompletableFuture.completedFuture(null);
-
-                    // 图表事件 30s 超时，防止 ChartOutputTool 未运行时管道挂起
-                    reactor.core.publisher.Flux<Map<String, String>> chartSignal =
-                            reactor.core.publisher.Mono.fromFuture(chartFuture).flux()
-                                    .timeout(java.time.Duration.ofSeconds(30))
-                                    .onErrorComplete()
-                                    .map(chartJson -> Map.of("type", "chart", "data", chartJson));
-
-                    return Flux.concat(partialDocumentFlux(plan, ctx), Flux.merge(
-                            // 1) 状态事件
-                            Flux.just(progressEvent("chart", "正在生成图表", "running")),
-                            // 2) Synthesizer 仅在后台执行图表生成，文字不推给前端
-                    synthesizePhase(synthPrompt, config)
+                    // 图表仅在生成与校验完成后随最终持久化结果开放，避免半成品闪现。
+                    return synthesizePhase(synthPrompt, config)
                             .doOnComplete(() -> log.info("Agent阶段 runId={} stage=synthesizer_finished",
                                     runContext.getRunId()))
-                            .thenMany(Flux.<Map<String, String>>empty()),
-                            // 3) 异步图表事件（ChartOutputTool 完成时发射）
-                            chartSignal
-                    ));
+                            .thenMany(Flux.empty());
                 }))
-                // v1 协议：发射 document 事件
+                // 最终文档只用于持久化和历史恢复；流式过程不替换已有 UI。
                 .concatWith(Flux.defer(() -> {
                     if (!isV1) return Flux.empty();
                     RunContext ctx = runContext;
@@ -454,7 +460,7 @@ public class AgentServiceImpl implements AgentService {
                             ? renderDocumentAssembler.assembleTextResponse(fullResponse.toString(), ctxRunId)
                             : renderDocumentAssembler.assemble(plan, ctxRunId);
                     if (ctx != null) ctx.setLastRenderDocument(doc);
-                    return Flux.just(Map.of("type", "document", "data", doc.toTransportJson()));
+                    return Flux.empty();
                 }))
                 .doOnComplete(() -> {
                     RunContext ctx = runContext;
@@ -525,10 +531,13 @@ public class AgentServiceImpl implements AgentService {
                     tokenLedger.discardRound(cid);
                     modelManager.clearCurrentConversationId();
                     exactTokenCounter.clear();
+                    runContext.completeActivityEvents();
                     try {
                         lock.forceUnlock();
                     } catch (Exception ignored) {}
-                });
+                }),
+                activityEvents
+        );
     }
 
     private Flux<String> synthesizePhase(String prompt, RunnableConfig config) {
@@ -564,30 +573,43 @@ public class AgentServiceImpl implements AgentService {
         return Map.of("type", "progress", "data", payload.toJSONString());
     }
 
+    /**
+     * 文档事件与持久化文档分离：阶段和版本只服务于传输期，避免污染最终快照。
+     */
+    private static Map<String, String> documentEvent(RenderDocument document, String phase, int revision) {
+        JSONObject payload = JSONObject.parseObject(document.toTransportJson());
+        payload.put("phase", phase);
+        payload.put("revision", revision);
+        return Map.of("type", "document", "data", payload.toJSONString());
+    }
+
+    private static Map<String, String> artifactEvent(RenderDocument document) {
+        return Map.of("type", "artifact", "data", document.toTransportJson());
+    }
+
+    private static Flux<Map<String, String>> artifactEvents(RenderDocument document) {
+        return Flux.fromIterable(document.splitForStreaming())
+                .map(AgentServiceImpl::artifactEvent)
+                .delayElements(Duration.ofMillis(70));
+    }
+
+    private static Map<String, String> activityEvent(RunActivity activity) {
+        JSONObject payload = new JSONObject();
+        payload.put("id", activity.id());
+        payload.put("stage", activity.stage());
+        payload.put("label", activity.label());
+        payload.put("state", activity.state().name().toLowerCase());
+        return Map.of("type", "activity", "data", payload.toJSONString());
+    }
+
     private Flux<Map<String, String>> previewFlux(RunContext context, String fallbackText) {
         String summary = context != null && context.getPresentationPlan() != null
                 ? context.getPresentationPlan().getSummary()
                 : fallbackText;
         if (StringUtils.isBlank(summary)) return Flux.empty();
-        PlainTextPolicy.PlainTextResult result = PlainTextPolicy.validate(summary, "preview");
-        if (StringUtils.isBlank(result.text())) return Flux.empty();
-        return Flux.fromIterable(splitIntoChunks(result.text()))
+        return Flux.fromIterable(splitIntoChunks(summary))
                 .delayElements(Duration.ofMillis(16))
                 .map(chunk -> Map.of("type", "preview", "data", chunk));
-    }
-
-    private Flux<Map<String, String>> partialDocumentFlux(PresentationPlan plan, RunContext context) {
-        if (plan == null || (!hasTextBlocks(plan) && !plan.hasTables())) {
-            return Flux.empty();
-        }
-        String runId = context != null ? context.getRunId() : null;
-        RenderDocument partialDocument = renderDocumentAssembler.assembleWithoutCharts(plan, runId);
-        return Flux.just(Map.of("type", "document", "data", partialDocument.toTransportJson()));
-    }
-
-    private static boolean hasTextBlocks(PresentationPlan plan) {
-        return StringUtils.isNotBlank(plan.getSummary())
-                || (plan.getBulletItems() != null && !plan.getBulletItems().isEmpty());
     }
 
     // ======================== 上下文注入 ========================

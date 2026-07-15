@@ -50,6 +50,10 @@ export interface ChatMessageVO {
   chartPreviewAvailable?: boolean
   /** RenderDocument v1 展示文档（新协议消息，旧消息为 null） */
   renderDocument?: RenderDocument | null
+  /** 当前运行中已追加的受控内容；结束后保留，避免用持久化快照替换 UI。 */
+  liveBlocks?: RenderBlock[]
+  /** 当前运行的用户可见活动时间线，不持久化。 */
+  activities?: RunActivity[]
   /** 渲染协议版本（当前为 1，旧消息为 null） */
   renderVersion?: number | null
   /** 当前运行的唯一标识，仅在流式 assistant 消息中存在 */
@@ -106,6 +110,10 @@ export interface RenderDocument {
   runId: string
   blocks: RenderBlock[]
   degraded?: boolean
+  /** 仅 SSE 传输期存在：安全展示快照或本轮最终结果。 */
+  phase?: 'snapshot' | 'final'
+  /** 仅 SSE 传输期存在：同一 run 内单调递增，用于重放与乱序保护。 */
+  revision?: number
 }
 
 export type RenderBlock =
@@ -171,6 +179,22 @@ export interface ProgressEvent {
   stage: string
   label: string
   state: 'running' | 'done' | 'failed'
+}
+
+/** SSE 运行活动：服务端已脱敏，不携带工具参数、SQL 或内部路径。 */
+export interface RunActivity {
+  id: string
+  stage: string
+  label: string
+  state: 'running' | 'succeeded' | 'failed'
+}
+
+/** SSE 阶段产物，只允许追加已校验的 RenderBlock。 */
+export interface ArtifactEvent {
+  version: 1
+  runId: string
+  blocks: RenderBlock[]
+  degraded?: boolean
 }
 
 /** 文件数据预览（对应后端 FilePreviewVO） */

@@ -55,6 +55,14 @@ public record RenderDocument(
         return JSON.toJSONString(this);
     }
 
+    /** 将文档拆为可独立追加的传输单元，供流式阶段产物使用。 */
+    public List<RenderDocument> splitForStreaming() {
+        if (blocks == null || blocks.isEmpty()) return List.of();
+        return blocks.stream()
+                .map(block -> new RenderDocument(version, runId, List.of(block), degraded))
+                .toList();
+    }
+
     /**
      * 从 JSON 反序列化（支持 sealed interface 类型自动解析）。
      */

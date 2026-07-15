@@ -30,6 +30,8 @@ import NoticeBlockVue from './blocks/NoticeBlock.vue'
 import ParagraphBlockVue from './blocks/ParagraphBlock.vue'
 import SummaryBlockVue from './blocks/SummaryBlock.vue'
 import LogoIcon from './LogoIcon.vue'
+import RichTextContent from './RichTextContent.vue'
+import RunActivityTimeline from './RunActivityTimeline.vue'
 
 // 文档区块很小，静态加载可避免最终文档首次挂载时出现空白帧。
 
@@ -56,6 +58,22 @@ const renderDocument = computed(() => {
   const document = props.message.renderDocument
   return isValidRenderDocument(document) ? document : null
 })
+
+const presentationBlocks = computed(
+  () => props.message.liveBlocks ?? renderDocument.value?.blocks ?? [],
+)
+const hasPresentationBlocks = computed(() => presentationBlocks.value.length > 0)
+const presentationDegraded = computed(() => renderDocument.value?.degraded === true)
+const analysisActivities = computed(() =>
+  (props.message.activities ?? []).filter(
+    (activity) => activity.stage !== 'chart' && activity.stage !== 'validate',
+  ),
+)
+const chartActivities = computed(() =>
+  (props.message.activities ?? []).filter(
+    (activity) => activity.stage === 'chart' || activity.stage === 'validate',
+  ),
+)
 
 const showChartModal = ref(false)
 const copySuccess = ref(false)
@@ -279,7 +297,7 @@ function formatTokens(n: number): string {
       </div>
 
       <!-- 无真实内容时的状态指示器（图表流程改用统一入口） -->
-      <div v-if="message.status === 'streaming' && !hasRealContent && !message.chartGenerating" class="msg-bubble msg-bubble--status">
+      <div v-if="message.status === 'streaming' && !hasRealContent && !message.chartGenerating && !message.activities?.length" class="msg-bubble msg-bubble--status">
         <span class="status-spinner" />
         <span class="status-text">{{ streamingDisplay() }}</span>
       </div>
@@ -291,7 +309,14 @@ function formatTokens(n: number): string {
       </div>
 
       <!-- 真实内容气泡（流式 + 完成态共享同一段落结构） -->
-      <div v-else class="msg-bubble msg-bubble--ai" :class="{ 'msg-bubble--streaming': message.status === 'streaming' }">
+      <div
+        v-else
+        class="msg-bubble msg-bubble--ai"
+        :class="{
+          'msg-bubble--streaming': message.status === 'streaming',
+        }"
+      >
+        <RunActivityTimeline v-if="analysisActivities.length" :activities="analysisActivities" />
         <!-- 结论区（独立于推理过程，仅完成态显示） -->
         <div v-if="message.status === 'done' && conclusion" class="msg-conclusion">
           <div class="msg-conclusion__header">
@@ -315,24 +340,24 @@ function formatTokens(n: number): string {
         </div>
 
         <!-- v1 协议：RenderDocument 区块渲染 -->
-        <template v-if="renderDocument">
+        <template v-if="hasPresentationBlocks">
           <TransitionGroup name="render-block" tag="div" class="render-document">
             <component
-              v-for="(block, index) in renderDocument.blocks.filter((item) => item.type !== 'chart')"
+              v-for="(block, index) in presentationBlocks.filter((item) => item.type !== 'chart')"
               :key="block.id"
               :is="blockComponent(block.type)"
               :block="block"
               :style="{ '--render-block-delay': `${index * 45}ms` }"
             />
           </TransitionGroup>
-          <div v-if="renderDocument.degraded" class="degraded-notice">
+          <div v-if="presentationDegraded" class="degraded-notice">
             ⚠️ 回答已降级
           </div>
         </template>
 
         <!-- 内容段：文本段 v-html 更新，表格段 v-for 固定骨架 + 增量行 -->
-        <template v-if="!renderDocument" v-for="seg in contentSegments" :key="seg.key">
-          <div v-if="seg.type === 'text'" class="msg-text" v-html="seg.html" />
+        <template v-if="!hasPresentationBlocks" v-for="seg in contentSegments" :key="seg.key">
+          <RichTextContent v-if="seg.type === 'text'" class="msg-text" :html="seg.html" />
           <div v-else-if="seg.type === 'table' && seg.headers" class="msg-tables">
             <div class="msg-table-wrap">
               <table>
@@ -352,7 +377,7 @@ function formatTokens(n: number): string {
         </template>
 
         <!-- event:table 结构化表格（流式 + 完成态均可能） -->
-        <div v-if="!renderDocument && message.tables && message.tables.length > 0" class="msg-tables">
+        <div v-if="!hasPresentationBlocks && message.tables && message.tables.length > 0" class="msg-tables">
           <div v-for="table in message.tables" :key="table.outputKey" class="msg-table-wrap">
             <table>
               <thead>
@@ -372,6 +397,8 @@ function formatTokens(n: number): string {
         </div>
 
         <!-- 图表入口：流式阶段与完成后的布局、图标和样式保持一致。 -->
+        <RunActivityTimeline v-if="chartActivities.length" :activities="chartActivities" />
+
         <div
           v-if="chartPending || canPreviewChart"
           class="chart-trigger"
@@ -440,6 +467,9 @@ function formatTokens(n: number): string {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  width: min(100%, 860px);
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ===== AI 头像 / Logo ===== */
@@ -455,11 +485,13 @@ function formatTokens(n: number): string {
 .msg-bubble {
   width: fit-content;
   max-width: 85%;
+  min-width: 0;
   padding: 12px 16px;
   font-size: 15px;
   line-height: 1.6;
   overflow-wrap: break-word;
   word-break: break-word;
+  overflow: hidden;
 }
 
 .msg-row--ai .msg-bubble {
@@ -473,18 +505,17 @@ function formatTokens(n: number): string {
 }
 
 .msg-bubble--ai {
-  background: var(--surface);
+  flex: 1;
+  width: 0;
+  max-width: none;
+  padding: 4px 0;
   color: var(--fg);
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
+  overflow: visible;
 }
 
 /* 流式气泡 — flex 布局让光标可同行或自然换行 */
 .msg-bubble--streaming {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0;
+  display: block;
 }
 
 /* 分段渲染：文本段自适应宽度（短文本单行，长文本自动换行），表格段独占整行 */
@@ -505,6 +536,8 @@ function formatTokens(n: number): string {
 .render-document {
   display: grid;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .render-block-enter-active {
@@ -530,10 +563,7 @@ function formatTokens(n: number): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  padding: 10px 18px;
+  padding: 4px 0;
 }
 
 .status-spinner {
@@ -594,10 +624,7 @@ function formatTokens(n: number): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  padding: 12px 20px;
+  padding: 4px 0;
 }
 
 .loading-dot {
@@ -880,6 +907,30 @@ function formatTokens(n: number): string {
   font-size: 13px;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   word-break: break-all;
+}
+
+.msg-text :deep(pre) {
+  margin: 12px 0;
+  padding: 12px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--border-inner);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.msg-text :deep(pre code) {
+  color: var(--fg);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  white-space: pre;
+}
+
+.msg-text :deep(blockquote) {
+  margin: 12px 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  background: var(--surface-raised);
 }
 
 /* ===== 表格渲染（陶土 + 白色主题） ===== */

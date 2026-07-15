@@ -8,8 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 /**
  * 请求级运行上下文 — 替代 AnalysisState 单例可变字段。
@@ -37,6 +41,9 @@ public class RunContext {
 
     /** 本轮 ChartOutputTool 生成的图表 JSON 列表（追加写入，doOnComplete 消费） */
     private final List<String> chartOptions = Collections.synchronizedList(new ArrayList<>());
+
+    /** 通过 validateChart 的图表索引；未校验图表绝不进入最终结果。 */
+    private final Set<Integer> validatedChartIndexes = Collections.synchronizedSet(new java.util.LinkedHashSet<>());
 
     /** 图表就绪信号（ChartOutputTool 完成时触发，用于异步发射 chart SSE 事件） */
     @Getter
@@ -78,6 +85,10 @@ public class RunContext {
     @Getter @Setter
     private PresentationPlan presentationPlan;
 
+    /** 展示计划首次就绪信号，用于在 Executor 结束前发送可安全展示的文档快照。 */
+    @Getter
+    private final CompletableFuture<PresentationPlan> presentationPlanReadyFuture = new CompletableFuture<>();
+
     /** 前端协商的渲染协议版本（null = 旧协议, "render-document.v1" = 新协议） */
     @Getter @Setter
     private String renderProtocol;
@@ -88,6 +99,14 @@ public class RunContext {
 
     /** PresentationSubmissionTool 调用次数（用于限流，超过 MAX_CALLS 降级） */
     private final AtomicInteger presentationCallCount = new AtomicInteger(0);
+
+    /** 当前运行内展示文档的单调版本，用于 SSE 重放和乱序保护。 */
+    private final AtomicInteger documentRevision = new AtomicInteger(0);
+
+    /** 仅用于本轮 SSE 的用户可见活动流；限制回放量，避免慢客户端无界积压。 */
+    private final Sinks.Many<RunActivity> activitySink = Sinks.many().replay().limit(64);
+
+    private final AtomicInteger activitySequence = new AtomicInteger(0);
 
     public RunContext(String runId, Long conversationId) {
         this.runId = runId;
@@ -121,9 +140,11 @@ public class RunContext {
      * 无图表时返回 null。
      */
     public String consumeChartOptions() {
-        if (chartOptions.isEmpty()) return null;
-        String result = "[" + String.join(",", chartOptions) + "]";
+        List<String> options = validatedChartOptions();
+        if (options.isEmpty()) return null;
+        String result = "[" + String.join(",", options) + "]";
         chartOptions.clear();
+        validatedChartIndexes.clear();
         return result;
     }
 
@@ -131,15 +152,28 @@ public class RunContext {
      * 非消费性查看是否有图表 JSON。
      */
     public String peekChartOptions() {
-        if (chartOptions.isEmpty()) return null;
-        return "[" + String.join(",", chartOptions) + "]";
+        List<String> options = validatedChartOptions();
+        return options.isEmpty() ? null : "[" + String.join(",", options) + "]";
     }
 
     /**
      * 是否有图表。
      */
     public boolean hasChartOptions() {
-        return !chartOptions.isEmpty();
+        return !validatedChartIndexes.isEmpty();
+    }
+
+    public void markChartValidated(int chartIndex) {
+        if (chartIndex >= 1 && chartIndex <= chartOptions.size()) {
+            validatedChartIndexes.add(chartIndex);
+        }
+    }
+
+    private List<String> validatedChartOptions() {
+        return validatedChartIndexes.stream()
+                .sorted()
+                .map(index -> chartOptions.get(index - 1))
+                .toList();
     }
 
     // ── 意图辅助 ──
@@ -184,6 +218,42 @@ public class RunContext {
         return presentationCallCount.getAndIncrement();
     }
 
+    /** 分配下一次展示文档事件的版本号。 */
+    public int nextDocumentRevision() {
+        return documentRevision.incrementAndGet();
+    }
+
+    public String beginActivity(String stage, String label) {
+        String id = "activity-" + activitySequence.incrementAndGet();
+        emitActivity(new RunActivity(id, stage, label, RunActivity.State.RUNNING));
+        return id;
+    }
+
+    public void finishActivity(String id, String stage, String label, RunActivity.State state) {
+        emitActivity(new RunActivity(id, stage, label, state));
+    }
+
+    public Flux<RunActivity> activityEvents() {
+        return activitySink.asFlux();
+    }
+
+    public void completeActivityEvents() {
+        activitySink.tryEmitComplete();
+    }
+
+    private void emitActivity(RunActivity activity) {
+        Sinks.EmitResult result = activitySink.tryEmitNext(activity);
+        if (result.isFailure() && result != Sinks.EmitResult.FAIL_TERMINATED) {
+            log.debug("运行活动事件未投递: runId={}, result={}", runId, result);
+        }
+    }
+
+    /** 保存计划，并发布首次可用快照。 */
+    public void publishPresentationPlan(PresentationPlan plan) {
+        this.presentationPlan = plan;
+        presentationPlanReadyFuture.complete(plan);
+    }
+
     /**
      * 重置图表就绪信号（每次 Synthesizer 调用前需要新信号）。
      */
@@ -196,9 +266,14 @@ public class RunContext {
      * 会触发 chartReadyFuture 完成（如果尚未），防止等待者挂起。
      */
     public void clear() {
+        completeActivityEvents();
         chartOptions.clear();
+        validatedChartIndexes.clear();
         if (!chartReadyFuture.isDone()) {
             chartReadyFuture.complete(null);
+        }
+        if (!presentationPlanReadyFuture.isDone()) {
+            presentationPlanReadyFuture.complete(null);
         }
         clearIntent();
         log.debug("运行上下文已清理: runId={}", runId);

@@ -1,6 +1,7 @@
 package com.AIBI.agent.model;
 
 import com.AIBI.agent.assembler.PlainTextPolicy;
+import com.AIBI.agent.assembler.OutputFormatPolicy;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
 import com.alibaba.fastjson2.JSON;
@@ -32,26 +33,40 @@ import java.util.stream.Collectors;
 @Component
 public class RenderDocumentAssembler {
 
+    private static final int MAX_TEXT_RESPONSE_LENGTH = 12_000;
+
     @Autowired
     private AnalysisState analysisState;
 
     /**
      * 将非分析类回答收口为可渲染文档。
      *
-     * 普通对话不要求模型提交 PresentationPlan；只要模型给出了有效文本，
-     * 就应当作为正常回答展示，而不是被误判为分析失败。
+     * 普通对话允许 Markdown，由前端统一净化和渲染；分析计划中的字段仍保持纯文本约束。
      */
     public RenderDocument assembleTextResponse(String text, String runId) {
-        PlainTextPolicy.PlainTextResult result = PlainTextPolicy.validate(text, "text response");
-        if (result.text().isBlank()) {
+        String response = normalizeTextResponse(text);
+        if (response.isBlank()) {
             return buildDegradedDocument(runId, "回答内容为空",
                     "暂时没有生成可展示的回答，请换一种说法后重试。");
         }
         return new RenderDocument(
                 RenderDocument.CURRENT_VERSION,
                 runId,
-                List.of(new ParagraphBlock("response-0", result.text())),
-                result.degraded());
+                List.of(new ParagraphBlock("response-0", response)),
+                false);
+    }
+
+    private String normalizeTextResponse(String text) {
+        OutputFormatPolicy.Result policyResult = OutputFormatPolicy.normalizeConversationMarkdown(text);
+        if (policyResult.diagramRemoved()) {
+            log.info("普通对话已移除不支持的图谱 DSL");
+        }
+        String response = policyResult.text().trim();
+        if (response.length() <= MAX_TEXT_RESPONSE_LENGTH) {
+            return response;
+        }
+        log.warn("普通对话过长，已截断：长度={}", response.length());
+        return response.substring(0, MAX_TEXT_RESPONSE_LENGTH) + "\n\n（内容过长，已截断）";
     }
 
     /**

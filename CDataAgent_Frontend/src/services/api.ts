@@ -11,9 +11,11 @@ const BASE_URL = (configuredBaseUrl || '/apis').replace(/\/$/, '')
 
 import { safeParseRenderDocument } from '@/utils/renderDocument'
 import type {
+  ArtifactEvent,
   MetaEvent,
   ProgressEvent,
   RenderDocument,
+  RunActivity,
   StructuredEvent,
   TableEventData,
 } from './types'
@@ -281,6 +283,8 @@ export function apiPostStream(
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
 ): { promise: Promise<StreamResult>; abort: () => void } {
   const { controller: abortController, timer } = createTimeout(STREAM_TIMEOUT)
   let userAborted = false
@@ -336,6 +340,8 @@ export function apiPostStream(
             onMeta,
             onDocument,
             onProgress,
+            onActivity,
+            onArtifact,
           )
           return { status: 'completed' }
         }
@@ -362,6 +368,8 @@ export function apiPostStream(
             onMeta,
             onDocument,
             onProgress,
+            onActivity,
+            onArtifact,
           )
         }
       }
@@ -407,6 +415,8 @@ function processBuffer(
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
 ): void {
   const trimmed = buffer.trim()
   if (trimmed.length === 0) return
@@ -420,6 +430,8 @@ function processBuffer(
     onMeta,
     onDocument,
     onProgress,
+    onActivity,
+    onArtifact,
   )
 }
 
@@ -436,6 +448,8 @@ function processSSEEvent(
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
 ): void {
   const dataLines: string[] = []
   let eventType = ''
@@ -489,6 +503,30 @@ function processSSEEvent(
       if (progress.stage && progress.label && progress.state) onProgress?.(progress, eventId)
     } catch {
       /* ignore parse errors */
+    }
+    return
+  }
+
+  if (eventType === 'activity') {
+    try {
+      const activity = JSON.parse(text) as RunActivity
+      if (activity.id && activity.stage && activity.label && activity.state) {
+        onActivity?.(activity, eventId)
+      }
+    } catch {
+      /* ignore malformed activity */
+    }
+    return
+  }
+
+  if (eventType === 'artifact') {
+    try {
+      const artifact = JSON.parse(text) as ArtifactEvent
+      if (artifact.version === 1 && artifact.runId && Array.isArray(artifact.blocks)) {
+        onArtifact?.(artifact, eventId)
+      }
+    } catch {
+      /* ignore malformed artifact */
     }
     return
   }
