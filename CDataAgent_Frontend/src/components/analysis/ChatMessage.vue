@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
 import { type Component, computed, defineAsyncComponent, ref } from 'vue'
-import type { ChatMessageVO } from '@/services/types'
+import type { ChatMessageVO, DataTableBlock, TableEventData } from '@/services/types'
 import { extractChartOption } from '@/utils/chartParser'
 import {
   type ContentSegment,
@@ -101,6 +101,31 @@ const visibleAttachments = computed(() =>
 const hiddenAttachmentCount = computed(() =>
   Math.max(0, userAttachments.value.length - ATTACHMENT_PREVIEW_LIMIT),
 )
+
+function tableEventBlock(table: TableEventData): DataTableBlock {
+  return {
+    id: `event-table-${table.outputKey}`,
+    type: 'table',
+    headers: table.headers,
+    rows: table.rows.map((row) => {
+      const cells = Object.fromEntries(
+        table.headers.map((header) => {
+          const value = row[header]
+          return [
+            header,
+            typeof value === 'string' || typeof value === 'number' || value === null
+              ? value
+              : value === undefined
+                ? null
+                : String(value),
+          ]
+        }),
+      )
+      return cells as Record<string, string | number | null>
+    }),
+    totalRows: table.totalRows,
+  }
+}
 
 /** 消息的结论文本（独立于推理过程） */
 const conclusion = computed((): string | null => {
@@ -250,18 +275,6 @@ const contentSegments = computed((): ContentSegment[] => {
 
   return segments
 })
-
-/**
- * 标准化 markdown 文本：修正 LLM 输出的常见格式瑕疵，使前端渲染更稳定。
- * 作为 prompt 约束的兜底，即使 LLM 偶有偏差也不会产生裸符号。
- */
-function formatCellValue(val: unknown): string {
-  if (val === null || val === undefined) return '—'
-  if (typeof val === 'number') {
-    return val % 1 === 0 ? val.toLocaleString() : val.toFixed(2)
-  }
-  return String(val)
-}
 
 function formatTimestamp(ts: number): string {
   const d = new Date(ts)
@@ -431,22 +444,11 @@ function formatTokens(n: number): string {
 
         <!-- event:table 结构化表格（流式 + 完成态均可能） -->
         <div v-if="!hasPresentationBlocks && message.tables && message.tables.length > 0" class="msg-tables">
-          <div v-for="table in message.tables" :key="table.outputKey" class="msg-table-wrap">
-            <table>
-              <thead>
-                <tr><th v-for="h in table.headers" :key="h">{{ h }}</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, ri) in table.rows" :key="ri" class="event-row"
-                    :style="{ animationDelay: `${ri * 0.05}s` }">
-                  <td v-for="h in table.headers" :key="h">{{ formatCellValue(row[h]) }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div v-if="table.totalRows > table.rows.length" class="msg-table-footer">
-              … 仅展示前 {{ table.rows.length }} 行，共 {{ table.totalRows }} 行
-            </div>
-          </div>
+          <DataTableBlockVue
+            v-for="table in message.tables"
+            :key="table.outputKey"
+            :block="tableEventBlock(table)"
+          />
         </div>
 
         <!-- 图表入口从结果整理完成时即占位，后续仅平滑切换内部状态。 -->
@@ -563,7 +565,7 @@ function formatTokens(n: number): string {
   max-width: 85%;
   min-width: 0;
   padding: 12px 16px;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.72;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -795,7 +797,7 @@ function formatTokens(n: number): string {
 }
 
 .msg-conclusion__text {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--fg);
   font-weight: 500;
@@ -859,7 +861,7 @@ function formatTokens(n: number): string {
   flex: 1;
   display: grid;
   gap: 2px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
 }
@@ -1161,7 +1163,7 @@ function formatTokens(n: number): string {
 .msg-tables .msg-table-wrap table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
@@ -1171,10 +1173,10 @@ function formatTokens(n: number): string {
   background: var(--accent);
   color: #fff;
   font-weight: 600;
-  padding: 8px 12px;
+  padding: 7px 12px;
   text-align: left;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.02em;
   border: 1px solid rgba(188, 105, 74, 0.3);
 }
@@ -1184,7 +1186,7 @@ function formatTokens(n: number): string {
 .msg-text :deep(.msg-table-wrap td),
 .msg-tables .msg-table-wrap th,
 .msg-tables .msg-table-wrap td {
-  padding: 8px 12px;
+  padding: 7px 12px;
   text-align: left;
   vertical-align: top;
   border: 1px solid var(--border-soft);
@@ -1194,7 +1196,7 @@ function formatTokens(n: number): string {
 .msg-text :deep(.msg-table-wrap tbody td),
 .msg-tables .msg-table-wrap tbody td {
   color: var(--fg);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* 交替行底色（暖白） */
@@ -1219,31 +1221,6 @@ function formatTokens(n: number): string {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* ===== event:table 行逐条滑入动画（仅在完成态稳定后触发一次） ===== */
-.msg-tables .msg-table-wrap .event-row {
-  opacity: 0;
-  animation: rowSlideIn 0.25s var(--ease-out-expo) forwards;
-}
-
-@keyframes rowSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.msg-tables .msg-table-footer {
-  padding: 6px 12px;
-  font-size: 13px;
-  color: var(--muted);
-  border-top: 1px solid var(--border-soft);
-  text-align: center;
 }
 
 /* ===== Token 消耗徽章 + 时间 ===== */
@@ -1324,23 +1301,23 @@ function formatTokens(n: number): string {
 .msg-text .msg-table-wrap table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 .msg-text .msg-table-wrap thead th {
   background: var(--accent);
   color: #fff;
   font-weight: 600;
-  padding: 8px 12px;
+  padding: 7px 12px;
   text-align: left;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.02em;
   border: 1px solid rgba(188, 105, 74, 0.3);
 }
 .msg-text .msg-table-wrap th,
 .msg-text .msg-table-wrap td {
-  padding: 8px 12px;
+  padding: 7px 12px;
   text-align: left;
   vertical-align: top;
   border: 1px solid var(--border-soft);
@@ -1349,7 +1326,7 @@ function formatTokens(n: number): string {
 }
 .msg-text .msg-table-wrap tbody td {
   color: var(--fg);
-  font-size: 14px;
+  font-size: 13px;
 }
 .msg-text .msg-table-wrap tbody tr:nth-child(even) {
   background: var(--surface-raised);

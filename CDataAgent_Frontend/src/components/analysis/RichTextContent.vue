@@ -38,17 +38,17 @@ const segments = computed<ContentSegment[]>(() => {
 </script>
 
 <style scoped>
-.rich-text-content { min-width: 0; max-width: 100%; color: var(--fg); font-size: 16px; line-height: 1.72; overflow-wrap: anywhere; }
+.rich-text-content { min-width: 0; max-width: 100%; color: var(--fg); font-size: 15px; line-height: 1.72; overflow-wrap: anywhere; }
 .rich-text-content :deep(p) { margin: 0 0 8px; }
 .rich-text-content :deep(p:last-child) { margin-bottom: 0; }
 .rich-text-content :deep(h1),
 .rich-text-content :deep(h2),
 .rich-text-content :deep(h3),
 .rich-text-content :deep(h4) { margin: 16px 0 8px; color: var(--fg); font-weight: 600; letter-spacing: -0.01em; }
-.rich-text-content :deep(h1) { font-size: 18px; border-bottom: 1px solid var(--border-soft); padding-bottom: 6px; }
-.rich-text-content :deep(h2) { font-size: 17px; border-bottom: 1px solid var(--border-soft); padding-bottom: 4px; }
-.rich-text-content :deep(h3) { font-size: 16px; }
-.rich-text-content :deep(h4) { font-size: 15px; }
+.rich-text-content :deep(h1) { font-size: 17px; border-bottom: 1px solid var(--border-soft); padding-bottom: 6px; }
+.rich-text-content :deep(h2) { font-size: 16px; border-bottom: 1px solid var(--border-soft); padding-bottom: 4px; }
+.rich-text-content :deep(h3) { font-size: 15px; }
+.rich-text-content :deep(h4) { font-size: 14px; }
 .rich-text-content :deep(hr) { margin: 16px 0; border: 0; border-top: 1px solid var(--border-soft); }
 .rich-text-content :deep(ul),
 .rich-text-content :deep(ol) { margin: 6px 0; padding-left: 1.5em; }
@@ -60,9 +60,9 @@ const segments = computed<ContentSegment[]>(() => {
 .rich-text-content :deep(a) { color: var(--accent); text-decoration: none; }
 .rich-text-content :deep(a:hover) { text-decoration: underline; }
 .rich-table-wrap { max-width: 100%; margin: 12px 0; overflow-x: auto; border: 1px solid var(--border-soft); border-radius: 10px; background: var(--surface); }
-.rich-table-wrap table { width: max-content; min-width: 100%; border-collapse: collapse; }
+.rich-table-wrap table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
 .rich-table-wrap th,
-.rich-table-wrap td { padding: 8px 12px; border: 1px solid var(--border-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.rich-table-wrap th { background: var(--accent); color: #fff; white-space: nowrap; }
+.rich-table-wrap td { padding: 7px 12px; border: 1px solid var(--border-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.rich-table-wrap th { background: var(--accent); color: #fff; font-size: 12px; white-space: nowrap; }
 .rich-table-wrap tr:nth-child(even) { background: var(--surface-raised); }
 </style>

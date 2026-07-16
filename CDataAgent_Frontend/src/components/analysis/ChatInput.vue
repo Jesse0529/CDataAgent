@@ -70,6 +70,7 @@ function handleMenuUpload() {
 
 function handleManageClick(e: MouseEvent) {
   e.stopPropagation()
+  if (props.loading) return
   manageSubmenu.value = true
 }
 
@@ -145,6 +146,15 @@ watch(text, () => {
   nextTick(autoResize)
 })
 
+watch(
+  () => props.loading,
+  (loading) => {
+    if (loading && manageSubmenu.value) {
+      manageSubmenu.value = false
+    }
+  },
+)
+
 defineExpose({ focusTextarea })
 </script>
 
@@ -177,7 +187,7 @@ defineExpose({ focusTextarea })
               <span>上传 Excel 文件</span>
             </button>
             <div class="chat-input__menu-divider" />
-            <button class="chat-input__menu-item" @click="handleManageClick">
+            <button class="chat-input__menu-item" :disabled="loading" @click="handleManageClick">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -197,14 +207,22 @@ defineExpose({ focusTextarea })
               <span>返回</span>
             </button>
             <div class="chat-input__menu-divider" />
-            <button class="chat-input__menu-item" @click="showMenu = false; manageSubmenu = false; emit('clear-conversation')">
+            <button
+              class="chat-input__menu-item"
+              :disabled="loading"
+              @click="showMenu = false; manageSubmenu = false; emit('clear-conversation')"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
               </svg>
               <span>清空聊天记录</span>
             </button>
-            <button class="chat-input__menu-item" @click="showMenu = false; manageSubmenu = false; emit('reset-conversation')">
+            <button
+              class="chat-input__menu-item"
+              :disabled="loading"
+              @click="showMenu = false; manageSubmenu = false; emit('reset-conversation')"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />

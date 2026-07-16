@@ -68,6 +68,10 @@ const clearing = ref(false)
 const resetting = ref(false)
 
 async function handleClearMessages() {
+  if (chatting.value) {
+    message.warning('任务运行中，暂不能清空聊天记录')
+    return
+  }
   dialog.warning({
     title: '清空聊天记录',
     content: '仅删除聊天记录但不可恢复，是否继续？',
@@ -93,6 +97,10 @@ async function handleClearMessages() {
 }
 
 async function handleResetConversation() {
+  if (chatting.value) {
+    message.warning('任务运行中，暂不能重置对话')
+    return
+  }
   dialog.warning({
     title: '重置对话',
     content: '该选项会清空聊天记录并重置 Agent 的记忆，是否继续？',
