@@ -175,7 +175,7 @@ public class ChartOutputTool {
                 case "area", "面积图" -> buildArea(title, dimValues, seriesNames, metricData);
                 case "pie", "饼图" -> buildPie(title, dimValues, metricData);
                 case "scatter", "散点图" -> buildScatter(title, seriesNames, metricData);
-                case "radar", "雷达图" -> buildRadar(title, seriesNames, metricData);
+                case "radar", "雷达图" -> buildRadar(title, dimValues, seriesNames, metricData);
                 case "funnel", "漏斗图" -> buildFunnel(title, dimValues, metricData);
                 case "gauge", "仪表盘" -> buildGauge(title, metricData);
                 case "heatmap", "热力图" -> buildHeatmap(title, dimValues, seriesNames, metricData);
@@ -191,7 +191,7 @@ public class ChartOutputTool {
                     case "area" -> buildArea(title, dimValues, seriesNames, metricData);
                     case "pie" -> buildPie(title, dimValues, metricData);
                     case "scatter" -> buildScatter(title, seriesNames, metricData);
-                    case "radar" -> buildRadar(title, seriesNames, metricData);
+                    case "radar" -> buildRadar(title, dimValues, seriesNames, metricData);
                     case "funnel" -> buildFunnel(title, dimValues, metricData);
                     case "gauge" -> buildGauge(title, metricData);
                     case "heatmap" -> buildHeatmap(title, dimValues, seriesNames, metricData);
@@ -266,6 +266,7 @@ public class ChartOutputTool {
             }
 
             if (!option.containsKey("tooltip")) issues.add("缺少 tooltip");
+            validateRadarOption(option, issues);
 
             String result;
             if (issues.isEmpty()) {
@@ -417,22 +418,79 @@ public class ChartOutputTool {
         return option.toJSONString();
     }
 
-    private String buildRadar(String title, List<String> seriesNames, Map<String, List<Double>> metricData) {
+    private String buildRadar(String title, List<String> dimValues, List<String> seriesNames,
+                              Map<String, List<Double>> metricData) {
+        if (dimValues.size() < 3) {
+            return ToolResultUtils.jsonTypedError("schema", "雷达图至少需要 3 个维度");
+        }
         JSONArray indicators = new JSONArray();
-        JSONArray values = new JSONArray();
+        for (int index = 0; index < dimValues.size(); index++) {
+            String dimension = dimValues.get(index);
+            if (StringUtils.isBlank(dimension)) {
+                return ToolResultUtils.jsonTypedError("schema", "雷达图维度值不能为空");
+            }
+            double max = 0D;
+            for (List<Double> values : metricData.values()) {
+                if (index >= values.size() || values.get(index) == null) {
+                    return ToolResultUtils.jsonTypedError("schema", "雷达图指标数据不完整");
+                }
+                max = Math.max(max, Math.abs(values.get(index)));
+            }
+            JSONObject indicator = new JSONObject();
+            indicator.put("name", dimension);
+            indicator.put("max", Math.max(1D, Math.ceil(max * 1.2D)));
+            indicators.add(indicator);
+        }
+
+        JSONArray radarData = new JSONArray();
         for (String name : seriesNames) {
-            List<Double> vals = metricData.get(name);
-            double max = vals.stream().mapToDouble(Double::doubleValue).max().orElse(100);
-            indicators.add(new JSONObject() {{ put("name", name); put("max", Math.ceil(max * 1.2)); }});
-            values.add(vals.isEmpty() ? 0 : vals.get(0));
+            List<Double> values = metricData.get(name);
+            if (values == null || values.size() != dimValues.size()) {
+                return ToolResultUtils.jsonTypedError("schema", "雷达图指标与维度数量不一致");
+            }
+            JSONObject item = new JSONObject();
+            item.put("name", name);
+            item.put("value", new JSONArray(values));
+            radarData.add(item);
         }
         JSONObject option = new JSONObject();
         option.put("title", new JSONObject() {{ put("text", title); put("left", "center"); }});
         option.put("tooltip", new JSONObject() {{ put("trigger", "item"); }});
         option.put("radar", new JSONObject() {{ put("indicator", indicators); }});
         option.put("series", JSONArray.of(new JSONObject() {{ put("name", title); put("type", "radar");
-            put("data", JSONArray.of(new JSONObject() {{ put("value", values); put("name", title); }})); }}));
+            put("data", radarData); }}));
         return option.toJSONString();
+    }
+
+    private void validateRadarOption(JSONObject option, List<String> issues) {
+        JSONObject radar = option.getJSONObject("radar");
+        if (radar == null) return;
+        JSONArray indicators = radar.getJSONArray("indicator");
+        if (indicators == null || indicators.size() < 3) {
+            issues.add("雷达图至少需要 3 个有效维度");
+            return;
+        }
+        JSONArray series = option.getJSONArray("series");
+        if (series == null) return;
+        for (int seriesIndex = 0; seriesIndex < series.size(); seriesIndex++) {
+            JSONObject seriesItem = series.getJSONObject(seriesIndex);
+            JSONArray data = seriesItem == null ? null : seriesItem.getJSONArray("data");
+            if (data == null) continue;
+            for (int dataIndex = 0; dataIndex < data.size(); dataIndex++) {
+                JSONObject item = data.getJSONObject(dataIndex);
+                JSONArray values = item == null ? null : item.getJSONArray("value");
+                if (values == null || values.size() != indicators.size()) {
+                    issues.add("雷达图数据向量与维度数量不一致");
+                    continue;
+                }
+                for (Object value : values) {
+                    if (toFiniteDouble(value) == null) {
+                        issues.add("雷达图包含无效数值");
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     private String buildFunnel(String title, List<String> dimValues, Map<String, List<Double>> metricData) {

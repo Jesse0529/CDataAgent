@@ -21,6 +21,7 @@ import com.AIBI.model.entity.Conversation;
 import com.AIBI.model.entity.ConversationMessage;
 import com.AIBI.model.entity.DataFile;
 import com.AIBI.model.vo.MessageVO;
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.AIBI.service.AgentService;
@@ -383,7 +384,7 @@ public class AgentServiceImpl implements AgentService {
                     log.info("Agent阶段 runId={} stage=plan_submitted tables={} charts={}",
                             runContext.getRunId(), tableCount, chartCount);
                     RenderDocument doc = renderDocumentAssembler.assembleWithoutCharts(plan, runContext.getRunId());
-                    return artifactEvents(doc);
+                    return artifactEvents(doc, plan.hasCharts());
                 })
                 : Flux.empty();
 
@@ -445,10 +446,7 @@ public class AgentServiceImpl implements AgentService {
                             runContext.getRunId(), chartCount);
 
                     // 图表仅在生成与校验完成后随最终持久化结果开放，避免半成品闪现。
-                    return synthesizePhase(synthPrompt, config)
-                            .doOnComplete(() -> log.info("Agent阶段 runId={} stage=synthesizer_finished",
-                                    runContext.getRunId()))
-                            .thenMany(Flux.empty());
+                    return synthesizeCharts(synthPrompt, config, runContext);
                 }))
                 // 最终文档只用于持久化和历史恢复；流式过程不替换已有 UI。
                 .concatWith(Flux.defer(() -> {
@@ -462,61 +460,10 @@ public class AgentServiceImpl implements AgentService {
                     if (ctx != null) ctx.setLastRenderDocument(doc);
                     return Flux.empty();
                 }))
-                .doOnComplete(() -> {
-                    RunContext ctx = runContext;
-                    String runId = ctx != null ? ctx.getRunId() : null;
-
-                    String content;
-                    String conclusion = null;
-                    String chartOption;
-                    String renderDocumentJson = null;
-                    Integer renderVersion = null;
-
-                    // 优先使用 document concatWith 中已生成的 RenderDocument
-                    RenderDocument doc = ctx != null ? ctx.getLastRenderDocument() : null;
-                    if (doc == null) {
-                        // 旧协议路径：尝试从 PresentationPlan 生成（兼容非流式场景）
-                        PresentationPlan plan = ctx != null ? ctx.getPresentationPlan() : null;
-                        if (plan != null) {
-                            doc = renderDocumentAssembler.assemble(plan, runId);
-                        }
-                    }
-
-                    if (doc != null) {
-                        // ── 新协议路径：已有 RenderDocument ──
-                        renderDocumentJson = doc.toJson();
-                        renderVersion = doc.version();
-                        content = doc.toContentProjection();
-
-                        // 从区块提取结论
-                        conclusion = doc.extractConclusion();
-
-                        // 消费图表 JSON
-                        chartOption = ctx != null ? ctx.consumeChartOptions() : null;
-
-                    } else {
-                        // ── 旧协议路径（兼容：无 RenderDocument） ──
-                        String raw = fullResponse.toString().trim()
-                                .replaceAll("#+NEEDS_CHART#*", "")
-                                .replace("【【【【【", "")
-                                .replace("】】】】】", "")
-                                .trim();
-                        conclusion = extractConclusion(raw);
-                        content = normalizeTableFormat(
-                                conclusion != null ? removeConclusionMarkers(raw) : raw);
-                        chartOption = ctx != null ? ctx.consumeChartOptions() : null;
-                    }
-
-                    // 持久化（双写）
-                    if (content != null && !content.isEmpty()) {
-                        Integer tokenUsage = consumeRoundTokenUsage(cid);
-                        saveMessage(cid, "assistant", content, fileAttachments, chartOption,
-                                tokenUsage, conclusion, renderDocumentJson, renderVersion);
-                        log.info("Agent阶段 runId={} stage=persisted blocks={} chart={} token={} degraded={}",
-                                runId, doc != null ? doc.blocks().size() : 0,
-                                chartOption != null, tokenUsage, doc != null && doc.degraded());
-                    }
-                })
+                .concatWith(Flux.defer(() -> {
+                    Finalization finalization = finalizeRun(cid, fileAttachments, fullResponse, runContext);
+                    return Flux.just(chartResultEvent(finalization));
+                }))
                 .doFinally(signal -> {
                     String cidStr = cid.toString();
                     // 清除 RunContext（图表和意图字段）
@@ -583,13 +530,102 @@ public class AgentServiceImpl implements AgentService {
         return Map.of("type", "document", "data", payload.toJSONString());
     }
 
-    private static Map<String, String> artifactEvent(RenderDocument document) {
-        return Map.of("type", "artifact", "data", document.toTransportJson());
+    private static Map<String, String> artifactEvent(RenderDocument document, boolean chartExpected) {
+        JSONObject payload = JSONObject.parseObject(document.toTransportJson());
+        payload.put("chartExpected", chartExpected);
+        return Map.of("type", "artifact", "data", payload.toJSONString());
     }
 
-    private static Flux<Map<String, String>> artifactEvents(RenderDocument document) {
+    /** 计划要求图表但首轮没有已校验产物时，仅补偿重试一次。 */
+    private Flux<Map<String, String>> synthesizeCharts(String prompt, RunnableConfig config, RunContext context) {
+        return synthesizePhase(prompt, config)
+                .thenMany(Flux.defer(() -> {
+                    if (context.hasChartOptions()) return Flux.<Map<String, String>>empty();
+                    log.warn("Agent阶段 runId={} stage=synthesizer_retry reason=no_validated_chart",
+                            context.getRunId());
+                    String retryPrompt = prompt + "\n\n上一轮未生成有效图表。现在必须依次调用 describeData、buildChart、validateChart，"
+                            + "并使用上述图表输出键；不要只返回说明文本。";
+                    return synthesizePhase(retryPrompt, config).thenMany(Flux.<Map<String, String>>empty());
+                }))
+                .doOnComplete(() -> log.info("Agent阶段 runId={} stage=synthesizer_finished validated={}",
+                        context.getRunId(), context.hasChartOptions()));
+    }
+
+    /** 完成持久化后再推送图表终态，避免客户端依赖异步刷新补齐关键状态。 */
+    private Finalization finalizeRun(Long cid, String fileAttachments, StringBuilder fullResponse,
+                                    RunContext context) {
+        String runId = context != null ? context.getRunId() : null;
+        PresentationPlan plan = context != null ? context.getPresentationPlan() : null;
+        int plannedChartCount = plan != null && plan.getChartOutputKeys() != null
+                ? plan.getChartOutputKeys().size() : 0;
+
+        String content;
+        String conclusion = null;
+        String chartOption;
+        String renderDocumentJson = null;
+        Integer renderVersion = null;
+
+        RenderDocument doc = context != null ? context.getLastRenderDocument() : null;
+        if (doc == null && plan != null) {
+            doc = renderDocumentAssembler.assemble(plan, runId);
+        }
+
+        if (doc != null) {
+            renderDocumentJson = doc.toJson();
+            renderVersion = doc.version();
+            content = doc.toContentProjection();
+            conclusion = doc.extractConclusion();
+            chartOption = context != null ? context.consumeChartOptions() : null;
+        } else {
+            String raw = fullResponse.toString().trim()
+                    .replaceAll("#+NEEDS_CHART#*", "")
+                    .replace("【【【【【", "")
+                    .replace("】】】】】", "")
+                    .trim();
+            conclusion = extractConclusion(raw);
+            content = normalizeTableFormat(conclusion != null ? removeConclusionMarkers(raw) : raw);
+            chartOption = context != null ? context.consumeChartOptions() : null;
+        }
+
+        if (content != null && !content.isEmpty()) {
+            Integer tokenUsage = consumeRoundTokenUsage(cid);
+            saveMessage(cid, "assistant", content, fileAttachments, chartOption,
+                    tokenUsage, conclusion, renderDocumentJson, renderVersion);
+            log.info("Agent阶段 runId={} stage=persisted blocks={} chart={} token={} degraded={}",
+                    runId, doc != null ? doc.blocks().size() : 0,
+                    chartOption != null, tokenUsage, doc != null && doc.degraded());
+        }
+        if (plannedChartCount > 0 && chartOption == null) {
+            log.warn("图表未生成 runId={} planned={}", runId, plannedChartCount);
+        }
+        return new Finalization(runId, plannedChartCount, chartOption);
+    }
+
+    private static Map<String, String> chartResultEvent(Finalization finalization) {
+        int validatedChartCount = 0;
+        if (StringUtils.isNotBlank(finalization.chartOption())) {
+            try {
+                validatedChartCount = JSON.parseArray(finalization.chartOption()).size();
+            } catch (Exception ignored) {
+                // 持久化已使用同一来源；事件退化为不可用状态，避免向客户端传递坏数据。
+            }
+        }
+        String state = finalization.plannedChartCount() == 0 ? "not_requested"
+                : validatedChartCount > 0 ? "ready" : "unavailable";
+        JSONObject payload = new JSONObject();
+        payload.put("runId", finalization.runId());
+        payload.put("plannedChartCount", finalization.plannedChartCount());
+        payload.put("validatedChartCount", validatedChartCount);
+        payload.put("state", state);
+        if ("ready".equals(state)) payload.put("chartOption", finalization.chartOption());
+        return Map.of("type", "chart-result", "data", payload.toJSONString());
+    }
+
+    private record Finalization(String runId, int plannedChartCount, String chartOption) {}
+
+    private static Flux<Map<String, String>> artifactEvents(RenderDocument document, boolean chartExpected) {
         return Flux.fromIterable(document.splitForStreaming())
-                .map(AgentServiceImpl::artifactEvent)
+                .map(item -> artifactEvent(item, chartExpected))
                 .delayElements(Duration.ofMillis(70));
     }
 
