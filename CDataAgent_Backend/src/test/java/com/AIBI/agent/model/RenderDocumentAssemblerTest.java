@@ -151,6 +151,7 @@ class RenderDocumentAssemblerTest {
     void chartWithDataProducesChartBlock() {
         RunContext ctx = new RunContext("run-008", 1L);
         ctx.addChartOption("{\"title\":{\"text\":\"test\"}}");
+        ctx.markChartValidated(1);
         RunContextHolder.set(ctx);
 
         PresentationPlan plan = new PresentationPlan();

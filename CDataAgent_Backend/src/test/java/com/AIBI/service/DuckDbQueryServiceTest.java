@@ -125,6 +125,29 @@ class DuckDbQueryServiceTest {
         assertEquals(5, arr.size());
     }
 
+    @Test
+    @DisplayName("DQS-02b: Agent 查询应标记超过返回上限的结果")
+    void agentQueryShouldMarkTruncatedResult() {
+        DuckDbQueryService.AgentQueryResult result = queryService.executeAgentQuery(
+                TEST_CID, List.of(fileRef), "SELECT * FROM sales_view ORDER BY category", 3);
+
+        assertFalse(result.hasError());
+        assertEquals(3, result.rowCount());
+        assertEquals(3, JSON.parseArray(result.dataJson()).size());
+        assertTrue(result.truncated());
+    }
+
+    @Test
+    @DisplayName("DQS-02c: Agent 查询保留显式 LIMIT，且不误标记截断")
+    void agentQueryShouldRespectExplicitLimit() {
+        DuckDbQueryService.AgentQueryResult result = queryService.executeAgentQuery(
+                TEST_CID, List.of(fileRef), "SELECT * FROM sales_view ORDER BY category LIMIT 2", 3);
+
+        assertFalse(result.hasError());
+        assertEquals(2, result.rowCount());
+        assertFalse(result.truncated());
+    }
+
     // ═══════════════════════════════════════════════════════════
     // DQS-03: 保留已有 LIMIT
     // ═══════════════════════════════════════════════════════════
@@ -137,6 +160,27 @@ class DuckDbQueryServiceTest {
         assertNotNull(result);
         JSONArray arr = JSON.parseArray(result);
         assertEquals(3, arr.size());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "SELECT 1; SELECT 2",
+            "SELECT 1; DROP VIEW sales_view;",
+            "SELECT ';' AS value; SELECT 2"
+    })
+    @DisplayName("DQS-03a: 多语句必须被拒绝")
+    void multipleStatementsShouldBeRejected(String sql) {
+        String result = queryService.executeQuery(List.of(fileRef), sql);
+        assertErrorType(result, "syntax");
+        assertMessageContains(result, "多条 SQL");
+    }
+
+    @Test
+    @DisplayName("DQS-03b: 字符串、注释与尾部分号不应误判为多语句")
+    void trailingSemicolonAndCommentsShouldBeAllowed() {
+        String result = queryService.executeQuery(List.of(fileRef),
+                "SELECT ';' AS value FROM sales_view LIMIT 1; -- trailing comment");
+        assertFalse(result.contains("\"error\""), result);
     }
 
     @Test

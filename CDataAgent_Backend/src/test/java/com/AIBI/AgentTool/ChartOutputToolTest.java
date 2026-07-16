@@ -70,4 +70,39 @@ class ChartOutputToolTest {
         assertEquals("month", fields.getJSONObject(0).getString("name"));
         assertEquals("2025-01", description.getJSONArray("samples").getJSONObject(0).getString("month"));
     }
+
+    @Test
+    void buildsTransposedRadarForFewObjectsAndMultipleMetrics() {
+        analysisState.addData("model_metrics", """
+                [{"model":"模型A","r2":0.91,"rmse":12.0,"mae":8.0},
+                 {"model":"模型B","r2":0.87,"rmse":15.0,"mae":10.0}]
+                """);
+
+        String result = chartOutputTool.buildChart("radar", "模型性能对比", "model",
+                "{\"R²\":\"r2\",\"RMSE\":\"rmse\",\"MAE\":\"mae\"}", "model_metrics");
+
+        assertEquals("chart-ready:1", result);
+        JSONObject option = JSON.parseObject(RunContextHolder.get().getChartOption(1));
+        JSONArray indicators = option.getJSONObject("radar").getJSONArray("indicator");
+        JSONArray data = option.getJSONArray("series").getJSONObject(0).getJSONArray("data");
+        assertEquals(3, indicators.size());
+        assertEquals("R²", indicators.getJSONObject(0).getString("name"));
+        assertEquals("模型A", data.getJSONObject(0).getString("name"));
+        assertEquals(3, data.getJSONObject(0).getJSONArray("value").size());
+    }
+
+    @Test
+    void rejectsTruncatedQueryResultBeforeBuildingChart() {
+        AnalysisState.QueryOutputRecord output = new AnalysisState.QueryOutputRecord();
+        output.outputKey = "raw_detail";
+        output.rowLimit = 1000;
+        output.truncated = true;
+        analysisState.addQueryOutput(output);
+
+        JSONObject error = JSON.parseObject(chartOutputTool.buildChart("bar", "明细", "month",
+                "{\"销售额\":\"sales\"}", "raw_detail"));
+
+        assertEquals("schema", error.getString("error"));
+        assertTrue(error.getString("message").contains("Top N"));
+    }
 }

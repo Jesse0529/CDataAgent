@@ -77,10 +77,12 @@ class PlainTextPolicyTest {
     }
 
     @Test
-    @DisplayName("表格分隔符导致修复失败")
-    void tableNotRepairable() {
+    @DisplayName("表格分隔符压平为纯文本")
+    void tableShouldBeFlattened() {
         String result = PlainTextPolicy.attemptRepair("| a | b |\n| --- | --- |\n| 1 | 2 |");
-        assertNull(result); // 修复应失败，因为表格分隔符无法安全去除
+        assertNotNull(result);
+        assertFalse(result.contains("|"));
+        assertTrue(result.contains("a；b"));
     }
 
     @Test
