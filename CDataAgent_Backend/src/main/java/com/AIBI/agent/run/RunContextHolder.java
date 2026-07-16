@@ -9,7 +9,7 @@ package com.AIBI.agent.run;
  * 使用 static volatile 字段而非 ThreadLocal：
  * Spring AI Alibaba Agent Framework 的 LLM 调用和工具回调在 Reactor/Netty 线程上执行，
  * 与设置 RunContext 的 Tomcat 线程不同，ThreadLocal 跨线程不可见。
- * 当前系统的 Redisson 锁保证了同一对话的串行执行，static 字段是安全的。
+ * 服务层以全局运行锁保证同一时刻只有一个 Agent 任务，避免异步回调读取到其他任务的上下文。
  */
 public class RunContextHolder {
 
@@ -22,7 +22,13 @@ public class RunContextHolder {
     /**
      * 设置当前 RunContext。
      */
-    public static void set(RunContext context) {
+    public static synchronized void set(RunContext context) {
+        if (context == null) {
+            throw new IllegalArgumentException("RunContext 不能为空");
+        }
+        if (current != null && current != context) {
+            throw new IllegalStateException("已有 Agent 任务正在运行，拒绝覆盖 RunContext");
+        }
         current = context;
     }
 
@@ -51,7 +57,16 @@ public class RunContextHolder {
     /**
      * 清除当前 RunContext（防止残留到下一次请求）。
      */
-    public static void clear() {
+    public static synchronized void clear() {
         current = null;
+    }
+
+    /**
+     * 仅清理指定任务仍持有的上下文，避免延迟回调误清理后续任务。
+     */
+    public static synchronized void clear(RunContext context) {
+        if (current == context) {
+            current = null;
+        }
     }
 }

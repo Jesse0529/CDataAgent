@@ -7,6 +7,7 @@ import com.AIBI.agent.model.RenderDocumentAssembler;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.agent.run.RunActivity;
+import com.AIBI.agent.run.AgentLockKeys;
 import com.AIBI.common.ErrorCode;
 import com.AIBI.exception.BusinessException;
 import com.AIBI.exception.ThrowUtils;
@@ -124,7 +125,6 @@ public class AgentServiceImpl implements AgentService {
 
     private static final String LOCK_PREFIX = "agent:lock:";
     private static final long LOCK_WAIT_SECONDS = 5;
-    private static final long LOCK_LEASE_SECONDS = 350;
     private static final int MAX_CONVERSATION_ROUNDS = 50;
 
     /** 结论标记正则：##CONCLUSION##\n...\n##END##（兼容 CRLF \r\n） */
@@ -157,13 +157,12 @@ public class AgentServiceImpl implements AgentService {
     @Override
     public void deleteMessages(Long conversationId) {
         ThrowUtils.throwIf(conversationId == null, ErrorCode.PARAMS_ERROR, "对话ID不能为空");
-        // 校验对话是否存在
         Conversation conv = conversationService.getById(conversationId);
         ThrowUtils.throwIf(conv == null, ErrorCode.NOT_FOUND_ERROR, "对话不存在");
 
         conversationMessageService.remove(
                 new QueryWrapper<ConversationMessage>().eq("conversationId", conversationId));
-        log.info("消息已清空");
+        log.info("聊天记录已清空");
     }
 
     @Override
@@ -173,17 +172,37 @@ public class AgentServiceImpl implements AgentService {
         Conversation conv = conversationService.getById(conversationId);
         ThrowUtils.throwIf(conv == null, ErrorCode.NOT_FOUND_ERROR, "对话不存在");
 
-        // ── 获取对话锁，防止与活跃流冲突 ──
+        // ── 获取全局运行锁和对话锁，防止与活跃流冲突 ──
+        RLock globalLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
         RLock lock = redissonClient.getLock(LOCK_PREFIX + conversationId);
+        boolean globalLocked = false;
+        boolean conversationLocked = false;
         try {
+            globalLocked = globalLock.tryLock(0, TimeUnit.SECONDS);
+            if (!globalLocked) {
+                throw new BusinessException(ErrorCode.TOO_MANY_REQUEST,
+                        "任务正在进行中，无法重置");
+            }
             // 0-wait: 锁被持有说明有活跃对话，直接拒绝
-            if (!lock.tryLock(0, LOCK_LEASE_SECONDS, TimeUnit.SECONDS)) {
+            conversationLocked = lock.tryLock(0, TimeUnit.SECONDS);
+            if (!conversationLocked) {
                 throw new BusinessException(ErrorCode.TOO_MANY_REQUEST,
                         "对话正在进行中，无法重置");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            if (globalLocked) {
+                unlockQuietly(globalLock);
+            }
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");
+        } catch (RuntimeException e) {
+            if (conversationLocked) {
+                unlockQuietly(lock);
+            }
+            if (globalLocked) {
+                unlockQuietly(globalLock);
+            }
+            throw e;
         }
 
         try {
@@ -218,12 +237,8 @@ public class AgentServiceImpl implements AgentService {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "重置对话失败: " + e.getMessage());
         } finally {
             // 释放锁
-            try {
-                if (lock.isHeldByCurrentThread()) {
-                    lock.forceUnlock();
-                }
-            } catch (Exception ignored) {
-            }
+            unlockQuietly(lock);
+            unlockQuietly(globalLock);
         }
     }
 
@@ -263,69 +278,94 @@ public class AgentServiceImpl implements AgentService {
             Long cid = getOrCreateDefaultConversation();
             String effectiveRunId = StringUtils.defaultIfBlank(runId, UUID.randomUUID().toString());
 
+            RLock globalLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
             RLock lock = redissonClient.getLock(LOCK_PREFIX + cid);
             try {
-                if (!lock.tryLock(LOCK_WAIT_SECONDS, LOCK_LEASE_SECONDS, TimeUnit.SECONDS)) {
+                if (!globalLock.tryLock(0, TimeUnit.SECONDS)) {
+                    return Flux.error(new BusinessException(ErrorCode.TOO_MANY_REQUEST,
+                            "已有任务正在运行，请等待完成后再发送"));
+                }
+                if (!lock.tryLock(LOCK_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                    unlockQuietly(globalLock);
                     return Flux.error(new BusinessException(ErrorCode.TOO_MANY_REQUEST,
                             "对话处理中，请稍后再试"));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                unlockQuietly(globalLock);
                 return Flux.error(new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙"));
             }
-
-            // 设置本轮 active 文件（前端传递的文件绑定）
-            analysisState.setCurrentThreadId(cid.toString());
-            String fileAttachments = null;
-            List<String> fileNames = new ArrayList<>();
-            if (fileIds != null && !fileIds.isEmpty()) {
-                analysisState.setActiveFileIds(fileIds);
-                // 文件切换时清空旧加载缓存，下次 loadData 重新加载
-                analysisState.setLoadedFiles(new ArrayList<>());
-
-                // 构建文件附件 JSON（用于持久化到消息表）
-                List<DataFile> dataFiles = dataFileMapper.selectBatchIds(fileIds);
-                JSONArray arr = new JSONArray();
-                for (DataFile df : dataFiles) {
-                    JSONObject item = new JSONObject();
-                    item.put("id", df.getId().toString());
-                    item.put("name", df.getOriginalFilename());
-                    arr.add(item);
-                    fileNames.add(df.getOriginalFilename());
-                }
-                if (!arr.isEmpty()) {
-                    fileAttachments = arr.toJSONString();
-                }
-            }
-
-            saveMessage(cid, "user", userMessage, fileAttachments);
-            redisLimiterManager.doRateLimit("agent_chat_default");
 
             // 创建 RunContext（请求级运行上下文）
             RunContext runContext = new RunContext(effectiveRunId, cid);
             runContext.setRenderProtocol(renderProtocol);
-            RunContextHolder.set(runContext);
+            boolean analysisStateInitialized = false;
+            try {
+                RunContextHolder.set(runContext);
 
-            String effectiveMessage = injectContext(userMessage, cid, fileIds);
+                // 设置本轮 active 文件（前端传递的文件绑定）
+                analysisState.setCurrentThreadId(cid.toString());
+                analysisStateInitialized = true;
+                String fileAttachments = null;
+                List<String> fileNames = new ArrayList<>();
+                if (fileIds != null && !fileIds.isEmpty()) {
+                    analysisState.setActiveFileIds(fileIds);
+                    // 文件切换时清空旧加载缓存，下次 loadData 重新加载
+                    analysisState.setLoadedFiles(new ArrayList<>());
 
-            log.info("运行开始 runId={} 文件数={}", effectiveRunId, fileNames.size());
+                // 构建文件附件 JSON（用于持久化到消息表）
+                    List<DataFile> dataFiles = dataFileMapper.selectBatchIds(fileIds);
+                    JSONArray arr = new JSONArray();
+                    for (DataFile df : dataFiles) {
+                        JSONObject item = new JSONObject();
+                        item.put("id", df.getId().toString());
+                        item.put("name", df.getOriginalFilename());
+                        arr.add(item);
+                        fileNames.add(df.getOriginalFilename());
+                    }
+                    if (!arr.isEmpty()) {
+                        fileAttachments = arr.toJSONString();
+                    }
+                }
 
-            modelManager.setCurrentConversationId(cid);
-            exactTokenCounter.setCurrentConversationId(cid);
-            tokenLedger.initRound(cid);
+                saveMessage(cid, "user", userMessage, fileAttachments);
+                redisLimiterManager.doRateLimit("agent_chat_default");
 
-            return executePipeline(cid, effectiveMessage, userMessage, lock, fileAttachments, runContext);
+                String effectiveMessage = injectContext(userMessage, cid, fileIds);
+
+                log.info("运行开始 文件数={}", fileNames.size());
+
+                modelManager.setCurrentConversationId(cid);
+                exactTokenCounter.setCurrentConversationId(cid);
+                tokenLedger.initRound(cid);
+
+                return executePipeline(cid, effectiveMessage, userMessage, lock, globalLock, fileAttachments, runContext);
+            } catch (RuntimeException e) {
+                runContext.clear();
+                RunContextHolder.clear(runContext);
+                if (analysisStateInitialized) {
+                    analysisState.clearByConversation(cid.toString());
+                }
+                duckDbConnectionManager.close(cid.toString());
+                tokenLedger.discardRound(cid);
+                modelManager.clearCurrentConversationId();
+                exactTokenCounter.clear();
+                unlockQuietly(lock);
+                unlockQuietly(globalLock);
+                return Flux.error(e);
+            }
         });
     }
 
     private Flux<Map<String, String>> executePipeline(Long cid, String effectiveMessage,
-                                                        String originalMessage, RLock lock,
+                                                        String originalMessage, RLock lock, RLock globalLock,
                                                         String fileAttachments, RunContext runContext) {
         RunnableConfig config = RunnableConfig.builder().threadId("executor:" + cid).build();
         Duration totalTimeout = Duration.ofSeconds(agentTimeoutSeconds);
         StringBuilder fullResponse = new StringBuilder();
-        String thinkingActivityId = runContext.beginActivity("thinking", "正在理解你的问题");
-        log.info("Agent阶段 runId={} stage=executor", runContext.getRunId());
+        runContext.beginRequirementUnderstanding();
+        runContext.setModelStage("executor");
+        log.info("阶段=executor");
 
         Flux<String> executorFlux;
         try {
@@ -345,11 +385,9 @@ public class AgentServiceImpl implements AgentService {
         Flux<Map<String, String>> executorEvents = executorFlux
                 .take(totalTimeout)
                 .doOnNext(fullResponse::append)
-                .doOnComplete(() -> runContext.finishActivity(thinkingActivityId, "thinking",
-                        "已完成需求理解", RunActivity.State.SUCCEEDED))
+                .doOnComplete(() -> runContext.completeRequirementUnderstanding(RunActivity.State.SUCCEEDED))
                 .onErrorResume(Exception.class, e -> {
-                    runContext.finishActivity(thinkingActivityId, "thinking",
-                            "需求理解未完成", RunActivity.State.FAILED);
+                    runContext.completeRequirementUnderstanding(RunActivity.State.FAILED);
                     log.error("运行失败 runId={}", runContext.getRunId(), e);
                     if (e instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
                         var wce = (org.springframework.web.reactive.function.client.WebClientResponseException) e;
@@ -381,8 +419,7 @@ public class AgentServiceImpl implements AgentService {
                 .flatMapMany(plan -> {
                     int tableCount = plan.getTableOutputKeys() == null ? 0 : plan.getTableOutputKeys().size();
                     int chartCount = plan.getChartOutputKeys() == null ? 0 : plan.getChartOutputKeys().size();
-                    log.info("Agent阶段 runId={} stage=plan_submitted tables={} charts={}",
-                            runContext.getRunId(), tableCount, chartCount);
+                    log.info("阶段=plan_submitted 表格={} 图表={}", tableCount, chartCount);
                     RenderDocument doc = renderDocumentAssembler.assembleWithoutCharts(plan, runContext.getRunId());
                     return artifactEvents(doc, plan.hasCharts());
                 })
@@ -403,8 +440,7 @@ public class AgentServiceImpl implements AgentService {
                             ? plan.getTableOutputKeys().size() : 0;
                     int chartCount = plan != null && plan.getChartOutputKeys() != null
                             ? plan.getChartOutputKeys().size() : 0;
-                    log.info("Agent阶段 runId={} stage=plan_ready tables={} charts={}",
-                            runContext.getRunId(), tableCount, chartCount);
+                    log.info("阶段=plan_ready 表格={} 图表={}", tableCount, chartCount);
 
                     // 判断是否需要触发 Synthesizer
                     boolean needsChart;
@@ -442,8 +478,7 @@ public class AgentServiceImpl implements AgentService {
                     }
 
                     if (!needsChart) return isV1 ? Flux.empty() : previewFlux(ctx, response);
-                    log.info("Agent阶段 runId={} stage=synthesizer charts={}",
-                            runContext.getRunId(), chartCount);
+                    log.info("阶段=synthesizer 图表={}", chartCount);
 
                     // 图表仅在生成与校验完成后随最终持久化结果开放，避免半成品闪现。
                     return synthesizeCharts(synthPrompt, config, runContext);
@@ -471,25 +506,37 @@ public class AgentServiceImpl implements AgentService {
                     if (ctx != null) {
                         ctx.clear();
                     }
-                    RunContextHolder.clear();
+                    RunContextHolder.clear(runContext);
                     // 清除 AnalysisState（文件/步骤/dataIndex ConcurrentHashMap）
-                    analysisState.clear();
+                    analysisState.clearByConversation(cidStr);
                     duckDbConnectionManager.close(cidStr);
                     tokenLedger.discardRound(cid);
                     modelManager.clearCurrentConversationId();
                     exactTokenCounter.clear();
                     runContext.completeActivityEvents();
-                    try {
-                        lock.forceUnlock();
-                    } catch (Exception ignored) {}
+                    unlockQuietly(lock);
+                    unlockQuietly(globalLock);
                 }),
                 activityEvents
         );
     }
 
+    private static void unlockQuietly(RLock lock) {
+        try {
+            if (lock != null && lock.isLocked()) {
+                lock.forceUnlock();
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private Flux<String> synthesizePhase(String prompt, RunnableConfig config) {
         log.debug("图表合成器开始运行");
         return Flux.defer(() -> {
+            RunContext context = RunContextHolder.get();
+            if (context != null) {
+                context.setModelStage("synthesizer");
+            }
             reactor.core.publisher.Flux<org.springframework.ai.chat.messages.Message> flux;
             try {
                 flux = synthesizerAgent.streamMessages(prompt, config);
@@ -541,14 +588,12 @@ public class AgentServiceImpl implements AgentService {
         return synthesizePhase(prompt, config)
                 .thenMany(Flux.defer(() -> {
                     if (context.hasChartOptions()) return Flux.<Map<String, String>>empty();
-                    log.warn("Agent阶段 runId={} stage=synthesizer_retry reason=no_validated_chart",
-                            context.getRunId());
+                    log.warn("阶段=synthesizer_retry 原因=无有效图表");
                     String retryPrompt = prompt + "\n\n上一轮未生成有效图表。现在必须依次调用 describeData、buildChart、validateChart，"
                             + "并使用上述图表输出键；不要只返回说明文本。";
                     return synthesizePhase(retryPrompt, config).thenMany(Flux.<Map<String, String>>empty());
                 }))
-                .doOnComplete(() -> log.info("Agent阶段 runId={} stage=synthesizer_finished validated={}",
-                        context.getRunId(), context.hasChartOptions()));
+                .doOnComplete(() -> log.info("阶段=synthesizer_finished 有图表={}", context.hasChartOptions()));
     }
 
     /** 完成持久化后再推送图表终态，避免客户端依赖异步刷新补齐关键状态。 */
@@ -591,12 +636,21 @@ public class AgentServiceImpl implements AgentService {
             Integer tokenUsage = consumeRoundTokenUsage(cid);
             saveMessage(cid, "assistant", content, fileAttachments, chartOption,
                     tokenUsage, conclusion, renderDocumentJson, renderVersion);
-            log.info("Agent阶段 runId={} stage=persisted blocks={} chart={} token={} degraded={}",
-                    runId, doc != null ? doc.blocks().size() : 0,
-                    chartOption != null, tokenUsage, doc != null && doc.degraded());
+            log.info("阶段=persisted 区块数={} 有图表={} 降级={}",
+                    doc != null ? doc.blocks().size() : 0,
+                    chartOption != null, doc != null && doc.degraded());
+            if (tokenUsage != null) {
+                log.info("本轮模型用量：{} Token", tokenUsage);
+            }
         }
         if (plannedChartCount > 0 && chartOption == null) {
-            log.warn("图表未生成 runId={} planned={}", runId, plannedChartCount);
+            log.warn("图表未生成：计划数={}", plannedChartCount);
+        }
+        if (context != null) {
+            RunContext.QueryReplayMetrics replayMetrics = context.getQueryReplayMetrics();
+            if (replayMetrics.count() > 0) {
+                log.info("大结果重算：次数={}、耗时={}ms", replayMetrics.count(), replayMetrics.elapsedMs());
+            }
         }
         return new Finalization(runId, plannedChartCount, chartOption);
     }
@@ -626,13 +680,15 @@ public class AgentServiceImpl implements AgentService {
     private static Flux<Map<String, String>> artifactEvents(RenderDocument document, boolean chartExpected) {
         return Flux.fromIterable(document.splitForStreaming())
                 .map(item -> artifactEvent(item, chartExpected))
-                .delayElements(Duration.ofMillis(70));
+                // 按语义区块依次交付，避免摘要、要点和表格在同一帧同时进入客户端。
+                .delayElements(Duration.ofMillis(120));
     }
 
     private static Map<String, String> activityEvent(RunActivity activity) {
         JSONObject payload = new JSONObject();
         payload.put("id", activity.id());
         payload.put("stage", activity.stage());
+        payload.put("toolKey", activity.toolKey());
         payload.put("label", activity.label());
         payload.put("state", activity.state().name().toLowerCase());
         return Map.of("type", "activity", "data", payload.toJSONString());

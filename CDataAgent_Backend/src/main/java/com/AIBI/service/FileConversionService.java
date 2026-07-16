@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,6 +59,9 @@ public class FileConversionService {
     @Autowired
     private DataFileMapper dataFileMapper;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     @Value("${data.file.storage-dir:/data/cdata-files}")
     private String storageDir;
 
@@ -72,8 +76,8 @@ public class FileConversionService {
     /**
      * 批量上传文件到指定对话。
      * <p>
-     * 事务性保证：先转换所有新文件 → 全部成功后删除旧文件 → 写入 H2。
-     * 任何一步失败都不会丢失旧数据。
+     * 一致性保证：先完成转换，再原子切换 H2 元数据，最后异步风险最低地删除旧文件。
+     * 任一步失败都优先保留旧数据，遗留的物理文件由清理任务回收。
      *
      * @param files           上传的文件数组
      * @param conversationId  对话 ID
@@ -108,14 +112,24 @@ public class FileConversionService {
                 }
             }
 
-            // 3. 全部成功后，如果要求替换则删除旧文件（排除正在复用的）
-            if (replaceIfExists) {
-                deleteConversationFilesExcluding(conversationId, reusedIds);
-            }
+            // 3. 先记录待替换的旧文件，避免新文件入库后被误删。
+            List<DataFile> oldFiles = replaceIfExists
+                    ? findConversationFilesExcluding(conversationId, reusedIds)
+                    : List.of();
 
-            // 4. 只写入新记录
+            // 4. 原子切换数据库元数据：新文件全部入库成功后才移除旧记录。
+            transactionTemplate.executeWithoutResult(status -> {
+                for (DataFile df : newRecords) {
+                    dataFileMapper.insert(df);
+                }
+                for (DataFile oldFile : oldFiles) {
+                    dataFileMapper.deleteById(oldFile.getId());
+                }
+            });
+
+            // 5. H2 已提交后再删除旧物理文件。删除失败仅产生孤儿文件，不影响新数据可用。
+            deletePhysicalFiles(oldFiles);
             for (DataFile df : newRecords) {
-                dataFileMapper.insert(df);
                 log.info("文件已入库: {} (view={}, {}行)", df.getOriginalFilename(),
                         df.getViewName(), df.getRowCount());
             }
@@ -125,6 +139,9 @@ public class FileConversionService {
         } catch (Exception e) {
             // 回滚：只删除新生成的 Parquet 文件
             for (DataFile df : newRecords) {
+                if (df.getId() != null) {
+                    dataFileMapper.deleteById(df.getId());
+                }
                 try {
                     Files.deleteIfExists(Path.of(df.getStoragePath()));
                 } catch (IOException ignored) {}
@@ -151,7 +168,8 @@ public class FileConversionService {
 
         // 查询是否已有相同文件（去重）
         QueryWrapper<DataFile> qw = new QueryWrapper<>();
-        qw.eq("contentHash", contentHash).eq("status", "READY").last("LIMIT 1");
+        qw.eq("contentHash", contentHash).eq("conversationId", conversationId)
+                .eq("status", "READY").last("LIMIT 1");
         DataFile existing = dataFileMapper.selectOne(qw);
 
         if (existing != null && Files.exists(Path.of(existing.getStoragePath()))) {
@@ -449,26 +467,35 @@ public class FileConversionService {
     private void deleteConversationFilesExcluding(Long conversationId, Set<Long> excludeIds) {
         if (conversationId == null) return;
 
-        List<DataFile> files = dataFileMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DataFile>()
-                        .eq("conversationId", conversationId));
+        List<DataFile> files = findConversationFilesExcluding(conversationId, excludeIds);
 
         for (DataFile df : files) {
-            if (excludeIds.contains(df.getId())) {
-                log.debug("跳过删除（正在复用）: id={}, {}", df.getId(), df.getOriginalFilename());
-                continue;
-            }
-            try {
-                Files.deleteIfExists(Path.of(df.getStoragePath()));
-            } catch (IOException e) {
-                log.warn("删除 Parquet 文件失败: {}", df.getStoragePath(), e);
-            }
             dataFileMapper.deleteById(df.getId());
         }
+        deletePhysicalFiles(files);
 
         if (!files.isEmpty()) {
             log.info("已清理文件：{}个文件（排除{}个复用）",
                     files.size(), excludeIds.size());
+        }
+    }
+
+    private List<DataFile> findConversationFilesExcluding(Long conversationId, Set<Long> excludeIds) {
+        List<DataFile> files = dataFileMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DataFile>()
+                        .eq("conversationId", conversationId));
+        return files.stream()
+                .filter(file -> !excludeIds.contains(file.getId()))
+                .collect(Collectors.toList());
+    }
+
+    private void deletePhysicalFiles(List<DataFile> files) {
+        for (DataFile file : files) {
+            try {
+                Files.deleteIfExists(Path.of(file.getStoragePath()));
+            } catch (IOException e) {
+                log.warn("删除 Parquet 文件失败: {}", file.getStoragePath(), e);
+            }
         }
     }
 

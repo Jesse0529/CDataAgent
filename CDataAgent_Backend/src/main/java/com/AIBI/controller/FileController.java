@@ -1,7 +1,7 @@
 package com.AIBI.controller;
 
-import cn.hutool.core.io.FileUtil;
 import com.AIBI.agent.model.AnalysisState;
+import com.AIBI.agent.run.AgentLockKeys;
 import com.AIBI.common.BaseResponse;
 import com.AIBI.common.ErrorCode;
 import com.AIBI.common.ResultUtils;
@@ -18,8 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +47,9 @@ public class FileController {
     @Autowired
     private DuckDbQueryService duckDbQueryService;
 
+    @Autowired
+    private RedissonClient redissonClient;
+
     /**
      * 批量上传数据文件（xlsx/xls/csv），转为 Parquet 并绑定到对话。
      * <p>
@@ -60,19 +66,36 @@ public class FileController {
         if (conversationId == null || conversationId <= 0)
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "conversationId 不能为空");
 
+        RLock runLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
+        boolean lockAcquired = false;
         try {
+            // 空闲时持有运行锁完成替换，阻止任务在文件切换中途启动。
+            // 运行中仍允许上传，但降级为追加，供下一轮显式选择后使用。
+            lockAcquired = runLock.tryLock(0, TimeUnit.SECONDS);
+            boolean deferReplacement = replaceIfExists && !lockAcquired;
             List<DataFile> dataFiles = fileConversionService.batchUpload(
-                    files, conversationId, replaceIfExists);
+                    files, conversationId, replaceIfExists && lockAcquired);
 
-            // 清除该对话的分析状态（数据已变化）
-            analysisState.resetByConversation(conversationId.toString());
+            if (lockAcquired) {
+                // 空闲时新文件立即生效，清除旧工作索引。
+                analysisState.resetByConversation(conversationId.toString());
+            } else if (deferReplacement) {
+                log.info("任务运行中，文件替换已延后到下一轮使用");
+            }
 
             List<DataFileVO> vos = dataFiles.stream().map(this::toVO).collect(Collectors.toList());
             log.info("文件批量上传完成：{}个文件", dataFiles.size());
             return ResultUtils.success(vos);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("文件批量上传失败", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理失败: " + e.getMessage());
+        } finally {
+            unlockQuietly(runLock, lockAcquired);
         }
     }
 
@@ -93,17 +116,32 @@ public class FileController {
     /** 删除单个文件 */
     @DeleteMapping("/{fileId}")
     public BaseResponse<Boolean> deleteFile(@PathVariable Long fileId) {
-        DataFile df = dataFileMapper.selectById(fileId);
-        if (df == null)
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "文件不存在");
+        RLock runLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
+        boolean lockAcquired = false;
         try {
-            java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(df.getStoragePath()));
-        } catch (Exception e) {
-            log.warn("物理文件删除失败：{}", df.getStoragePath());
+            lockAcquired = runLock.tryLock(0, TimeUnit.SECONDS);
+            if (!lockAcquired) {
+                throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, "任务运行中，暂不能删除文件");
+            }
+            DataFile df = dataFileMapper.selectById(fileId);
+            if (df == null) {
+                throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "文件不存在");
+            }
+            // 先删除元数据，物理删除失败时由孤儿文件清理任务兜底。
+            dataFileMapper.deleteById(fileId);
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(df.getStoragePath()));
+            } catch (Exception e) {
+                log.warn("物理文件删除失败：{}", df.getStoragePath());
+            }
+            analysisState.resetByConversation(df.getConversationId().toString());
+            return ResultUtils.success(true);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");
+        } finally {
+            unlockQuietly(runLock, lockAcquired);
         }
-        dataFileMapper.deleteById(fileId);
-        analysisState.resetByConversation(df.getConversationId().toString());
-        return ResultUtils.success(true);
     }
 
     /**
@@ -141,5 +179,15 @@ public class FileController {
         vo.setStatus(df.getStatus());
         vo.setCreateTime(df.getCreateTime());
         return vo;
+    }
+
+    private static void unlockQuietly(RLock lock, boolean lockAcquired) {
+        if (!lockAcquired) return;
+        try {
+            if (lock.isLocked()) {
+                lock.forceUnlock();
+            }
+        } catch (Exception ignored) {
+        }
     }
 }

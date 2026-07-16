@@ -64,7 +64,7 @@ public interface AgentService {
     Long getOrCreateDefaultConversation();
 
     /**
-     * 清空指定对话的所有消息。
+     * 清空指定对话的所有聊天消息，不影响工作记忆。
      */
     void deleteMessages(Long conversationId);
 

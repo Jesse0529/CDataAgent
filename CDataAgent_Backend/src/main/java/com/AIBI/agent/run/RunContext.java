@@ -10,7 +10,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -36,6 +38,10 @@ public class RunContext {
     /** 所属对话 ID */
     @Getter
     private final Long conversationId;
+
+    /** 当前模型调用所属阶段，仅用于调用级成本观测。 */
+    @Getter @Setter
+    private volatile String modelStage = "unknown";
 
     // ── 图表暂存（从 AnalysisState 迁移） ──
 
@@ -100,6 +106,14 @@ public class RunContext {
     /** PresentationSubmissionTool 调用次数（用于限流，超过 MAX_CALLS 降级） */
     private final AtomicInteger presentationCallCount = new AtomicInteger(0);
 
+    /** Executor 与 Synthesizer 的工具调用计数，分别限流以避免一个阶段影响另一个阶段。 */
+    private final AtomicInteger executorToolCallCount = new AtomicInteger(0);
+    private final AtomicInteger synthesizerToolCallCount = new AtomicInteger(0);
+
+    /** 大结果按索引重算的次数与耗时，仅用于决定是否需要引入缓存。 */
+    private final AtomicInteger queryReplayCount = new AtomicInteger(0);
+    private final AtomicLong queryReplayElapsedMs = new AtomicLong(0);
+
     /** 当前运行内展示文档的单调版本，用于 SSE 重放和乱序保护。 */
     private final AtomicInteger documentRevision = new AtomicInteger(0);
 
@@ -107,6 +121,10 @@ public class RunContext {
     private final Sinks.Many<RunActivity> activitySink = Sinks.many().replay().limit(64);
 
     private final AtomicInteger activitySequence = new AtomicInteger(0);
+
+    /** 需求理解活动在意图声明工具返回后立即收口。 */
+    private volatile String requirementUnderstandingActivityId;
+    private final AtomicBoolean requirementUnderstandingCompleted = new AtomicBoolean(false);
 
     public RunContext(String runId, Long conversationId) {
         this.runId = runId;
@@ -218,19 +236,59 @@ public class RunContext {
         return presentationCallCount.getAndIncrement();
     }
 
+    /**
+     * 尝试占用一次工具调用配额。展示计划提交不计入该配额，确保达到上限后仍能正常收口。
+     */
+    public boolean tryAcquireToolCall(String stage, int maxCalls) {
+        AtomicInteger counter = "synthesizer".equals(stage)
+                ? synthesizerToolCallCount : executorToolCallCount;
+        return counter.incrementAndGet() <= maxCalls;
+    }
+
+    public void recordQueryReplay(long elapsedMs) {
+        queryReplayCount.incrementAndGet();
+        queryReplayElapsedMs.addAndGet(Math.max(0, elapsedMs));
+    }
+
+    public QueryReplayMetrics getQueryReplayMetrics() {
+        return new QueryReplayMetrics(queryReplayCount.get(), queryReplayElapsedMs.get());
+    }
+
     /** 分配下一次展示文档事件的版本号。 */
     public int nextDocumentRevision() {
         return documentRevision.incrementAndGet();
     }
 
     public String beginActivity(String stage, String label) {
+        return beginActivity(stage, stage, label);
+    }
+
+    public String beginRequirementUnderstanding() {
+        requirementUnderstandingCompleted.set(false);
+        String id = beginActivity("thinking", "requirement-understanding", "正在理解需求");
+        requirementUnderstandingActivityId = id;
+        return id;
+    }
+
+    public void completeRequirementUnderstanding(RunActivity.State state) {
+        String id = requirementUnderstandingActivityId;
+        if (id == null || !requirementUnderstandingCompleted.compareAndSet(false, true)) return;
+        String label = state == RunActivity.State.SUCCEEDED ? "需求理解完成" : "需求理解失败";
+        finishActivity(id, "thinking", "requirement-understanding", label, state);
+    }
+
+    public String beginActivity(String stage, String toolKey, String label) {
         String id = "activity-" + activitySequence.incrementAndGet();
-        emitActivity(new RunActivity(id, stage, label, RunActivity.State.RUNNING));
+        emitActivity(new RunActivity(id, stage, toolKey, label, RunActivity.State.RUNNING));
         return id;
     }
 
     public void finishActivity(String id, String stage, String label, RunActivity.State state) {
-        emitActivity(new RunActivity(id, stage, label, state));
+        finishActivity(id, stage, stage, label, state);
+    }
+
+    public void finishActivity(String id, String stage, String toolKey, String label, RunActivity.State state) {
+        emitActivity(new RunActivity(id, stage, toolKey, label, state));
     }
 
     public Flux<RunActivity> activityEvents() {
@@ -241,7 +299,7 @@ public class RunContext {
         activitySink.tryEmitComplete();
     }
 
-    private void emitActivity(RunActivity activity) {
+    private synchronized void emitActivity(RunActivity activity) {
         Sinks.EmitResult result = activitySink.tryEmitNext(activity);
         if (result.isFailure() && result != Sinks.EmitResult.FAIL_TERMINATED) {
             log.debug("运行活动事件未投递: runId={}, result={}", runId, result);
@@ -278,4 +336,6 @@ public class RunContext {
         clearIntent();
         log.debug("运行上下文已清理: runId={}", runId);
     }
+
+    public record QueryReplayMetrics(int count, long elapsedMs) {}
 }

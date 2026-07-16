@@ -6,6 +6,7 @@ package com.AIBI.agent.run;
 public record RunActivity(
         String id,
         String stage,
+        String toolKey,
         String label,
         State state
 ) {
