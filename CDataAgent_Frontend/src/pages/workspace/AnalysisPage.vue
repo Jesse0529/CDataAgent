@@ -244,9 +244,16 @@ async function syncMessagesAfterStream(): Promise<void> {
       liveMessage.renderVersion = persisted.renderVersion ?? null
     }
     if (!liveMessage.chartOption && persistedCharts) liveMessage.chartOption = persistedCharts
+    if (persistedCharts) {
+      liveMessage.chartResultState = 'ready'
+      liveMessage.chartPreviewAvailable = true
+    } else if (liveMessage.chartExpected && !liveMessage.chartResultState) {
+      liveMessage.chartResultState = 'unavailable'
+      liveMessage.chartPreviewAvailable = false
+    }
     if (liveMessage.tokenUsage === undefined)
       liveMessage.tokenUsage = persisted.tokenUsage ?? undefined
-    liveMessage.chartPreviewAvailable = true
+    if (!liveMessage.chartResultState) liveMessage.chartPreviewAvailable = true
   } catch (err: unknown) {
     console.warn('[AnalysisPage] stream message reconciliation failed', err)
   }
