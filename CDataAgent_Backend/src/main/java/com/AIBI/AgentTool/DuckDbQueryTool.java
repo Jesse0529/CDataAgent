@@ -15,11 +15,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,6 +37,13 @@ import java.util.stream.Collectors;
 @Component
 public class DuckDbQueryTool {
 
+    private static final int MAX_INLINE_RESULT_ROWS = 200;
+    private static final int MAX_INLINE_RESULT_BYTES = 32 * 1024;
+
+    /** Agent 结果会进入 AnalysisState 并参与后续图表，必须远小于通用查询上限。 */
+    @Value("${agent.query.max-result-rows:1000}")
+    private int agentMaxResultRows;
+
     @Autowired
     private DuckDbQueryService duckDbQueryService;
 
@@ -45,7 +56,7 @@ public class DuckDbQueryTool {
      * TTL 60 秒，最多 100 条。按 SQL + viewNames 的 SHA256 hash 索引。
      * 文件删除时通过 TTL 自然过期。
      */
-    private static final Cache<String, String> sqlCache = Caffeine.newBuilder()
+    private static final Cache<String, CachedQueryResult> sqlCache = Caffeine.newBuilder()
             .expireAfterWrite(60, TimeUnit.SECONDS)
             .maximumSize(100)
             .build();
@@ -56,11 +67,11 @@ public class DuckDbQueryTool {
         RunContext ctx = RunContextHolder.require();
         String category = ctx.getIntentCategory();
         if (category == null) {
-            return ToolResultUtils.jsonTypedError("syntax",
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                     "请先调用 declareIntent 声明意图后再查询数据。");
         }
         if (!"analysis".equals(category)) {
-            return ToolResultUtils.jsonTypedError("syntax",
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                     "当前意图分类为 " + category + "，无需查询数据。请直接回复用户。");
         }
         return null; // 放行
@@ -73,13 +84,10 @@ public class DuckDbQueryTool {
      * 单文件示例：SELECT region, SUM(sales) FROM data_1001_abc123 GROUP BY region
      * 多文件 JOIN 示例：SELECT a.region, a.sales, b.target FROM data_1001_abc123 a JOIN data_1001_def456 b ON a.region=b.region
      */
-    @Tool(description = "对已加载的数据执行 SQL 查询（仅 SELECT）。" +
-            "✅ 聚合/筛选/排序/统计/JOIN ❌ 不用于建表/删表。" +
-            "多文件时用 viewName 引用具体文件，支持跨文件 JOIN。" +
-            "loadData 已返回列信息，直接使用。SQL 自动追加 LIMIT。结果自动保存到分析状态。")
+    @Tool(description = "对已加载视图执行只读 SQL：聚合、筛选、排序、统计或 JOIN。结果保存为 outputKey；截断结果需重查。")
     public String runDuckdb(
-            @ToolParam(description = "SELECT 查询语句。表名用 loadData 返回的 viewName，支持 JOIN") String sql,
-            @ToolParam(description = "结果引用的名称（后续步骤用此名称引用数据），如 monthly_sales") String outputKey) {
+            @ToolParam(description = "SELECT SQL；表名使用 viewName") String sql,
+            @ToolParam(description = "结果引用，如 monthly_sales") String outputKey) {
         // 意图守卫
         String guardResult = checkIntentGuard();
         if (guardResult != null) return guardResult;
@@ -87,23 +95,15 @@ public class DuckDbQueryTool {
         try {
             List<AnalysisState.LoadedFileRecord> files = analysisState.getLoadedFiles();
             if (files == null || files.isEmpty()) {
-                return ToolResultUtils.jsonTypedError("syntax", "没有已加载的数据文件，请先调用 loadData");
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "没有已加载的数据文件，请先调用 loadData");
             }
 
             // 回合内去重：同一 outputKey 已有结果时直接返回
-            String existing = analysisState.getDataByKey(outputKey);
+            AnalysisState.QueryOutputRecord existing = analysisState.getQueryOutput(outputKey);
             if (existing != null) {
-                JSONArray existingData = JSON.parseArray(existing);
-                int existingCount = existingData != null ? existingData.size() : 0;
-                analysisState.addStepResult(outputKey, "runDuckdb", existingCount, sql);
-                JSONObject summary = new JSONObject();
-                summary.put("outputKey", outputKey);
-                summary.put("rows", existingCount);
-                summary.put("cached", true);
-                summary.put("sample", existingData != null && existingData.size() > 0
-                        ? existingData.subList(0, Math.min(3, existingData.size())) : JSONArray.of());
-                log.info("DuckDB查询：命中缓存 输出键={} 行数={}", outputKey, existingCount);
-                return summary.toJSONString();
+                return buildSummary(outputKey, existing.rowCount, existing.rowLimit, existing.truncated,
+                        existing.sampleJson, true).toJSONString();
             }
 
             // 构建 FileRef 列表
@@ -113,52 +113,44 @@ public class DuckDbQueryTool {
 
             // 跨轮次 SQL 缓存（输出键不同但 SQL 可能相同）
             String cacheKey = buildCacheKey(refs, sql);
-            String cachedResult = sqlCache.getIfPresent(cacheKey);
+            CachedQueryResult cachedResult = sqlCache.getIfPresent(cacheKey);
             if (cachedResult != null) {
-                JSONArray cachedData = JSON.parseArray(cachedResult);
-                int cachedCount = cachedData != null ? cachedData.size() : 0;
-                analysisState.addStepResult(outputKey, "runDuckdb", cachedCount, sql);
-                analysisState.addData(outputKey, cachedResult);
-                log.info("DuckDB查询：Caffeine缓存命中 输出键={} 行数={}", outputKey, cachedCount);
-                JSONObject summary = new JSONObject();
-                summary.put("outputKey", outputKey);
-                summary.put("rows", cachedCount);
-                summary.put("cached", true);
-                summary.put("sample", cachedData != null && cachedData.size() > 0
-                        ? cachedData.subList(0, Math.min(3, cachedData.size())) : JSONArray.of());
-                return summary.toJSONString();
+                JSONArray cachedData = JSON.parseArray(cachedResult.dataJson());
+                saveQueryOutput(outputKey, sql, refs, cachedData, cachedResult.rowCount(),
+                        cachedResult.rowLimit(), cachedResult.truncated(), "runDuckdb");
+                log.info("DuckDB查询：命中本地缓存 输出键={} 行数={} 截断={}",
+                        outputKey, cachedResult.rowCount(), cachedResult.truncated());
+                return buildSummary(outputKey, cachedResult.rowCount(), cachedResult.rowLimit(),
+                        cachedResult.truncated(), sampleJson(cachedData), true).toJSONString();
             }
 
-            String conversationId = analysisState.getCurrentThreadId();
-            String result = duckDbQueryService.executeQuery(conversationId, refs, sql);
+            String conversationId = RunContextHolder.require().getConversationId().toString();
+            DuckDbQueryService.AgentQueryResult result = duckDbQueryService
+                    .executeAgentQuery(conversationId, refs, sql, agentMaxResultRows);
 
             // 瞬态错误自动重试一次（system/timeout）
-            if (result != null && ToolResultUtils.isTransientError(result)) {
+            if (result != null && ToolResultUtils.isTransientError(result.dataJson())) {
                 log.warn("DuckDB查询：瞬态错误，重试一次");
-                result = duckDbQueryService.executeQuery(conversationId, refs, sql);
+                result = duckDbQueryService.executeAgentQuery(conversationId, refs, sql, agentMaxResultRows);
             }
 
-            if (result != null && result.contains("\"error\"")) {
-                return result;
+            if (result == null || result.hasError()) {
+                return result == null ? ToolResultUtils.jsonTypedError("system", "查询未返回结果") : result.dataJson();
             }
 
             // 存入 Caffeine 缓存（跨轮次复用）
-            sqlCache.put(cacheKey, result);
+            sqlCache.put(cacheKey, new CachedQueryResult(result.dataJson(), result.rowCount(),
+                    result.rowLimit(), result.truncated()));
 
             // 存入分析状态
-            JSONArray data = JSON.parseArray(result);
-            int rowCount = data != null ? data.size() : 0;
-            analysisState.addStepResult(outputKey, "runDuckdb", rowCount, sql);
-            analysisState.addData(outputKey, result);
+            JSONArray data = JSON.parseArray(result.dataJson());
+            saveQueryOutput(outputKey, sql, refs, data, result.rowCount(), result.rowLimit(),
+                    result.truncated(), "runDuckdb");
 
-            JSONObject summary = new JSONObject();
-            summary.put("outputKey", outputKey);
-            summary.put("rows", rowCount);
-            summary.put("sample", data != null && data.size() > 0
-                    ? data.subList(0, Math.min(3, data.size())) : JSONArray.of());
-
-            log.info("DuckDB查询：输出键={}、行数={}、视图数={}", outputKey, rowCount, files.size());
-            return summary.toJSONString();
+            log.info("DuckDB查询：输出键={}、行数={}、截断={}、视图数={}",
+                    outputKey, result.rowCount(), result.truncated(), files.size());
+            return buildSummary(outputKey, result.rowCount(), result.rowLimit(), result.truncated(),
+                    sampleJson(data), false).toJSONString();
         } catch (Exception e) {
             log.error("DuckDB查询失败", e);
             analysisState.addStepResultFailed(outputKey, "runDuckdb", e.getMessage());
@@ -171,10 +163,9 @@ public class DuckDbQueryTool {
      * <p>
      * 在所有已加载文件的第一个文件上执行（如需指定文件，请用 runDuckdb 手写 SQL）。
      */
-    @Tool(description = "批量计算多列的统计量（COUNT, AVG, MIN, MAX, STDDEV, PERCENTILE_25, PERCENTILE_50, PERCENTILE_75）。" +
-            "✅ 快速了解数据分布 ❌ 不适合排名/趋势（用 runDuckdb + SQL 聚合函数）")
+    @Tool(description = "计算数值列的 count、均值、极值、标准差和四分位数；仅用于分布概览。")
     public String queryStatistics(
-            @ToolParam(description = "要统计的数值列名，逗号分隔，如 sales,profit,amount") String columns) {
+            @ToolParam(description = "数值列名，逗号分隔") String columns) {
         // 意图守卫
         String guardResult = checkIntentGuard();
         if (guardResult != null) return guardResult;
@@ -182,7 +173,8 @@ public class DuckDbQueryTool {
         String statsKey = columns + "_stats";
         try {
             List<AnalysisState.LoadedFileRecord> files = analysisState.getLoadedFiles();
-            if (files == null || files.isEmpty()) return ToolResultUtils.jsonTypedError("syntax", "没有已加载的数据文件");
+            if (files == null || files.isEmpty()) return ToolResultUtils.jsonTypedError(
+                    ToolResultUtils.ERROR_PRECONDITION, "没有已加载的数据文件");
 
             // 回合内去重
             String existing = analysisState.getDataByKey(statsKey);
@@ -194,10 +186,14 @@ public class DuckDbQueryTool {
             // 在当前架构下，统计默认针对第一个文件。如需跨文件统计，Agent 应使用 runDuckdb。
             AnalysisState.LoadedFileRecord activeFile = files.get(files.size() - 1);
 
-            String[] cols = columns.split(",");
+            List<String> cols = parseStatisticsColumns(columns, activeFile);
+            if (cols.isEmpty()) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "统计字段为空或不属于当前文件；可用字段：" + availableColumns(activeFile));
+            }
             StringBuilder sqlBuilder = new StringBuilder("SELECT");
-            for (int i = 0; i < cols.length; i++) {
-                String col = cols[i].trim();
+            for (int i = 0; i < cols.size(); i++) {
+                String col = cols.get(i);
                 if (i > 0) sqlBuilder.append(",");
                 sqlBuilder.append(" COUNT(\"").append(col).append("\") AS ").append(col).append("_count");
                 sqlBuilder.append(", AVG(\"").append(col).append("\") AS ").append(col).append("_avg");
@@ -217,32 +213,34 @@ public class DuckDbQueryTool {
                     new DuckDbConfig.FileRef(activeFile.parquetPath, activeFile.viewName));
             String querySql = sqlBuilder.toString();
             String cacheKey = buildCacheKey(refs, querySql);
-            String cachedResult = sqlCache.getIfPresent(cacheKey);
+            CachedQueryResult cachedResult = sqlCache.getIfPresent(cacheKey);
             if (cachedResult != null) {
                 log.info("统计查询：Caffeine缓存命中 列={}", columns);
-                analysisState.addData(statsKey, cachedResult);
-                analysisState.addStepResult(statsKey, "queryStatistics",
-                        JSON.parseArray(cachedResult).size(), null);
-                sqlCache.put(cacheKey, cachedResult);
-                return cachedResult;
+                JSONArray data = JSON.parseArray(cachedResult.dataJson());
+                saveQueryOutput(statsKey, querySql, refs, data, cachedResult.rowCount(),
+                        cachedResult.rowLimit(), cachedResult.truncated(), "queryStatistics");
+                return cachedResult.dataJson();
             }
-            String conversationId = analysisState.getCurrentThreadId();
-            String result = duckDbQueryService.executeQuery(conversationId, refs, querySql);
+            String conversationId = RunContextHolder.require().getConversationId().toString();
+            DuckDbQueryService.AgentQueryResult result = duckDbQueryService
+                    .executeAgentQuery(conversationId, refs, querySql, agentMaxResultRows);
 
             // 瞬态错误自动重试一次
-            if (result != null && ToolResultUtils.isTransientError(result)) {
+            if (result != null && ToolResultUtils.isTransientError(result.dataJson())) {
                 log.warn("统计查询：瞬态错误，重试一次 列={}", columns);
-                result = duckDbQueryService.executeQuery(conversationId, refs, sqlBuilder.toString());
+                result = duckDbQueryService.executeAgentQuery(conversationId, refs, sqlBuilder.toString(), agentMaxResultRows);
             }
 
-            if (result != null && result.contains("\"error\"")) return result;
+            if (result == null || result.hasError()) {
+                return result == null ? ToolResultUtils.jsonTypedError("system", "统计查询未返回结果") : result.dataJson();
+            }
 
-            sqlCache.put(cacheKey, result);
-            analysisState.addData(statsKey, result);
-            analysisState.addStepResult(statsKey, "queryStatistics",
-                    JSON.parseArray(result).size(), null);
+            sqlCache.put(cacheKey, new CachedQueryResult(result.dataJson(), result.rowCount(),
+                    result.rowLimit(), result.truncated()));
+            saveQueryOutput(statsKey, querySql, refs, JSON.parseArray(result.dataJson()), result.rowCount(),
+                    result.rowLimit(), result.truncated(), "queryStatistics");
 
-            return result;
+            return result.dataJson();
         } catch (Exception e) {
             log.error("统计查询失败", e);
             analysisState.addStepResultFailed(statsKey, "queryStatistics", e.getMessage());
@@ -269,6 +267,83 @@ public class DuckDbQueryTool {
             // 降级：用 hashCode 避免阻断查询
             return "fallback_" + rawKey.hashCode();
         }
+    }
+
+    private void saveQueryOutput(String outputKey, String sql, List<DuckDbConfig.FileRef> refs,
+                                 JSONArray data, int rowCount, int rowLimit, boolean truncated, String toolName) {
+        String dataJson = data == null ? "[]" : data.toJSONString();
+        boolean inline = rowCount <= MAX_INLINE_RESULT_ROWS
+                && dataJson.getBytes(StandardCharsets.UTF_8).length <= MAX_INLINE_RESULT_BYTES;
+
+        AnalysisState.QueryOutputRecord output = new AnalysisState.QueryOutputRecord();
+        output.outputKey = outputKey;
+        output.sql = sql;
+        output.sources = refs.stream()
+                .map(ref -> new AnalysisState.QuerySourceRecord(ref.parquetPath(), ref.viewName()))
+                .collect(Collectors.toList());
+        output.fields = data == null || data.isEmpty() || data.getJSONObject(0) == null
+                ? List.of() : List.copyOf(data.getJSONObject(0).keySet());
+        output.sampleJson = sampleJson(data);
+        output.rowCount = rowCount;
+        output.rowLimit = rowLimit;
+        output.truncated = truncated;
+        output.storageMode = inline ? "inline" : "requery";
+
+        if (inline) {
+            analysisState.addData(outputKey, dataJson);
+        }
+        analysisState.addQueryOutput(output);
+        analysisState.addStepResult(outputKey, toolName, rowCount, sql);
+    }
+
+    private static JSONObject buildSummary(String outputKey, int rowCount, int rowLimit, boolean truncated,
+                                           String sampleJson, boolean cached) {
+        JSONObject summary = new JSONObject();
+        summary.put("outputKey", outputKey);
+        summary.put("rows", rowCount);
+        summary.put("rowLimit", rowLimit);
+        summary.put("truncated", truncated);
+        summary.put("cached", cached);
+        summary.put("sample", sampleJson == null ? JSONArray.of() : JSON.parseArray(sampleJson));
+        if (truncated) {
+            summary.put("notice", "结果仅返回前" + rowLimit + "行，不能据此得出完整结论或直接制图；请先聚合、筛选或使用 Top N 查询。");
+        }
+        return summary;
+    }
+
+    private static String sampleJson(JSONArray data) {
+        if (data == null || data.isEmpty()) return "[]";
+        return JSON.toJSONString(data.subList(0, Math.min(3, data.size())));
+    }
+
+    private record CachedQueryResult(String dataJson, int rowCount, int rowLimit, boolean truncated) {}
+
+    /** 统计工具只接受 loadData 已暴露的真实字段，避免猜测列名进入 DuckDB。 */
+    private static List<String> parseStatisticsColumns(String columns,
+                                                       AnalysisState.LoadedFileRecord activeFile) {
+        if (columns == null || columns.isBlank() || activeFile.columns == null || activeFile.columns.isEmpty()) {
+            return List.of();
+        }
+        Set<String> available = activeFile.columns.stream()
+                .map(column -> column.name)
+                .collect(Collectors.toSet());
+        Set<String> requested = new LinkedHashSet<>();
+        for (String raw : columns.split(",", -1)) {
+            String column = raw.trim();
+            if (column.isEmpty() || !available.contains(column)) {
+                return List.of();
+            }
+            requested.add(column);
+        }
+        return new ArrayList<>(requested);
+    }
+
+    private static String availableColumns(AnalysisState.LoadedFileRecord activeFile) {
+        if (activeFile.columns == null) return "无";
+        return activeFile.columns.stream()
+                .map(column -> column.name)
+                .limit(30)
+                .collect(Collectors.joining(", "));
     }
 
     /**

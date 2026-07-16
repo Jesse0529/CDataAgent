@@ -3,6 +3,8 @@ package com.AIBI.AgentTool;
 import com.AIBI.agent.model.AnalysisState;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
+import com.AIBI.config.DuckDbConfig;
+import com.AIBI.service.DuckDbQueryService;
 import com.AIBI.utils.ToolCacheManager;
 import com.AIBI.utils.ToolResultUtils;
 import com.alibaba.fastjson2.JSON;
@@ -36,6 +38,9 @@ public class ChartOutputTool {
     @Autowired
     private AnalysisState analysisState;
 
+    @Autowired
+    private DuckDbQueryService duckDbQueryService;
+
     private static final int MAX_DIM_VALUES = 80;
 
     private static final int DATA_SCHEMA_SAMPLE_ROWS = 3;
@@ -43,14 +48,15 @@ public class ChartOutputTool {
     /**
      * 返回指定分析结果的真实字段名与样本，供 Synthesizer 在构建图表前选择字段。
      */
-    @Tool(description = "查看 dataRef 对应结果的真实 schema。调用 buildChart 前必须先调用本工具；"
-            + "dimensionField 与 metricMapping 中的字段名必须从 fields.name 原样选择，不能使用中文释义、展示别名或猜测字段名。")
+    @Tool(description = "读取 dataRef 的真实字段和样本；buildChart 前必调，字段名必须原样使用。")
     public String describeData(
             @ToolParam(description = "runDuckdb 或 runPython 返回的 outputKey") String dataRef) {
         try {
+            String truncatedError = truncatedResultError(dataRef);
+            if (truncatedError != null) return truncatedError;
             JSONArray dataArray = getDataArray(dataRef);
             if (dataArray == null) {
-                return ToolResultUtils.jsonTypedError("schema", "数据引用不存在: " + dataRef
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION, "数据引用不存在: " + dataRef
                         + "。可用数据: " + analysisState.getAvailableKeys());
             }
             if (dataArray.isEmpty()) return ToolResultUtils.jsonTypedError("schema", "数据为空: " + dataRef);
@@ -85,28 +91,31 @@ public class ChartOutputTool {
     /**
      * 构建 ECharts v5 option JSON。
      */
-    @Tool(description = "使用 echarts-java 确定性构建 ECharts v5 option JSON。" +
-            "支持 bar/line/area/pie/scatter/radar/funnel/gauge/heatmap。" +
-            "成功时返回 chart-ready:N，必须将该引用传给 validateChart；不返回 option JSON。" +
-            "✅ 生成图表配置 ❌ 不用于数据分析。dataRef 为 runDuckdb 或 runPython 的 outputKey")
+    @Tool(description = "构建 ECharts 图表：bar/line/area/pie/scatter/radar/funnel/gauge/heatmap。返回 chart-ready:N，随后必须 validateChart。")
     public String buildChart(
-            @ToolParam(description = "图表类型：bar/line/area/pie/scatter/radar/funnel/gauge/heatmap") String chartType,
-            @ToolParam(description = "图表标题，如 '2024年各区域销售额对比'") String title,
-            @ToolParam(description = "维度字段名（X 轴），与数据中的键对应，如 region") String dimensionField,
-            @ToolParam(description = "指标映射 JSON：{\"系列展示名\":\"数据列名\"}，如 {\"销售额\":\"sales\"}") String metricMapping,
-            @ToolParam(description = "数据 outputKey（来自 runDuckdb 或 runPython 的结果引用名）") String dataRef) {
+            @ToolParam(description = "图表类型") String chartType,
+            @ToolParam(description = "业务标题") String title,
+            @ToolParam(description = "真实维度字段") String dimensionField,
+            @ToolParam(description = "JSON：展示名到真实指标字段的映射") String metricMapping,
+            @ToolParam(description = "查询结果 outputKey") String dataRef) {
         try {
             if (StringUtils.isBlank(chartType) || StringUtils.isBlank(title)
                     || StringUtils.isBlank(dimensionField) || StringUtils.isBlank(metricMapping)) {
                 return ToolResultUtils.jsonTypedError("syntax", "chartType, title, dimensionField, metricMapping 不能为空");
             }
 
+            String truncatedError = truncatedResultError(dataRef);
+            if (truncatedError != null) return truncatedError;
+
             // 从分析状态获取数据
             JSONArray dataArray = getDataArray(dataRef);
             if (dataArray == null) {
-                return ToolResultUtils.jsonTypedError("syntax", "数据引用不存在: " + dataRef + "。可用数据: " + analysisState.getAvailableKeys());
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "数据引用不存在: " + dataRef + "。可用数据: " + analysisState.getAvailableKeys());
             }
-            if (dataArray == null || dataArray.isEmpty()) return ToolResultUtils.jsonTypedError("syntax", "数据为空");
+            if (dataArray == null || dataArray.isEmpty()) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION, "数据为空");
+            }
 
             JSONObject mapping = JSON.parseObject(metricMapping);
             if (mapping == null || mapping.isEmpty()) return ToolResultUtils.jsonTypedError("syntax", "metricMapping 格式无效");
@@ -222,9 +231,9 @@ public class ChartOutputTool {
     /**
      * 校验 ECharts option JSON 结构完整性。
      */
-    @Tool(description = "校验 buildChart 返回的 chart-ready:N 引用，或直接校验 ECharts option JSON。构建图表后必须调用此工具兜底校验")
+    @Tool(description = "校验 buildChart 返回的 chart-ready:N；构建后必须调用。")
     public String validateChart(
-            @ToolParam(description = "buildChart 返回的 chart-ready:N；仅在校验外部 option 时传 ECharts option JSON") String optionJson) {
+            @ToolParam(description = "chart-ready:N 或 ECharts option JSON") String optionJson) {
         try {
             if (optionJson == null || optionJson.isBlank()) return ToolResultUtils.jsonTypedError("syntax", "option JSON 为空");
 
@@ -316,7 +325,36 @@ public class ChartOutputTool {
 
     private JSONArray getDataArray(String dataRef) {
         String dataJson = analysisState.getDataByKey(dataRef);
-        return dataJson == null ? null : JSON.parseArray(dataJson);
+        if (dataJson != null) return JSON.parseArray(dataJson);
+
+        AnalysisState.QueryOutputRecord output = analysisState.getQueryOutput(dataRef);
+        if (output == null || output.sources == null || output.sources.isEmpty()) return null;
+
+        List<DuckDbConfig.FileRef> refs = output.sources.stream()
+                .map(source -> new DuckDbConfig.FileRef(source.parquetPath, source.viewName))
+                .toList();
+        long startNanos = System.nanoTime();
+        try {
+            DuckDbQueryService.AgentQueryResult result = duckDbQueryService.executeAgentQuery(
+                    RunContextHolder.require().getConversationId().toString(), refs, output.sql, output.rowLimit);
+            if (result == null || result.hasError()) {
+                log.warn("图表数据重算失败：引用={}", dataRef);
+                return null;
+            }
+            return JSON.parseArray(result.dataJson());
+        } finally {
+            RunContext context = RunContextHolder.get();
+            if (context != null) {
+                context.recordQueryReplay((System.nanoTime() - startNanos) / 1_000_000);
+            }
+        }
+    }
+
+    private String truncatedResultError(String dataRef) {
+        AnalysisState.QueryOutputRecord output = analysisState.getQueryOutput(dataRef);
+        if (output == null || !output.truncated) return null;
+        return ToolResultUtils.jsonTypedError("schema", "数据引用 " + dataRef + " 仅返回前"
+                + output.rowLimit + "行，不能直接生成图表。请先使用聚合、筛选或 Top N 查询缩小结果。");
     }
 
     private List<String> availableFields(JSONArray dataArray) {
@@ -420,8 +458,12 @@ public class ChartOutputTool {
 
     private String buildRadar(String title, List<String> dimValues, List<String> seriesNames,
                               Map<String, List<Double>> metricData) {
+        if (dimValues.size() < 3 && seriesNames.size() >= 3) {
+            return buildTransposedRadar(title, dimValues, seriesNames, metricData);
+        }
         if (dimValues.size() < 3) {
-            return ToolResultUtils.jsonTypedError("schema", "雷达图至少需要 3 个维度");
+            return ToolResultUtils.jsonTypedError("schema", "雷达图至少需要 3 个维度；当前只有 "
+                    + dimValues.size() + " 个维度和 " + seriesNames.size() + " 个指标，建议改用柱状图");
         }
         JSONArray indicators = new JSONArray();
         for (int index = 0; index < dimValues.size(); index++) {
@@ -453,6 +495,50 @@ public class ChartOutputTool {
             item.put("value", new JSONArray(values));
             radarData.add(item);
         }
+        JSONObject option = new JSONObject();
+        option.put("title", new JSONObject() {{ put("text", title); put("left", "center"); }});
+        option.put("tooltip", new JSONObject() {{ put("trigger", "item"); }});
+        option.put("radar", new JSONObject() {{ put("indicator", indicators); }});
+        option.put("series", JSONArray.of(new JSONObject() {{ put("name", title); put("type", "radar");
+            put("data", radarData); }}));
+        return option.toJSONString();
+    }
+
+    /**
+     * 少量对象、多指标场景的雷达图：指标作为雷达维度，每行对象作为一个系列。
+     * 例如两个模型同时比较 R²、RMSE、MAE 时，两个模型均可在三项指标上形成完整雷达面。
+     */
+    private String buildTransposedRadar(String title, List<String> dimValues, List<String> seriesNames,
+                                        Map<String, List<Double>> metricData) {
+        JSONArray indicators = new JSONArray();
+        for (String seriesName : seriesNames) {
+            List<Double> values = metricData.get(seriesName);
+            if (values == null || values.size() != dimValues.size() || values.stream().anyMatch(Objects::isNull)) {
+                return ToolResultUtils.jsonTypedError("schema", "雷达图指标数据不完整");
+            }
+            double max = values.stream().mapToDouble(Math::abs).max().orElse(0D);
+            JSONObject indicator = new JSONObject();
+            indicator.put("name", seriesName);
+            indicator.put("max", Math.max(1D, Math.ceil(max * 1.2D)));
+            indicators.add(indicator);
+        }
+
+        JSONArray radarData = new JSONArray();
+        for (int rowIndex = 0; rowIndex < dimValues.size(); rowIndex++) {
+            String objectName = dimValues.get(rowIndex);
+            if (StringUtils.isBlank(objectName)) {
+                return ToolResultUtils.jsonTypedError("schema", "雷达图对象名称不能为空");
+            }
+            JSONArray values = new JSONArray();
+            for (String seriesName : seriesNames) {
+                values.add(metricData.get(seriesName).get(rowIndex));
+            }
+            JSONObject item = new JSONObject();
+            item.put("name", objectName);
+            item.put("value", values);
+            radarData.add(item);
+        }
+
         JSONObject option = new JSONObject();
         option.put("title", new JSONObject() {{ put("text", title); put("left", "center"); }});
         option.put("tooltip", new JSONObject() {{ put("trigger", "item"); }});
