@@ -37,7 +37,7 @@ mvn clean package -DskipTests
 ## 环境依赖
 
 - **Redis**（必需）— 锁、共享数据、模型配置、偏好、Checkpoint
-- **DeepSeek API Key** — 环境变量 `DEEPSEEK_API_KEY`
+- **模型配置** — 通过模型配置接口写入 Redis；生产和开发启动均需提供 `MODEL_ENCRYPTION_KEY`，不得写入配置文件或提交到 Git
 
 无需 MySQL、RabbitMQ。数据库为 H2 嵌入式文件，首次启动自动创建。
 
@@ -45,7 +45,7 @@ mvn clean package -DskipTests
 
 ```
 com.AIBI/
-├── AgentTool/          # Agent 工具类（@Tool 注解，4 个工具）
+├── AgentTool/          # Agent 工具类（数据加载、查询、图表、偏好等）
 ├── agent/model/        # Agent 模型（ExecutionPlan、AnalysisState）
 ├── aop/                # 切面（LogInterceptor 请求日志）
 ├── config/             # 配置（Agent、DeepSeek、ModelManager、Redisson、DuckDB、沙箱）
@@ -72,21 +72,22 @@ AgentController → AgentServiceImpl
   ├── Phase 1: ExecutorAgent  — 自主决策，逐步调用工具，结果存入 AnalysisState
   │     ├── DataLoadingTool   — 加载对话绑定文件到分析环境
   │     ├── DuckDbQueryTool   — SQL 查询（支持多文件 JOIN）
-  │     ├── PythonRunnerTool  — Docker Python 沙箱（可选）
+  │     ├── PythonRunnerTool  — 可选能力，默认关闭且不注册
   │     └── PreferenceTool    — 用户偏好读写
-  │     └── 检测 ##NEEDS_CHART## → 触发 SynthesizerAgent
+  │     └── 按展示计划决定是否触发 SynthesizerAgent
   └── Phase 2: SynthesizerAgent — 基于分析结果生成图表和结论
         ├── ChartOutputTool   — echarts-java 构建图表
         └── PreferenceTool
 ```
 
 **核心设计**：
-- **双层 Agent 编排**：Executor 自主决策 + Synthesizer 图表合成，通过 Tool Calling + ##NEEDS_CHART## 标记协调
+- **双层 Agent 编排**：Executor 自主决策 + Synthesizer 图表合成，通过 Tool Calling 与展示计划协调
 - **H2 直写持久化**：用户消息和 Assistant 回复在对话流中同步写入 H2，无外部 MQ
-- **Redis 共享数据区**：跨 Agent 数据通过 Redis 传递
+- **结果索引化**：AnalysisState 仅保存小结果或查询索引；大结果从 Parquet 按需重算，不进入工作记忆
 - **Redis Checkpoint**：对话记忆由 RedisSaver 管理，支持多轮对话
+- **上下文压缩**：由 SummarizationHook 在 128k 阈值触发；不再叠加滑窗钩子
 - **流式输出**：`/apis/agent/chat/stream`，SSE token 级推送
-- **分布式锁**：Redisson RLock 防对话并发消息
+- **运行隔离**：Redisson 全局锁 + 对话锁，使用 watchdog 续租，防止单机异步运行串状态
 
 ### 数据表（3 张，H2 嵌入式）
 
@@ -102,10 +103,12 @@ AgentController → AgentServiceImpl
 |------|------|
 | 多轮对话 | `RunnableConfig.threadId`（conversationId） |
 | 流式输出 | SSE token 级推送 |
+| 工具预算 | Executor 最多 50 次、Synthesizer 最多 20 次；展示计划与图表校验不计入额度 |
+| SQL 安全 | 仅允许一条查询语句；大结果精确标记截断，禁止直接用于完整图表或结论 |
 | 限流 | `RedisLimiterManager`，固定 key `agent_chat_default` |
 | 超时保护 | 全局 120s + 子 Agent 工具级 |
-| 重试 | DuckDB SQLException 1 次重试、沙箱 1 次重试 |
-| 文件转换 | EasyExcel 流式 → CSV → DuckDB → Parquet |
+| 重试 | DuckDB SQLException 1 次重试；沙箱仅在显式启用时参与重试 |
+| 文件转换 | EasyExcel 流式 → CSV → DuckDB → Parquet；替换按“转换、元数据切换、清理旧文件”执行 |
 | 多文件支持 | DuckDB 注册多 Parquet 为 VIEW，SQL 支持 JOIN |
 | 文件清理 | FileCleanupJob，每日凌晨 3 点清理孤儿/卡住文件 |
 | 模型配置 | Redis `model:config:default`，支持 DEEPSEEK/OPENAI/CUSTOM |
@@ -124,14 +127,17 @@ AgentController → AgentServiceImpl
 ## 关键细节
 
 - AI Prompt 分隔符：`【【【【【`（前半 ECharts option JSON，后半分析结论）
-- 文件上传：≤10MB，仅 xlsx/xls/csv
+- 文件上传：≤60MB，仅 xlsx/xls/csv
 - 图表生成用 **echarts-java 确定性构建**，非 LLM 手写 JSON
 - 提示词文件：`classpath:prompts/*.txt`
 - 自部署单用户模式，无登录/注册/权限体系
 
 ## 环境配置
 
-- `application.yml` 指定 `spring.profiles.active`（dev/prod/test）
+- 根配置默认使用 `prod`；本地开发需显式设置 `SPRING_PROFILES_ACTIVE=dev`
+- 本地开发配置仅保留在工作区，不提交 `application-dev.yml` 的本地变更
+- Docker 默认仅暴露应用的本机回环端口；Redis 不发布宿主机端口，数据使用命名卷
+- `.env`、加密密钥、数据目录和日志均不得提交
 
 ## 变更纪律
 
