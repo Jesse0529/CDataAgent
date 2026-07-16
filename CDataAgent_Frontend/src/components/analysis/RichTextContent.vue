@@ -38,7 +38,7 @@ const segments = computed<ContentSegment[]>(() => {
 </script>
 
 <style scoped>
-.rich-text-content { min-width: 0; max-width: 100%; color: var(--fg); line-height: 1.6; overflow-wrap: anywhere; }
+.rich-text-content { min-width: 0; max-width: 100%; color: var(--fg); font-size: 16px; line-height: 1.72; overflow-wrap: anywhere; }
 .rich-text-content :deep(p) { margin: 0 0 8px; }
 .rich-text-content :deep(p:last-child) { margin-bottom: 0; }
 .rich-text-content :deep(h1),

@@ -12,6 +12,7 @@ const BASE_URL = (configuredBaseUrl || '/apis').replace(/\/$/, '')
 import { safeParseRenderDocument } from '@/utils/renderDocument'
 import type {
   ArtifactEvent,
+  ChartResultEvent,
   MetaEvent,
   ProgressEvent,
   RenderDocument,
@@ -285,6 +286,7 @@ export function apiPostStream(
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
   onActivity?: (activity: RunActivity, eventId: string | null) => void,
   onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
 ): { promise: Promise<StreamResult>; abort: () => void } {
   const { controller: abortController, timer } = createTimeout(STREAM_TIMEOUT)
   let userAborted = false
@@ -342,6 +344,7 @@ export function apiPostStream(
             onProgress,
             onActivity,
             onArtifact,
+            onChartResult,
           )
           return { status: 'completed' }
         }
@@ -370,6 +373,7 @@ export function apiPostStream(
             onProgress,
             onActivity,
             onArtifact,
+            onChartResult,
           )
         }
       }
@@ -417,6 +421,7 @@ function processBuffer(
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
   onActivity?: (activity: RunActivity, eventId: string | null) => void,
   onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
 ): void {
   const trimmed = buffer.trim()
   if (trimmed.length === 0) return
@@ -432,6 +437,7 @@ function processBuffer(
     onProgress,
     onActivity,
     onArtifact,
+    onChartResult,
   )
 }
 
@@ -450,6 +456,7 @@ function processSSEEvent(
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
   onActivity?: (activity: RunActivity, eventId: string | null) => void,
   onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
 ): void {
   const dataLines: string[] = []
   let eventType = ''
@@ -527,6 +534,18 @@ function processSSEEvent(
       }
     } catch {
       /* ignore malformed artifact */
+    }
+    return
+  }
+
+  if (eventType === 'chart-result') {
+    try {
+      const result = JSON.parse(text) as ChartResultEvent
+      if (result.runId && result.state && Number.isInteger(result.plannedChartCount)) {
+        onChartResult?.(result, eventId)
+      }
+    } catch {
+      /* ignore malformed chart result */
     }
     return
   }

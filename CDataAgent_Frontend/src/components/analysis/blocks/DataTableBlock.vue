@@ -36,7 +36,7 @@ defineProps<{ block: DataTableBlock }>()
 .block-table__title {
   padding: 12px 14px 8px;
   color: var(--fg);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -48,7 +48,7 @@ table {
   border-collapse: separate;
   border-spacing: 0;
   color: var(--fg);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 th, td {
@@ -65,7 +65,7 @@ th {
   z-index: 1;
   background: var(--accent-glow-soft);
   color: var(--accent);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.02em;
   white-space: nowrap;

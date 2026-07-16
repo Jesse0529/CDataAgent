@@ -46,6 +46,10 @@ export interface ChatMessageVO {
   reconnecting?: boolean
   /** 后端正在生成或校验图表中，禁用统一图表入口。 */
   chartGenerating?: boolean
+  /** 本轮展示计划已明确包含图表，可在生成前稳定地预留图表入口。 */
+  chartExpected?: boolean
+  /** 图表生成终态；由服务端在流结束前明确推送。 */
+  chartResultState?: ChartResultEvent['state']
   /** 已由持久化消息确认，允许打开图表预览。 */
   chartPreviewAvailable?: boolean
   /** RenderDocument v1 展示文档（新协议消息，旧消息为 null） */
@@ -195,6 +199,17 @@ export interface ArtifactEvent {
   runId: string
   blocks: RenderBlock[]
   degraded?: boolean
+  /** 服务端展示计划已明确包含图表，不代表图表已通过校验。 */
+  chartExpected?: boolean
+}
+
+/** SSE 图表终态；仅包含已通过后端校验的图表配置。 */
+export interface ChartResultEvent {
+  runId: string
+  plannedChartCount: number
+  validatedChartCount: number
+  state: 'ready' | 'unavailable' | 'not_requested'
+  chartOption?: string | null
 }
 
 /** 文件数据预览（对应后端 FilePreviewVO） */

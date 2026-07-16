@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { apiPostStream } from '@/services/api'
 import type {
   ArtifactEvent,
+  ChartResultEvent,
   ChatMessageVO,
   MetaEvent,
   ProgressEvent,
@@ -193,10 +194,25 @@ export function useAgentStream() {
           if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
           const existing = message.liveBlocks ? [...message.liveBlocks] : []
           const existingIds = new Set(existing.map((block) => block.id))
+          if (artifact.chartExpected === true) message.chartExpected = true
           message.liveBlocks = [
             ...existing,
             ...artifact.blocks.filter((block) => !existingIds.has(block.id)),
           ]
+          message.lastEventId = eventId
+          if (eventId) lastEventId = eventId
+          onScrollToBottom(true)
+        },
+        (result: ChartResultEvent, eventId: string | null) => {
+          if (currentRunId && result.runId !== currentRunId) return
+          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
+          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          message.chartExpected = result.plannedChartCount > 0
+          message.chartResultState = result.state
+          message.chartGenerating = false
+          message.chartPreviewAvailable = result.state === 'ready'
+          const chartOptions = parseChartOptions(result.chartOption)
+          if (chartOptions) message.chartOption = chartOptions
           message.lastEventId = eventId
           if (eventId) lastEventId = eventId
           onScrollToBottom(true)
@@ -239,7 +255,9 @@ export function useAgentStream() {
         message.status = 'done'
         message.timestamp = Date.now()
         message.chartGenerating = false
-        message.chartPreviewAvailable = true
+        message.chartPreviewAvailable = message.chartResultState
+          ? message.chartResultState === 'ready' && Boolean(message.chartOption?.length)
+          : true
         message.reconnecting = false
         onPersist()
         onScrollToBottom()

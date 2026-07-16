@@ -74,6 +74,18 @@ const chartActivities = computed(() =>
     (activity) => activity.stage === 'chart' || activity.stage === 'validate',
   ),
 )
+const chartPreparationVisible = computed(
+  () =>
+    props.message.status === 'streaming' &&
+    props.message.chartExpected === true &&
+    chartActivities.value.length === 0 &&
+    analysisActivities.value.some(
+      (activity) => activity.stage === 'compose' && activity.state === 'succeeded',
+    ),
+)
+const chartFlowVisible = computed(
+  () => chartPreparationVisible.value || chartActivities.value.length > 0,
+)
 
 const showChartModal = ref(false)
 const copySuccess = ref(false)
@@ -138,13 +150,22 @@ const chartResult = computed((): Record<string, unknown>[] | null => {
 const chartPending = computed(
   () =>
     props.message.status === 'streaming' &&
-    (props.message.chartGenerating || Boolean(chartResult.value)),
+    (chartFlowVisible.value || props.message.chartGenerating || Boolean(chartResult.value)),
 )
 const canPreviewChart = computed(
   () =>
     props.message.status === 'done' &&
     props.message.chartPreviewAvailable === true &&
     Boolean(chartResult.value),
+)
+const chartUnavailable = computed(
+  () =>
+    props.message.status === 'done' &&
+    props.message.chartExpected === true &&
+    props.message.chartResultState === 'unavailable',
+)
+const chartTriggerVisible = computed(
+  () => chartPending.value || canPreviewChart.value || chartUnavailable.value,
 )
 
 function openChartPreview(): void {
@@ -396,33 +417,47 @@ function formatTokens(n: number): string {
           </div>
         </div>
 
-        <!-- 图表入口：流式阶段与完成后的布局、图标和样式保持一致。 -->
-        <RunActivityTimeline v-if="chartActivities.length" :activities="chartActivities" />
+        <!-- 图表入口从结果整理完成时即占位，后续仅平滑切换内部状态。 -->
+        <Transition name="chart-flow">
+          <section v-if="chartTriggerVisible" class="chart-flow">
+            <RunActivityTimeline
+              v-if="chartFlowVisible"
+              :activities="chartActivities"
+              :pending-label="chartPreparationVisible ? '正在准备图表' : undefined"
+            />
 
-        <div
-          v-if="chartPending || canPreviewChart"
-          class="chart-trigger"
-          :class="{ 'chart-trigger--pending': chartPending }"
-          :role="canPreviewChart ? 'button' : undefined"
-          :tabindex="canPreviewChart ? 0 : undefined"
-          :aria-disabled="canPreviewChart ? undefined : true"
-          @click="openChartPreview"
-          @keydown.enter.prevent="openChartPreview"
-        >
-          <span class="chart-trigger__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="14" width="4" height="7" rx="1" fill="currentColor" />
-              <rect x="10" y="9" width="4" height="12" rx="1" fill="currentColor" />
-              <rect x="17" y="4" width="4" height="17" rx="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span class="chart-trigger__text">
-            {{ canPreviewChart
-              ? (chartResult?.length === 1 ? '查看可视化图表' : `查看可视化图表（${chartResult?.length} 张）`)
-              : '正在生成图表…' }}
-          </span>
-          <span class="chart-trigger__arrow">→</span>
-        </div>
+            <div
+              class="chart-trigger"
+              :class="{
+                'chart-trigger--pending': chartPending,
+                'chart-trigger--unavailable': chartUnavailable,
+              }"
+              :role="canPreviewChart ? 'button' : undefined"
+              :tabindex="canPreviewChart ? 0 : undefined"
+              :aria-disabled="canPreviewChart ? undefined : true"
+              @click="openChartPreview"
+              @keydown.enter.prevent="openChartPreview"
+            >
+              <span class="chart-trigger__icon" :class="{ 'is-loading': chartPending }">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="14" width="4" height="7" rx="1" fill="currentColor" />
+                  <rect x="10" y="9" width="4" height="12" rx="1" fill="currentColor" />
+                  <rect x="17" y="4" width="4" height="17" rx="1" fill="currentColor" />
+                </svg>
+              </span>
+              <span class="chart-trigger__text">
+                {{ chartUnavailable ? '图表未生成' : '查看可视化图表' }}
+                <small v-if="chartPending">生成中，完成后可查看</small>
+                <small v-else-if="chartUnavailable">本轮未生成有效图表，请重试或调整问题</small>
+              </span>
+              <span v-if="chartPending" class="chart-trigger__preview" aria-hidden="true">
+                <i /><i /><i />
+              </span>
+              <span v-else-if="chartUnavailable" class="chart-trigger__unavailable" aria-hidden="true">!</span>
+              <span v-else class="chart-trigger__arrow">→</span>
+            </div>
+          </section>
+        </Transition>
 
         <!-- 完成态：时间 + Token 消耗 -->
         <div v-if="message.status === 'done'" class="msg-token-usage">
@@ -487,8 +522,8 @@ function formatTokens(n: number): string {
   max-width: 85%;
   min-width: 0;
   padding: 12px 16px;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.72;
   overflow-wrap: break-word;
   word-break: break-word;
   overflow: hidden;
@@ -729,6 +764,8 @@ function formatTokens(n: number): string {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: min(100%, 520px);
+  min-height: 68px;
   padding: 12px 18px;
   margin-top: 16px;
   margin-bottom: 12px;
@@ -752,6 +789,13 @@ function formatTokens(n: number): string {
   pointer-events: none;
 }
 
+.chart-trigger--unavailable {
+  border-style: dashed;
+  cursor: default;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
 .chart-trigger__icon {
   flex-shrink: 0;
   width: 36px;
@@ -761,13 +805,88 @@ function formatTokens(n: number): string {
   color: var(--accent);
   display: grid;
   place-items: center;
+  transition: filter 180ms ease, opacity 180ms ease;
+}
+
+.chart-trigger__icon.is-loading {
+  filter: blur(1.5px);
+  opacity: 0.62;
 }
 
 .chart-trigger__text {
   flex: 1;
-  font-size: 14px;
-  font-weight: 500;
+  display: grid;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--fg);
+}
+
+.chart-trigger__text small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.chart-trigger__preview {
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+  width: 48px;
+  height: 34px;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  filter: blur(1.2px);
+  overflow: hidden;
+}
+
+.chart-trigger__preview::after {
+  position: absolute;
+  width: 72px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 76%), transparent);
+  content: '';
+  animation: chart-preview-shimmer 1.3s ease-in-out infinite;
+}
+
+.chart-trigger__preview i {
+  width: 8px;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--accent);
+  animation: chart-preview-bars 900ms ease-in-out infinite alternate;
+}
+
+.chart-trigger__preview i:nth-child(1) { height: 12px; }
+.chart-trigger__preview i:nth-child(2) { height: 21px; animation-delay: 120ms; }
+.chart-trigger__preview i:nth-child(3) { height: 16px; animation-delay: 240ms; }
+
+.chart-trigger__unavailable {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@keyframes chart-preview-shimmer {
+  from { transform: translateX(-56px); }
+  to { transform: translateX(56px); }
+}
+
+@keyframes chart-preview-bars {
+  to { transform: scaleY(0.65); opacity: 0.58; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-trigger__preview::after,
+  .chart-trigger__preview i { animation: none; }
 }
 
 .chart-trigger__arrow {
@@ -775,6 +894,17 @@ function formatTokens(n: number): string {
   color: var(--accent);
   font-size: 16px;
   transition: transform 0.28s var(--spring);
+}
+
+.chart-flow-enter-active,
+.chart-flow-leave-active {
+  transition: opacity 220ms ease-out, transform 220ms var(--ease-out-expo);
+}
+
+.chart-flow-enter-from,
+.chart-flow-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 /* ===== 用户消息附件 chips ===== */
@@ -819,6 +949,11 @@ function formatTokens(n: number): string {
 /* ===== 内容渲染 ===== */
 .msg-text :deep(p) {
   margin: 0 0 8px;
+}
+
+.msg-text :deep(p),
+.msg-text :deep(li) {
+  color: var(--fg);
 }
 
 .msg-text :deep(p:last-child) {
