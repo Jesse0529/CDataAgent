@@ -4,7 +4,7 @@
       <span class="run-activities__marker" :class="`is-${activity.state}`" aria-hidden="true" />
       <span class="run-activities__label">
         {{ activity.label }}
-        <span v-if="activity.count && activity.count > 1" class="run-activities__count">×{{ activity.count }}</span>
+        <span v-if="activity.count && activity.count > 1" class="run-activities__count">（<strong>{{ activity.count }}</strong>次）</span>
       </span>
     </li>
     <li v-if="activeLabel" class="run-activities__item run-activities__item--active">
@@ -56,7 +56,8 @@ const visible = computed(() => completedActivities.value.length > 0 || Boolean(a
 
 .run-activities__item { display: flex; min-height: 22px; align-items: center; gap: 9px; color: var(--muted); font-size: 14px; }
 .run-activities__item--active { color: var(--fg); }
-.run-activities__count { margin-left: 5px; color: var(--accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.run-activities__count { display: inline-block; margin-left: 2px; color: inherit; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; transform: translateY(-1px); }
+.run-activities__count strong { color: var(--fg); font-weight: inherit; }
 .run-activities__marker { width: 7px; height: 7px; border-radius: 50%; background: var(--border-inner); flex: 0 0 auto; }
 .run-activities__marker.is-running { background: var(--accent); animation: activity-pulse 1s ease-in-out infinite; }
 .run-activities__marker.is-succeeded { background: #3aa675; }
