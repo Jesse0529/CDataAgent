@@ -1,6 +1,7 @@
 package com.AIBI.config;
 
 import com.alibaba.cloud.ai.graph.agent.hook.TokenCounter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -16,27 +17,37 @@ import java.util.List;
  * SummarizationHook 在模型调用前作预算决策；实际成本仍以 TokenLedger 的 API usage 为准。
  */
 @Component
+@Slf4j
 public class ExactTokenCounter implements TokenCounter {
 
     private static final int DEFAULT_CHARS_PER_TOKEN = 2;
+    private static final int SUMMARY_WARNING_TOKENS = 96_000;
+
+    private volatile boolean summaryWarningLogged;
 
     /**
      * 保留兼容调用。预调用裁剪不再依赖上一请求的 API usage。
      */
     public void setCurrentConversationId(Long cid) {
-        // no-op
+        summaryWarningLogged = false;
     }
 
     /**
      * 保留兼容调用。
      */
     public void clear() {
-        // no-op
+        summaryWarningLogged = false;
     }
 
     @Override
     public int countTokens(List<Message> messages) {
-        return estimateByChars(messages, DEFAULT_CHARS_PER_TOKEN);
+        int tokens = estimateByChars(messages, DEFAULT_CHARS_PER_TOKEN);
+        if (tokens >= SUMMARY_WARNING_TOKENS && !summaryWarningLogged) {
+            summaryWarningLogged = true;
+            log.info("摘要上下文接近阈值：消息数={}、估算Token={}、阈值=128000",
+                    messages.size(), tokens);
+        }
+        return tokens;
     }
 
     static int estimateByChars(List<Message> messages, int charsPerToken) {

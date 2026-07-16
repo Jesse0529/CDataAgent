@@ -23,8 +23,8 @@ public class AnalysisStateStoreProperties {
     /** SQL 结果数据 TTL（分钟），较短，过期自动重查 */
     private int dataTtlMinutes = 60;
 
-    /** dataIndex 最大条目数，超限 FIFO 淘汰 */
-    private int maxDataEntries = 10;
+    /** dataIndex 总容量上限，超限时保留较新的结果。 */
+    private int maxDataTotalBytes = 1024 * 1024;
 
     /** 单条 data 最大字节数，超限不持久化 */
     private int maxDataEntryBytes = 50 * 1024;

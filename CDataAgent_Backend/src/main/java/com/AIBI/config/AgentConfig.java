@@ -1,7 +1,6 @@
 package com.AIBI.config;
 
 import com.AIBI.AgentTool.*;
-import com.AIBI.agent.hook.ContextWindowHook;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolerror.ToolErrorInterceptor;
@@ -46,6 +45,9 @@ public class AgentConfig {
 
     @Value("${agent.synthesizer.timeout-seconds:30}")
     private int synthesizerTimeout;
+
+    @Value("${sandbox.enabled:false}")
+    private boolean sandboxEnabled;
 
     // ─── 拦截器 ────────────────────────────────────────────────
 
@@ -102,15 +104,10 @@ public class AgentConfig {
                 .build();
     }
 
-    @Bean
-    public ContextWindowHook contextWindowHook(ExactTokenCounter exactTokenCounter) {
-        return new ContextWindowHook(exactTokenCounter);
-    }
-
     // ─── Executor Agent — 自主执行分析或对话 ──────────────────────
 
     /**
-     * Executor: 持有 5 个数据工具，严格按计划逐步执行。
+     * Executor: 持有数据工具，严格按计划逐步执行。
      * 使用独立的 System Prompt（agent-executor.txt）。
      * 沙箱通过 {@code ObjectProvider} 可选注入。
      */
@@ -122,21 +119,26 @@ public class AgentConfig {
                                     PreferenceTool preferenceTool,
                                     PresentationSubmissionTool presentationSubmissionTool,
                                     BaseCheckpointSaver redisSaver,
-                                    SummarizationHook summarizationHook,
-                                    ContextWindowHook contextWindowHook) {
-        ReactAgent agent = ReactAgent.builder()
+                                    SummarizationHook summarizationHook) {
+        var builder = ReactAgent.builder()
                 .name("Executor")
                 .description("数据分析助手——自主决策，与用户对话并执行数据分析")
                 .model(chatModel)
                 .systemPrompt(promptConfig.getExecutorPrompt())
                 .saver(redisSaver)
-                .hooks(contextWindowHook, summarizationHook)
-                .methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool, preferenceTool, presentationSubmissionTool)
-                .toolExecutionTimeout(Duration.ofSeconds(executorTimeout))
-                .interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler())
-                .build();
+                .hooks(summarizationHook)
+                .toolExecutionTimeout(Duration.ofSeconds(executorTimeout));
+        if (sandboxEnabled) {
+            builder.interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler());
+            builder.methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool,
+                    preferenceTool, presentationSubmissionTool);
+        } else {
+            builder.interceptors(duckdbRetry(), toolErrorHandler());
+            builder.methodTools(dataLoadingTool, duckDbQueryTool, preferenceTool, presentationSubmissionTool);
+        }
+        ReactAgent agent = builder.build();
 
-        log.info("执行器Agent就绪（6个工具）");
+        log.info("执行器Agent就绪（Python工具启用={}）", sandboxEnabled);
         return agent;
     }
 

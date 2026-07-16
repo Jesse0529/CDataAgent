@@ -35,6 +35,9 @@ public class AnalysisState {
     /** 内存缓存：threadId → outputKey → dataJson */
     private final ConcurrentHashMap<String, Map<String, String>> dataIndex = new ConcurrentHashMap<>();
 
+    /** 内存缓存：threadId → outputKey → 可重放查询索引 */
+    private final ConcurrentHashMap<String, Map<String, QueryOutputRecord>> queryOutputs = new ConcurrentHashMap<>();
+
     /** 内存缓存：threadId → 本轮消息指定的 active 文件 ID 列表（前端传参决定） */
     private final ConcurrentHashMap<String, List<Long>> activeFileIds = new ConcurrentHashMap<>();
 
@@ -202,6 +205,22 @@ public class AnalysisState {
                 .put(outputKey, dataJson);
     }
 
+    /** 保存查询索引。大结果仅保存索引，按需基于原始 Parquet 重算。 */
+    public void addQueryOutput(QueryOutputRecord output) {
+        queryOutputs.computeIfAbsent(currentThreadId, k -> new LinkedHashMap<>())
+                .put(output.outputKey, output);
+    }
+
+    public QueryOutputRecord getQueryOutput(String outputKey) {
+        Map<String, QueryOutputRecord> outputs = queryOutputs.get(currentThreadId);
+        return outputs != null ? outputs.get(outputKey) : null;
+    }
+
+    public Map<String, QueryOutputRecord> getQueryOutputs() {
+        Map<String, QueryOutputRecord> outputs = queryOutputs.get(currentThreadId);
+        return outputs != null ? new LinkedHashMap<>(outputs) : Collections.emptyMap();
+    }
+
     public String getDataByKey(String outputKey) {
         Map<String, String> map = dataIndex.get(currentThreadId);
         return map != null ? map.get(outputKey) : null;
@@ -209,7 +228,12 @@ public class AnalysisState {
 
     public Set<String> getAvailableKeys() {
         Map<String, String> map = dataIndex.get(currentThreadId);
-        return map != null ? map.keySet() : Collections.emptySet();
+        Map<String, QueryOutputRecord> outputs = queryOutputs.get(currentThreadId);
+        if ((map == null || map.isEmpty()) && (outputs == null || outputs.isEmpty())) return Collections.emptySet();
+        Set<String> keys = new LinkedHashSet<>();
+        if (map != null) keys.addAll(map.keySet());
+        if (outputs != null) keys.addAll(outputs.keySet());
+        return keys;
     }
 
     public List<StepRecord> getSteps() {
@@ -227,14 +251,28 @@ public class AnalysisState {
      * 图表和意图字段已迁移至 RunContext，由 RunContext.clear() 负责清理。
      */
     public void clear() {
-        // 持久化到 Redis（在清空之前）
-        if (analysisStateStore != null && currentThreadId != null) {
-            analysisStateStore.save(currentThreadId, this);
+        clearByConversation(currentThreadId);
+    }
+
+    /**
+     * 清理指定会话的工作状态，供运行结束时按会话精确调用。
+     */
+    public void clearByConversation(String conversationId) {
+        if (conversationId == null) {
+            return;
         }
-        loadedFiles.remove(currentThreadId);
-        stepResults.remove(currentThreadId);
-        dataIndex.remove(currentThreadId);
-        activeFileIds.remove(currentThreadId);
+        // 持久化到 Redis（在清空之前）
+        if (analysisStateStore != null) {
+            analysisStateStore.save(conversationId, this);
+        }
+        loadedFiles.remove(conversationId);
+        stepResults.remove(conversationId);
+        dataIndex.remove(conversationId);
+        queryOutputs.remove(conversationId);
+        activeFileIds.remove(conversationId);
+        if (conversationId.equals(currentThreadId)) {
+            currentThreadId = null;
+        }
         log.debug("分析状态已清理");
     }
 
@@ -261,7 +299,7 @@ public class AnalysisState {
         // 恢复文件、步骤和 SQL 结果，但不恢复 activeFileIds
         // activeFileIds 由前端每轮传入，始终以当前请求为准
         restore(conversationId, snapshot.files(), snapshot.steps(),
-                snapshot.dataIndex(), null);
+                snapshot.dataIndex(), snapshot.queryOutputs(), null);
         log.debug("状态已恢复：文件={}、步骤={}、数据={}",
                 snapshot.files().size(), snapshot.steps().size(), snapshot.dataIndex().size());
         return true;
@@ -276,6 +314,7 @@ public class AnalysisState {
         loadedFiles.remove(conversationId);
         stepResults.remove(conversationId);
         dataIndex.remove(conversationId);
+        queryOutputs.remove(conversationId);
         activeFileIds.remove(conversationId);
         if (analysisStateStore != null) {
             analysisStateStore.delete(conversationId);
@@ -288,11 +327,12 @@ public class AnalysisState {
      */
     public void restore(String conversationId, List<LoadedFileRecord> files,
                          List<StepRecord> steps, Map<String, String> data,
-                         List<Long> fileIds) {
+                         Map<String, QueryOutputRecord> outputs, List<Long> fileIds) {
         this.currentThreadId = conversationId;
         if (files != null) loadedFiles.put(conversationId, new ArrayList<>(files));
         if (steps != null) stepResults.put(conversationId, new ArrayList<>(steps));
         if (data != null) dataIndex.put(conversationId, new LinkedHashMap<>(data));
+        if (outputs != null) queryOutputs.put(conversationId, new LinkedHashMap<>(outputs));
         if (fileIds != null && !fileIds.isEmpty()) activeFileIds.put(conversationId, new ArrayList<>(fileIds));
     }
 
@@ -350,6 +390,8 @@ public class AnalysisState {
                 } else {
                     sb.append("  ").append(s.toolName).append(" → ").append(s.outputKey);
                     if (s.rowCount > 0) sb.append(" (").append(s.rowCount).append("行)");
+                    QueryOutputRecord output = getQueryOutput(s.outputKey);
+                    if (output != null && output.truncated) sb.append(" [结果已截断]");
                 }
                 sb.append("\n");
             }
@@ -395,5 +437,31 @@ public class AnalysisState {
         public String status;
         /** 失败时的详细错误信息（成功时为 null） */
         public String errorMessage;
+    }
+
+    /** 查询结果索引。数据源始终是原始 Parquet，避免大结果进入工作记忆。 */
+    @Data
+    public static class QueryOutputRecord {
+        public String outputKey;
+        public String sql;
+        public List<QuerySourceRecord> sources;
+        public List<String> fields;
+        public String sampleJson;
+        public int rowCount;
+        public int rowLimit;
+        public boolean truncated;
+        /** inline 表示完整结果在 dataIndex，requery 表示按需重算。 */
+        public String storageMode;
+    }
+
+    @Data
+    public static class QuerySourceRecord {
+        public String parquetPath;
+        public String viewName;
+        public QuerySourceRecord() {}
+        public QuerySourceRecord(String parquetPath, String viewName) {
+            this.parquetPath = parquetPath;
+            this.viewName = viewName;
+        }
     }
 }

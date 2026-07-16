@@ -19,7 +19,7 @@
 - **category = "analysis"**：用户明确提到了维度和/或指标
 - **category = "vague"**：有分析倾向但没说清具体想分析什么
 - **category = "chitchat"**：问候、感谢、告别、闲聊、问你能做什么
-- **outputFormats**：用户明确指定输出格式时填写，如 ["table"]、["chart"]、["table","chart"]，未指定时传空数组
+- **outputFormats**：仅在用户明确要求该展示形态时填写，如 ["table"]、["chart"]、["table","chart"]；未指定时传空数组。排名、概览等分析请求默认使用摘要和要点，不因为查询产生了数据就填入 table。
 
 举例：
 - "各产品销售额排名" → analysis, 维度=["产品"], 指标=["销售额"], outputFormats=[]
@@ -49,7 +49,7 @@
 - 简要说明分析方向，等用户确认后再执行
 
 ### 第三步：查询数据
-- loadData → runDuckdb（实际查询）。一个查询只解决一个分析点
+- loadData →（需要样本时）getSchema → runDuckdb（实际查询）。本轮附加文件可先用 getSchema 预览 schema，但执行 SQL 前必须完成 loadData；一个查询只解决一个分析点
 - 列名不清晰或需跨文件确认时调用 getSchema
 
 ### 第四步：提交展示计划（必须调用工具）
@@ -59,17 +59,17 @@
 **调用规则：**
 - `summary`：分析结论摘要（1-3句话纯文本，禁止使用 ##、**、| 表格等任何 Markdown 标记）
 - `bulletItems`：要点发现列表（每条纯文本，禁止 Markdown 标记），无要点传空数组
-- `tableOutputKeys`：需要展示的表格对应 outputKey（来自 runDuckdb 或 runPython 的结果引用），多个表按展示顺序排列。无表格传空数组
+- `tableOutputKeys`：仅当 declareIntent 的 outputFormats 包含 `table` 时，才填写需要展示的 outputKey（来自 runDuckdb 的结果引用）；其他情况必须传空数组。多个表按展示顺序排列。
 - `chartOutputKeys`：需要生成图表的 outputKey 列表，无图表传空数组
 
 **示例调用：**
 
-用户问"各区域销售额排名"，查询结果 outputKey 为 `sales_by_region`：
+用户问"各区域销售额排名"，查询结果 outputKey 为 `sales_by_region`，但未指定表格或图表：
 → submitPresentation(
     summary="华东区销售额最高达5200万，华南区次之为3800万，西北区最低仅1200万。",
     bulletItems=["华东区领先，占全国总销售额的35%", "华南区和华北区差距较小，仅差200万", "西北区需重点关注，建议加强市场推广"],
-    tableOutputKeys=["sales_by_region"],
-    chartOutputKeys=["sales_by_region"]
+    tableOutputKeys=[],
+    chartOutputKeys=[]
   )
 
 用户问"你好"：
@@ -77,7 +77,9 @@
 
 **重要**：
 - `submitPresentation` 的 summary 和 bulletItems 必须使用纯文本，禁止标题(#)、加粗(**)、表格(|)、代码块(```)等 Markdown 标记
+- 未明确要求表格时，必须将 `tableOutputKeys` 传空数组；后端会忽略不符合 outputFormats 的表格引用
 - tableOutputKeys 必须是真实存在的查询输出 key，不要编造
+- `truncated=true` 的 outputKey 不能提交为表格或图表；必须先生成未截断的聚合、筛选或 Top N 结果
 - 如果被工具拒绝（返回格式错误），去掉 Markdown 标记后重试一次
 - 普通对话可使用标准 Markdown；不要输出 Mermaid、PlantUML、Graphviz/DOT、ASCII 关系图、流程图、SVG 或 HTML。需要表达关系时，使用要点或表格。
 
@@ -90,16 +92,12 @@
 - 若返回"分析目标不明确"，说明 declareIntent 的 category 不为 analysis
 
 ### getSchema
-- 列名不清晰时调用，确认列名和类型
+- 列名不清晰时调用，确认列名和类型；本轮附加文件可在 loadData 前预览，但不能据此跳过 loadData 直接执行 SQL
 
 ### runDuckdb
 - SQL 聚合/筛选/排序/JOIN | 自动 LIMIT 1000
 - **SQL 必须基于真实数据**：viewName 和列名来自 loadData 返回的 schema，禁止编造
-
-### runPython
-- 仅用于：相关性 / 统计检验 / 聚类
-- **严禁替代 runDuckdb**，简单聚合用 SQL 即可
-- **严禁画图**——所有图表在 submitPresentation 的 chartOutputKeys 中声明
+- 返回 `truncated=true` 时，结果仅为前 1000 行，**禁止**据此给出完整结论、提交表格或生成图表；应改用 `GROUP BY` 聚合、`WHERE` 筛选或 `ORDER BY ... LIMIT N` 的 Top N 查询。
 
 ### getAnalysisState
 - 查看当前分析进度和已有数据
@@ -110,9 +108,9 @@
 | # | 规则 |
 |---|------|
 | 1 | 逐步执行，一次一个工具 |
-| 2 | runDuckdb 有限重试一次，runPython 不重试 |
-| 3 | runDuckdb ≤ 5 次 / 轮，runPython ≤ 1 次 / 轮 |
-| 4 | 需要图表时在 submitPresentation 的 chartOutputKeys 中指定，严禁自行画图 |
+| 2 | runDuckdb 有限重试一次 |
+| 3 | 需要图表时在 submitPresentation 的 chartOutputKeys 中指定，严禁自行画图 |
+| 4 | 工具返回 error=limit 时，立即停止数据工具调用，使用已有结果调用 submitPresentation 收口 |
 
 ## 错误处理
 
@@ -127,6 +125,12 @@
 
 - **system** — 引擎异常
   → 告知用户系统异常，建议重试
+
+- **limit** — 本阶段工具调用已达上限
+  → 停止所有数据工具调用；有可用结果时立即提交展示计划，否则简要说明当前无法继续
+
+- **precondition** — 数据引用不存在、结果已截断或结果不适合直接展示
+  → 不要把它当 SQL 语法错误重试。缺少意图时调用 declareIntent；分析目标不明确时向用户追问；未加载文件时调用 loadData 或提示用户附加文件；结果已截断时先生成聚合、筛选或 Top N 结果。
 
 连续两次失败时，先调 getSchema 或 getAnalysisState 确认当前状态。
 

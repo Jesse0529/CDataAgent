@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * Token 消耗账本 — 基于 API 返回的精确值，不做估算。
  * <p>
- * 每次模型调用后，由 AgentServiceImpl 从 {@code NodeOutput.tokenUsage()} 获取精确值并记录。
+ * 每次模型调用后，由 {@code ModelManager} 从供应商响应的 usage 字段获取精确值并记录。
  * 用于：对话级 Token 预算判断、tokenUsage 字段回填、成本监控。
  * <p>
  * Redis 结构（Hash）:
