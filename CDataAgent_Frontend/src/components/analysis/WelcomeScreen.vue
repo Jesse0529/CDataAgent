@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <div class="welcome">
     <div class="welcome__mark" aria-hidden="true">
-      <LogoIcon :size="180" />
+      <LogoIcon :size="100" />
     </div>
     <h1 class="welcome__title">CData <span>Agent</span></h1>
     <p v-if="!hasFiles" class="welcome__sub">
@@ -31,12 +31,12 @@ defineProps<{
 }
 
 .welcome__mark {
-  width: 210px;
-  height: 136px;
+  width: 140px;
+  height: 90px;
   display: grid;
   place-items: center;
-  margin-bottom: 6px;
-  filter: drop-shadow(0 14px 24px rgba(188, 105, 74, 0.16));
+  margin-bottom: 4px;
+  filter: drop-shadow(0 10px 20px rgba(188, 105, 74, 0.14));
 }
 
 .welcome__title {
@@ -67,8 +67,8 @@ defineProps<{
   }
 
   .welcome__mark {
-    width: 168px;
-    height: 108px;
+    width: 110px;
+    height: 72px;
   }
 
   .welcome__sub {
