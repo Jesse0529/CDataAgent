@@ -20,15 +20,15 @@ public class PreferenceTool {
     @Autowired
     private UserPreferenceManager preferenceManager;
 
-    @Tool(description = "获取当前用户的已保存偏好，返回 JSON 对象。了解用户长期偏好（图表类型、输出风格），但用户当前输入优先。")
+    @Tool(description = "读取长期偏好；当前用户请求优先。")
     public String getPreferences() {
         Map<String, String> prefs = preferenceManager.getAllPreferences();
         return JSON.toJSONString(prefs);
     }
 
-    @Tool(description = "保存用户一项偏好设置。仅在用户明确表达长期偏好时调用（如「以后都用柱状图」）。调用前先检查是否已存在相同值。")
+    @Tool(description = "保存长期偏好；仅在用户明确表达“以后/始终”等偏好时调用。")
     public String savePreference(
-            @ToolParam(description = "偏好键：chart_type(图表类型)/output_style(输出风格: simplified/detailed/balanced)") String key,
+            @ToolParam(description = "chart_type 或 output_style") String key,
             @ToolParam(description = "偏好值") String value) {
         if (key == null || key.isBlank() || value == null || value.isBlank())
             return "保存失败：key 和 value 不能为空";
@@ -37,7 +37,7 @@ public class PreferenceTool {
         if (value.equals(existing)) return "该偏好已保存，无需重复设置";
 
         preferenceManager.setPreference(key.trim(), value.trim());
-        log.info("savePreference: key={}", key);
+        log.info("用户偏好已保存：键={}", key);
         return "偏好已保存";
     }
 }

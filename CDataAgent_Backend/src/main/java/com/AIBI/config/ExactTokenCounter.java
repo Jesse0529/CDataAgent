@@ -1,83 +1,78 @@
 package com.AIBI.config;
 
-import com.AIBI.manager.TokenLedger;
 import com.alibaba.cloud.ai.graph.agent.hook.TokenCounter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * 基于 TokenLedger 精确值的 TokenCounter — 替代框架默认的字符估算（text.length()/4）。
+ * 当前消息列表的保守 Token 计数器。
  * <p>
- * 每次模型调用后，{@link TokenLedger#recordRoundModelCall} 会将精确的 inputTokens
- * 写入 Redis {@code conv:ledger:{cid}} 的 {@code lastInputTokens} 字段。
- * 下一轮 {@link SummarizationHook} 触发时，此计数器优先使用该精确值判断是否需要压缩，
- * 仅在精确值不可用（新对话、Redis 连接问题）时回退到字符估算。
- * <p>
- * conversationId 由 {@code AgentServiceImpl} 在请求开始时传入、结束时清除，
- * 通过 {@link #setCurrentConversationId(Long)} / {@link #clear()} 管理。
+ * API 返回的 promptTokens 属于上一次模型请求，且包含 system prompt 与工具 schema，
+ * 不能用于判断当前 Checkpoint 消息列表是否需要裁剪。此计数器只计算传入消息，供滑窗和
+ * SummarizationHook 在模型调用前作预算决策；实际成本仍以 TokenLedger 的 API usage 为准。
  */
 @Component
+@Slf4j
 public class ExactTokenCounter implements TokenCounter {
 
-    private static final int DEFAULT_CHARS_PER_TOKEN = 4;
+    private static final int DEFAULT_CHARS_PER_TOKEN = 2;
+    private static final int SUMMARY_WARNING_TOKENS = 96_000;
 
-    @Autowired
-    private TokenLedger tokenLedger;
+    private volatile boolean summaryWarningLogged;
 
-    private final ThreadLocal<Long> conversationIdHolder = new ThreadLocal<>();
-
+    /**
+     * 保留兼容调用。预调用裁剪不再依赖上一请求的 API usage。
+     */
     public void setCurrentConversationId(Long cid) {
-        conversationIdHolder.set(cid);
+        summaryWarningLogged = false;
     }
 
+    /**
+     * 保留兼容调用。
+     */
     public void clear() {
-        conversationIdHolder.remove();
+        summaryWarningLogged = false;
     }
 
     @Override
     public int countTokens(List<Message> messages) {
-        // 1. 优先使用精确值
-        Long cid = conversationIdHolder.get();
-        if (cid != null) {
-            int exactTokens = tokenLedger.getCurrentMessageListTokens(cid);
-            if (exactTokens > 0) {
-                return exactTokens;
-            }
+        int tokens = estimateByChars(messages, DEFAULT_CHARS_PER_TOKEN);
+        if (tokens >= SUMMARY_WARNING_TOKENS && !summaryWarningLogged) {
+            summaryWarningLogged = true;
+            log.info("摘要上下文接近阈值：消息数={}、估算Token={}、阈值=128000",
+                    messages.size(), tokens);
         }
-
-        // 2. 回退：字符估算（与框架默认行为一致）
-        return estimateByChars(messages, DEFAULT_CHARS_PER_TOKEN);
+        return tokens;
     }
 
-    // ─── 回退估算 ───────────────────────────────────────────
-
-    /**
-     * 与框架 {@link TokenCounter#approximateMsgCounter(int)} 实现一致的字符估算逻辑。
-     */
     static int estimateByChars(List<Message> messages, int charsPerToken) {
         int total = 0;
         for (Message msg : messages) {
             if (msg instanceof ToolResponseMessage trm) {
-                for (ToolResponseMessage.ToolResponse resp : trm.getResponses()) {
-                    total += resp.responseData().length() / charsPerToken;
+                for (ToolResponseMessage.ToolResponse response : trm.getResponses()) {
+                    total += ceilDivide(response.responseData().length(), charsPerToken);
                 }
-            } else {
-                // AssistantMessage：包含 text + tool_calls arguments
-                if (msg.getText() != null) {
-                    total += msg.getText().length() / charsPerToken;
-                }
-                if (msg instanceof AssistantMessage am) {
-                    for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
-                        total += tc.arguments().length() / charsPerToken;
-                    }
+                continue;
+            }
+
+            if (msg.getText() != null) {
+                total += ceilDivide(msg.getText().length(), charsPerToken);
+            }
+            if (msg instanceof AssistantMessage assistantMessage) {
+                for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
+                    total += ceilDivide(toolCall.arguments().length(), charsPerToken);
                 }
             }
         }
         return total;
+    }
+
+    private static int ceilDivide(int value, int divisor) {
+        return (value + divisor - 1) / divisor;
     }
 }

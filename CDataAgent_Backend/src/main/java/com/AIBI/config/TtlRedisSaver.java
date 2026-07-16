@@ -83,13 +83,13 @@ public class TtlRedisSaver implements BaseCheckpointSaver {
                 redisson.<String>getBucket(CHECKPOINT_PREFIX + threadId).delete();
                 // 2. 反向索引 map
                 redisson.<String, String>getMap(THREAD_REVERSE_PREFIX + threadId).delete();
-                log.debug("Redis checkpoint content deleted: threadId={}", threadId);
+                log.debug("Redis检查点已删除: threadId={}", threadId);
             }
             // 3. thread 元数据 map（即使 threadId 为 null 也删除）
             meta.delete();
-            log.info("Redis checkpoints physically deleted for threadName={}", threadName);
+            log.info("Redis检查点已删除: threadName={}", threadName);
         } catch (Exception e) {
-            log.warn("Redis checkpoint 删除失败: threadName={}", threadName, e);
+            log.warn("Redis检查点删除失败: threadName={}", threadName, e);
         }
     }
 
@@ -114,7 +114,7 @@ public class TtlRedisSaver implements BaseCheckpointSaver {
             redisson.<String, String>getMap(THREAD_REVERSE_PREFIX + threadId).expire(ttl);
         } catch (Exception e) {
             // TTL 续期失败不影响 Agent 核心流程，仅记日志
-            log.warn("TTL 续期失败: threadName={}", threadName, e);
+            log.warn("TTL续期失败: threadName={}", threadName, e);
         }
     }
 }

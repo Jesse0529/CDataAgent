@@ -6,9 +6,20 @@
  * - 所有响应 HTTP 200（包括错误），错误通过 code 字段传递
  */
 
-const BASE_URL = '/apis'
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+const BASE_URL = (configuredBaseUrl || '/apis').replace(/\/$/, '')
 
-import type { StructuredEvent, TableEventData } from './types'
+import { safeParseRenderDocument } from '@/utils/renderDocument'
+import type {
+  ArtifactEvent,
+  ChartResultEvent,
+  MetaEvent,
+  ProgressEvent,
+  RenderDocument,
+  RunActivity,
+  StructuredEvent,
+  TableEventData,
+} from './types'
 
 // ---- 错误码常量 ----
 
@@ -64,7 +75,10 @@ export class ApiError extends Error {
 
 // ---- 请求超时 ----
 
-function createTimeout(ms: number): { controller: AbortController; timer: ReturnType<typeof setTimeout> } {
+function createTimeout(ms: number): {
+  controller: AbortController
+  timer: ReturnType<typeof setTimeout>
+} {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), ms)
   return { controller, timer }
@@ -72,6 +86,49 @@ function createTimeout(ms: number): { controller: AbortController; timer: Return
 
 const DEFAULT_TIMEOUT = 30_000 // 30 秒常规超时
 const STREAM_TIMEOUT = 5 * 60_000 // 5 分钟流式超时（对齐后端 SseEmitter 超时）
+
+type HttpMethod = 'GET' | 'POST' | 'DELETE'
+
+interface RequestOptions {
+  method: HttpMethod
+  body?: Record<string, unknown> | FormData
+  timeout?: number
+  timeoutMessage?: string
+}
+
+async function request<T>(url: string, options: RequestOptions): Promise<ApiResponse<T>> {
+  const {
+    method,
+    body,
+    timeout = DEFAULT_TIMEOUT,
+    timeoutMessage = '请求超时，请检查网络后重试',
+  } = options
+  const { controller, timer } = createTimeout(timeout)
+  const isFormData = body instanceof FormData
+
+  try {
+    const response = await fetch(`${BASE_URL}${url}`, {
+      method,
+      headers: body && !isFormData ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'include',
+      body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new ApiError(response.status, `HTTP ${response.status}`)
+    }
+
+    return (await response.json()) as ApiResponse<T>
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(50000, timeoutMessage)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 // ---- 重试 ----
 
@@ -84,14 +141,13 @@ export interface RetryOptions {
   shouldRetry?: (err: unknown) => boolean
 }
 
+export type StreamResult = { status: 'completed' } | { status: 'aborted' }
+
 /**
  * 对异步操作进行自动重试。
  * 仅网络错误和 5xxxx 服务端错误可重试；业务错误（4xxxx）不重试。
  */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {},
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const { maxRetries = 2, baseDelay = 800 } = options
   const shouldRetry =
     options.shouldRetry ??
@@ -123,33 +179,8 @@ export async function withRetry<T>(
 /**
  * 发送 GET 请求
  */
-export async function apiGet<T = unknown>(
-  url: string,
-): Promise<ApiResponse<T>> {
-  const { controller, timer } = createTimeout(DEFAULT_TIMEOUT)
-
-  try {
-    const response = await fetch(`${BASE_URL}${url}`, {
-      method: 'GET',
-      credentials: 'include',
-      signal: controller.signal,
-    })
-
-    clearTimeout(timer)
-
-    if (!response.ok) {
-      throw new ApiError(response.status, `HTTP ${response.status}`)
-    }
-
-    const json: ApiResponse<T> = await response.json()
-    return json
-  } catch (err: unknown) {
-    clearTimeout(timer)
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(50000, '请求超时，请检查网络后重试')
-    }
-    throw err
-  }
+export async function apiGet<T = unknown>(url: string): Promise<ApiResponse<T>> {
+  return request<T>(url, { method: 'GET' })
 }
 
 /**
@@ -172,32 +203,7 @@ export async function apiPost<T = unknown>(
   url: string,
   body: Record<string, unknown>,
 ): Promise<ApiResponse<T>> {
-  const { controller, timer } = createTimeout(DEFAULT_TIMEOUT)
-
-  try {
-    const response = await fetch(`${BASE_URL}${url}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    })
-
-    clearTimeout(timer)
-
-    if (!response.ok) {
-      throw new ApiError(response.status, `HTTP ${response.status}`)
-    }
-
-    const json: ApiResponse<T> = await response.json()
-    return json
-  } catch (err: unknown) {
-    clearTimeout(timer)
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(50000, '请求超时，请检查网络后重试')
-    }
-    throw err
-  }
+  return request<T>(url, { method: 'POST', body })
 }
 
 /**
@@ -223,31 +229,12 @@ export async function apiUpload<T = unknown>(
   url: string,
   formData: FormData,
 ): Promise<ApiResponse<T>> {
-  const { controller, timer } = createTimeout(60_000) // 上传 60s 超时
-
-  try {
-    const response = await fetch(`${BASE_URL}${url}`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-      signal: controller.signal,
-    })
-
-    clearTimeout(timer)
-
-    if (!response.ok) {
-      throw new ApiError(response.status, `HTTP ${response.status}`)
-    }
-
-    const json: ApiResponse<T> = await response.json()
-    return json
-  } catch (err: unknown) {
-    clearTimeout(timer)
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(50000, '上传超时，请检查网络后重试')
-    }
-    throw err
-  }
+  return request<T>(url, {
+    method: 'POST',
+    body: formData,
+    timeout: 60_000,
+    timeoutMessage: '上传超时，请检查网络后重试',
+  })
 }
 
 // ---- DELETE ----
@@ -255,33 +242,8 @@ export async function apiUpload<T = unknown>(
 /**
  * 发送 DELETE 请求
  */
-export async function apiDelete<T = unknown>(
-  url: string,
-): Promise<ApiResponse<T>> {
-  const { controller, timer } = createTimeout(DEFAULT_TIMEOUT)
-
-  try {
-    const response = await fetch(`${BASE_URL}${url}`, {
-      method: 'DELETE',
-      credentials: 'include',
-      signal: controller.signal,
-    })
-
-    clearTimeout(timer)
-
-    if (!response.ok) {
-      throw new ApiError(response.status, `HTTP ${response.status}`)
-    }
-
-    const json: ApiResponse<T> = await response.json()
-    return json
-  } catch (err: unknown) {
-    clearTimeout(timer)
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(50000, '请求超时，请检查网络后重试')
-    }
-    throw err
-  }
+export async function apiDelete<T = unknown>(url: string): Promise<ApiResponse<T>> {
+  return request<T>(url, { method: 'DELETE' })
 }
 
 /**
@@ -306,28 +268,30 @@ export async function apiDeleteChecked<T = unknown>(url: string): Promise<T> {
  * - `event:` 字段标识事件类型
  *
  * @param onToken 每个 data 字段的回调（多行 data 用 \n 连接后传入）
- * @param onDone  流成功结束的回调
- * @param onError 出错回调（含超时、网络错误、后端 error 事件）
  * @param onStructured 结构化完成事件回调（event:complete）
  * @param onStatus 状态事件回调（event:status），如 "正在分析数据…" "正在生成图表…"
  * @param onChart 图表配置事件回调（event:chart），data 为 JSON 数组字符串
- * @returns { promise, abort } — abort() 可中断进行中的流，中断后 promise 正常 resolve
+ * @returns { promise, abort } — promise 对请求错误 reject，用户主动 abort 时返回 aborted
  */
 export function apiPostStream(
   url: string,
   body: Record<string, unknown>,
   onToken: (token: string) => void,
-  onDone: () => void,
-  onError: (err: Error) => void,
   onStructured?: (data: StructuredEvent) => void,
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
-): { promise: Promise<void>; abort: () => void } {
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
+): { promise: Promise<StreamResult>; abort: () => void } {
   const { controller: abortController, timer } = createTimeout(STREAM_TIMEOUT)
   let userAborted = false
 
-  const promise = (async () => {
+  const promise = (async (): Promise<StreamResult> => {
     try {
       const response = await fetch(`${BASE_URL}${url}`, {
         method: 'POST',
@@ -354,7 +318,11 @@ export function apiPostStream(
         }
       }
 
-      const reader = response.body!.getReader()
+      if (!response.body) {
+        throw new Error('流式响应缺少响应体')
+      }
+
+      const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
 
@@ -362,44 +330,70 @@ export function apiPostStream(
         const { value, done } = await reader.read()
 
         if (done) {
+          buffer += decoder.decode()
           // 处理缓冲区中可能残留的最后一个事件
-          processBuffer(buffer, onToken, onError, onStructured, onStatus, onChart, onTable)
-          onDone()
-          break
+          processBuffer(
+            buffer,
+            onToken,
+            onStructured,
+            onStatus,
+            onChart,
+            onTable,
+            onMeta,
+            onDocument,
+            onProgress,
+            onActivity,
+            onArtifact,
+            onChartResult,
+          )
+          return { status: 'completed' }
         }
 
         buffer += decoder.decode(value, { stream: true })
 
         // 按 \n\n 分隔事件（SSE 协议的事件边界）
         while (true) {
-          const idx = buffer.indexOf('\n\n')
-          if (idx === -1) break
+          const separator = /\r?\n\r?\n/.exec(buffer)
+          if (!separator || separator.index === undefined) break
 
-          const rawEvent = buffer.slice(0, idx)
-          buffer = buffer.slice(idx + 2)
+          const rawEvent = buffer.slice(0, separator.index)
+          buffer = buffer.slice(separator.index + separator[0].length)
 
           if (rawEvent.length === 0) continue
 
-          processSSEEvent(rawEvent, onToken, onError, onStructured, onStatus, onChart, onTable)
+          processSSEEvent(
+            rawEvent,
+            onToken,
+            onStructured,
+            onStatus,
+            onChart,
+            onTable,
+            onMeta,
+            onDocument,
+            onProgress,
+            onActivity,
+            onArtifact,
+            onChartResult,
+          )
         }
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         if (userAborted) {
-          // 用户主动中断 — 不触发 onDone/onError，由调用方处理 UI
-          return
+          return { status: 'aborted' }
         }
-        onError(new ApiError(50000, 'AI 响应超时，请重试'))
-      } else {
-        onError(err instanceof Error ? err : new Error(String(err)))
+        throw new ApiError(50000, 'AI 响应超时，请重试')
       }
+      throw err instanceof Error ? err : new Error(String(err))
+    } finally {
+      clearTimeout(timer)
     }
   })()
 
   return {
     promise,
     abort: () => {
-      if (userAborted || !abortController.signal.aborted) {
+      if (!abortController.signal.aborted) {
         userAborted = true
         clearTimeout(timer)
         try {
@@ -418,15 +412,33 @@ export function apiPostStream(
 function processBuffer(
   buffer: string,
   onToken: (token: string) => void,
-  onError: (err: Error) => void,
   onStructured?: (data: StructuredEvent) => void,
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
 ): void {
   const trimmed = buffer.trim()
   if (trimmed.length === 0) return
-  processSSEEvent(trimmed, onToken, onError, onStructured, onStatus, onChart, onTable)
+  processSSEEvent(
+    trimmed,
+    onToken,
+    onStructured,
+    onStatus,
+    onChart,
+    onTable,
+    onMeta,
+    onDocument,
+    onProgress,
+    onActivity,
+    onArtifact,
+    onChartResult,
+  )
 }
 
 /**
@@ -435,31 +447,113 @@ function processBuffer(
 function processSSEEvent(
   rawEvent: string,
   onToken: (token: string) => void,
-  onError: (err: Error) => void,
   onStructured?: (data: StructuredEvent) => void,
   onStatus?: (text: string) => void,
   onChart?: (chartJson: string) => void,
   onTable?: (tableData: TableEventData) => void,
+  onMeta?: (meta: MetaEvent, eventId: string | null) => void,
+  onDocument?: (doc: RenderDocument, eventId: string | null) => void,
+  onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
+  onActivity?: (activity: RunActivity, eventId: string | null) => void,
+  onArtifact?: (artifact: ArtifactEvent, eventId: string | null) => void,
+  onChartResult?: (result: ChartResultEvent, eventId: string | null) => void,
 ): void {
   const dataLines: string[] = []
   let eventType = ''
+  let eventId: string | null = null
 
-  for (const line of rawEvent.split('\n')) {
+  for (const line of rawEvent.split(/\r?\n/)) {
     if (line.startsWith('data:')) {
       dataLines.push(line.slice(5).replace(/^ /, ''))
     } else if (line.startsWith('event:')) {
       eventType = line.slice(6).trim()
+    } else if (line.startsWith('id:')) {
+      eventId = line.slice(3).trim()
     }
   }
 
   if (dataLines.length === 0) {
     if (eventType === 'error') {
-      onError(new Error('后端流式处理异常'))
+      throw new Error('后端流式处理异常')
     }
     return
   }
 
   const text = dataLines.join('\n')
+
+  // ── 新事件：meta ──
+  if (eventType === 'meta') {
+    try {
+      const meta = JSON.parse(text) as MetaEvent
+      onMeta?.(meta, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  // ── 新事件：document ──
+  if (eventType === 'document') {
+    try {
+      const doc = JSON.parse(text)
+      const parsed = safeParseRenderDocument(doc)
+      if (parsed) onDocument?.(parsed, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  if (eventType === 'progress') {
+    try {
+      const progress = JSON.parse(text) as ProgressEvent
+      if (progress.stage && progress.label && progress.state) onProgress?.(progress, eventId)
+    } catch {
+      /* ignore parse errors */
+    }
+    return
+  }
+
+  if (eventType === 'activity') {
+    try {
+      const activity = JSON.parse(text) as RunActivity
+      if (activity.id && activity.stage && activity.label && activity.state) {
+        onActivity?.(activity, eventId)
+      }
+    } catch {
+      /* ignore malformed activity */
+    }
+    return
+  }
+
+  if (eventType === 'artifact') {
+    try {
+      const artifact = JSON.parse(text) as ArtifactEvent
+      if (artifact.version === 1 && artifact.runId && Array.isArray(artifact.blocks)) {
+        onArtifact?.(artifact, eventId)
+      }
+    } catch {
+      /* ignore malformed artifact */
+    }
+    return
+  }
+
+  if (eventType === 'chart-result') {
+    try {
+      const result = JSON.parse(text) as ChartResultEvent
+      if (result.runId && result.state && Number.isInteger(result.plannedChartCount)) {
+        onChartResult?.(result, eventId)
+      }
+    } catch {
+      /* ignore malformed chart result */
+    }
+    return
+  }
+
+  if (eventType === 'preview') {
+    onToken(text)
+    return
+  }
 
   if (eventType === 'status') {
     if (onStatus) onStatus(text)
@@ -483,7 +577,9 @@ function processSSEEvent(
       try {
         const tableData = JSON.parse(text) as TableEventData
         onTable(tableData)
-      } catch { /* 解析失败静默忽略 */ }
+      } catch {
+        /* 解析失败静默忽略 */
+      }
     }
     return
   }
@@ -493,23 +589,22 @@ function processSSEEvent(
     try {
       const parsed = JSON.parse(text) as StructuredEvent
       if (parsed.type === 'error') {
-        onError(new Error(parsed.message || '服务处理出错'))
+        throw new Error(parsed.message || '服务处理出错')
       } else if (onStructured) {
         onStructured(parsed)
       }
-    } catch {
-      onToken(text)
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('无效的完成事件')
     }
     return
   }
 
   if (eventType === 'error') {
-    onError(new Error(text || '流式响应出错'))
-    return
+    throw new Error(text || '流式响应出错')
   }
 
   // event:message / 无 event 字段 → 文本 token
-  if (text) {
+  if ((eventType === 'message' || eventType === '') && text) {
     onToken(text)
   }
 }

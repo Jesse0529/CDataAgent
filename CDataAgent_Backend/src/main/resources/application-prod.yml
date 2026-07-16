@@ -2,16 +2,21 @@ server:
   port: ${SERVER_PORT:9999}
 
 spring:
+  h2:
+    console:
+      enabled: false
   datasource:
     driver-class-name: org.h2.Driver
     url: ${H2_URL}
     username: ${H2_USERNAME:sa}
     password: ${H2_PASSWORD:}
-  redis:
-    database: ${REDIS_DATABASE:1}
-    host: ${REDIS_HOST}
-    port: ${REDIS_PORT:6379}
-    timeout: ${REDIS_TIMEOUT:5000}
+  data:
+    redis:
+      database: ${REDIS_DATABASE:1}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:5000}
   servlet:
     multipart:
       max-file-size: 60MB
@@ -37,6 +42,8 @@ data:
 
 # ======================== 模型配置 ========================
 model:
+  encryption:
+    key: ${MODEL_ENCRYPTION_KEY}
   default:
     provider: ${MODEL_PROVIDER}
     model-name: ${MODEL_NAME}
@@ -47,20 +54,21 @@ agent:
   rate-limit: ${AGENT_RATE_LIMIT:2}
   executor:
     timeout-seconds: ${EXECUTOR_TIMEOUT:90}
-    max-tool-calls: ${EXECUTOR_MAX_TOOL_CALLS:15}
+    max-tool-calls: ${EXECUTOR_MAX_TOOL_CALLS:50}
   synthesizer:
     timeout-seconds: ${SYNTHESIZER_TIMEOUT:30}
+    max-tool-calls: ${SYNTHESIZER_MAX_TOOL_CALLS:20}
   context:
     inject-analysis-state: true
     analysis-state-persistence:
       enabled: true
       meta-ttl-days: 3
       data-ttl-minutes: 60
-      max-data-entries: 10
+      max-data-total-bytes: ${ANALYSIS_STATE_MAX_DATA_TOTAL_BYTES:1048576}
       max-data-entry-bytes: 51200
 
 sandbox:
-  enabled: ${SANDBOX_ENABLED:true}
+  enabled: ${SANDBOX_ENABLED:false}
   mount-dir: ${SANDBOX_MOUNT_DIR:/data/sandbox-workspace}
   execution-timeout: ${SANDBOX_EXECUTION_TIMEOUT:60}
   health-check-interval: ${SANDBOX_HEALTH_INTERVAL:60000}

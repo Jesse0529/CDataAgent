@@ -1,16 +1,20 @@
-version: "3.8"
-
 services:
   redis:
     image: redis:7-alpine
     container_name: cdata-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command:
+      - sh
+      - -c
+      - >-
+        if [ -n "$$REDIS_PASSWORD" ]; then exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+        else exec redis-server --appendonly yes; fi
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,19 +26,28 @@ services:
     container_name: cdata-app
     restart: unless-stopped
     ports:
-      - "9999:9999"
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${SERVER_PORT:-9999}:9999"
     environment:
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      SPRING_PROFILES_ACTIVE: prod
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      H2_URL: "jdbc:h2:file:/data/cdata-files/h2/cdata;AUTO_SERVER=TRUE;MODE=MySQL"
+      H2_USERNAME: ${H2_USERNAME:-sa}
+      H2_PASSWORD: ${H2_PASSWORD:-}
+      DATA_STORAGE_DIR: /data/cdata-files
+      REPORT_OUTPUT_DIR: /data/cdata-reports
+      MODEL_ENCRYPTION_KEY: ${MODEL_ENCRYPTION_KEY:?请在 .env 中设置 MODEL_ENCRYPTION_KEY}
+      SANDBOX_ENABLED: "false"
       TZ: Asia/Shanghai
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /data/sandbox-workspace:/data/sandbox-workspace
-      - /data/cdata-files:/data/cdata-files
+      - cdata-files:/data/cdata-files
+      - cdata-reports:/data/cdata-reports
     depends_on:
       redis:
         condition: service_healthy
 
 volumes:
   redis-data:
+  cdata-files:
+  cdata-reports:

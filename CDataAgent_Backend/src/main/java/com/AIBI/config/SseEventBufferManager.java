@@ -25,9 +25,9 @@ public class SseEventBufferManager {
     /**
      * 获取或创建对话的事件缓冲区。
      */
-    public SseEventBuffer getOrCreate(String conversationId) {
-        return buffers.computeIfAbsent(conversationId, k -> {
-            log.debug("创建 SseEventBuffer: cid={}", k);
+    public SseEventBuffer getOrCreate(String runId) {
+        return buffers.computeIfAbsent(runId, k -> {
+            log.debug("创建事件缓冲区");
             return new SseEventBuffer();
         });
     }
@@ -35,8 +35,8 @@ public class SseEventBufferManager {
     /**
      * 获取对话的事件缓冲区（不存在时返回 null）。
      */
-    public SseEventBuffer getIfPresent(String conversationId) {
-        return buffers.get(conversationId);
+    public SseEventBuffer getIfPresent(String runId) {
+        return buffers.get(runId);
     }
 
     /**
@@ -44,37 +44,37 @@ public class SseEventBufferManager {
      *
      * @return 生成的 UUID token
      */
-    public String generateResumeToken(String conversationId) {
+    public String generateResumeToken(String runId) {
         String token = UUID.randomUUID().toString();
-        resumeTokens.put(conversationId, token);
+        resumeTokens.put(runId, token);
         return token;
     }
 
     /**
      * 设置 resumeToken。
      */
-    public void setResumeToken(String conversationId, String token) {
-        resumeTokens.put(conversationId, token);
+    public void setResumeToken(String runId, String token) {
+        resumeTokens.put(runId, token);
     }
 
     /**
      * 验证 resumeToken 是否匹配。
      */
-    public boolean validateResumeToken(String conversationId, String token) {
-        String expected = resumeTokens.get(conversationId);
+    public boolean validateResumeToken(String runId, String token) {
+        String expected = resumeTokens.get(runId);
         return expected != null && expected.equals(token);
     }
 
     /**
      * 移除对话的事件缓冲区。
      */
-    public void remove(String conversationId) {
-        SseEventBuffer buf = buffers.remove(conversationId);
+    public void remove(String runId) {
+        SseEventBuffer buf = buffers.remove(runId);
         if (buf != null) {
             buf.invalidate();
         }
-        resumeTokens.remove(conversationId);
-        log.debug("SseEventBuffer 已移除: cid={}", conversationId);
+        resumeTokens.remove(runId);
+        log.debug("事件缓冲区已移除");
     }
 
     /**
@@ -84,7 +84,7 @@ public class SseEventBufferManager {
     public void cleanupExpired() {
         buffers.forEach((cid, buf) -> {
             if (!buf.isValid()) {
-                log.debug("清理过期 SseEventBuffer: cid={}", cid);
+                log.debug("清理过期事件缓冲区");
                 buffers.remove(cid);
                 resumeTokens.remove(cid);
             }

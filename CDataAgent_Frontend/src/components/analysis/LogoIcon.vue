@@ -5,16 +5,21 @@ defineProps<{
 </script>
 
 <template>
-  <svg
-    :width="size ?? 32"
-    :height="size ?? 32"
-    viewBox="0 0 32 32"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <rect width="32" height="32" rx="8" fill="#BC694A" />
-    <text x="4" y="20" font-family="'Segoe UI', 'SF Pro Display', system-ui, sans-serif" font-size="17" font-weight="600" fill="white">C</text>
-    <text x="16" y="20" font-family="'Segoe UI', 'SF Pro Display', system-ui, sans-serif" font-size="17" font-weight="600" fill="white">D</text>
-    <circle cx="11" cy="14" r="1.6" fill="white" />
-    <circle cx="22" cy="14" r="1.6" fill="white" />
-  </svg>
+  <img
+    class="logo-icon"
+    src="/brand/cdata-agent-logo.png"
+    :style="{ width: `${size ?? 32}px` }"
+    alt=""
+    aria-hidden="true"
+  />
 </template>
+
+<style scoped>
+.logo-icon {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+</style>

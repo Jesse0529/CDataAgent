@@ -46,6 +46,16 @@ public class MessageVO implements Serializable {
     private Integer tokenUsage;
 
     /**
+     * RenderDocument v1 JSON（新协议的权威展示文档，旧消息为 null）
+     */
+    private String renderDocument;
+
+    /**
+     * 渲染协议版本（当前为 1，旧消息为 null）
+     */
+    private Integer renderVersion;
+
+    /**
      * 创建时间
      */
     private Date createTime;

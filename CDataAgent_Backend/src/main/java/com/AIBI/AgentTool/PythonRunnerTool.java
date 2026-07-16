@@ -49,13 +49,10 @@ public class PythonRunnerTool {
     /**
      * 在沙箱中执行 Python 分析脚本。
      */
-    @Tool(description = "在 Docker 沙箱中执行 Python 分析脚本（pandas/scipy/sklearn）。" +
-            "⚠️ 仅用于：相关性矩阵 / 统计检验 / 聚类 / 自定义复杂公式。" +
-            "❌ 不用于：描述性统计（用 queryStatistics）、排名（用 runDuckdb）、数据预览（用 getSchema）。" +
-            "数据通过 dataRefs 参数传入的 Parquet 文件路径用 pd.read_parquet() 读取。输出必须用 print(json)。")
+    @Tool(description = "在 Docker 沙箱运行 Python，仅用于相关性、统计检验、聚类或复杂公式；输出 print(JSON)。")
     public String runPython(
-            @ToolParam(description = "完整的 Python 脚本代码") String code,
-            @ToolParam(description = "分析结果的引用名") String outputKey) {
+            @ToolParam(description = "Python 脚本") String code,
+            @ToolParam(description = "结果 outputKey") String outputKey) {
         try {
             // 1. AST 安全检查
             String validationError = validateCode(code);
@@ -81,12 +78,12 @@ public class PythonRunnerTool {
             result.put("type", "python_result");
             result.put("result", output);
 
-            log.info("runPython: outputKey={}, outputSize={}", outputKey,
+            log.info("Python执行：输出键={}、输出大小={}", outputKey,
                     output != null ? output.length() : 0);
             return result.toJSONString();
 
         } catch (Exception e) {
-            log.error("runPython 失败", e);
+            log.error("Python执行失败", e);
             analysisState.addStepResultFailed(outputKey, "runPython", e.getMessage());
             return jsonError("Python 执行失败: " + e.getMessage());
         }

@@ -1,0 +1,1646 @@
+﻿球员编号,姓名(英文),场上位置(大类),场上位置(细分),惯用脚,身高_cm,国籍(国际),出生日期,转会时年龄,国籍(转会源),位置(转会源)
+50202,Eden Hazard,Attack,Left Winger,right,175.0,Belgium,1991-01-07 00:00:00,21.0,Belgium,LW
+59866,Victor Moses,Midfield,Right Midfield,right,177.0,Nigeria,1990-12-12 00:00:00,21.0,Nigeria,RM
+57500,Cesar Azpilicueta,Defender,Centre-Back,right,178.0,Spain,1989-08-28 00:00:00,22.0,Spain,RB
+35251,Marko Marin,Midfield,Attacking Midfield,right,170.0,Germany,1989-03-13 00:00:00,23.0,Germany,AM
+46220,Pablo Hernandez,Midfield,Attacking Midfield,right,173.0,Spain,1985-04-11 00:00:00,27.0,Spain,AM
+70789,Michu,Attack,Second Striker,left,185.0,Spain,1986-03-21 00:00:00,26.0,Spain,SS
+51681,Chico Flores,Defender,Centre-Back,right,187.0,Spain,1987-03-06 00:00:00,25.0,Spain,CB
+4380,Robin van Persie,Attack,Centre-Forward,left,183.0,Netherlands,1983-08-06 00:00:00,29.0,Netherlands,CF
+81785,Shinji Kagawa,Midfield,Attacking Midfield,right,175.0,Japan,1989-03-17 00:00:00,23.0,Japan,AM
+65,Dimitar Berbatov,Attack,Centre-Forward,,,Bulgaria,1981-01-30 00:00:00,31.0,Bulgaria,CF
+13979,Ashkan Dejagah,Attack,Right Winger,right,181.0,Iran,1986-07-05 00:00:00,26.0,Iran,RW
+3548,Kieran Richardson,Defender,Left-Back,left,177.0,England,1984-10-21 00:00:00,27.0,England,LB
+15799,Santi Cazorla,Midfield,Central Midfield,both,168.0,Spain,1984-12-13 00:00:00,27.0,Spain,CM
+82442,Olivier Giroud,Attack,Centre-Forward,left,192.0,France,1986-09-30 00:00:00,25.0,France,CF
+46831,Modibo Maiga,Attack,Centre-Forward,left,185.0,Mali,1987-09-03 00:00:00,24.0,Mali,CF
+12691,James Collins,Defender,Centre-Back,right,188.0,Wales,1983-08-23 00:00:00,28.0,Wales,CB
+1327,Alou Diarra,Midfield,Defensive Midfield,right,189.0,France,1981-07-15 00:00:00,31.0,France,DM
+31579,Adam Johnson,Attack,Right Winger,left,182.0,England,1987-07-14 00:00:00,25.0,England,RW
+143559,Matija Nastasic,Defender,Centre-Back,left,187.0,Serbia,1993-03-28 00:00:00,19.0,Serbia,CB
+57079,Jack Rodwell,Midfield,Defensive Midfield,right,188.0,England,1991-03-11 00:00:00,21.0,England,DM
+31552,Scott Sinclair,Attack,Left Winger,right,177.0,England,1989-03-25 00:00:00,23.0,England,LW
+18301,Maicon,Defender,Right-Back,right,185.0,Brazil,1981-07-26 00:00:00,31.0,Brazil,RB
+123742,Gaston Ramirez,Midfield,Attacking Midfield,left,183.0,Uruguay,1990-12-02 00:00:00,21.0,Uruguay,AM
+19368,Mousa Dembele,Midfield,Central Midfield,left,185.0,Belgium,1987-07-16 00:00:00,25.0,Belgium,CM
+17965,Hugo Lloris,Goalkeeper,Goalkeeper,left,188.0,France,1986-12-26 00:00:00,25.0,France,GK
+90466,Gylfi Sigurdsson,Midfield,Attacking Midfield,right,186.0,Iceland,1989-09-08 00:00:00,22.0,Iceland,AM
+27577,Clint Dempsey,Attack,Second Striker,right,185.0,United States,1983-03-09 00:00:00,29.0,United States,SS
+8883,Emmanuel Adebayor,Attack,Centre-Forward,right,192.0,Togo,1984-02-26 00:00:00,28.0,Togo,CF
+51452,Joe Allen,Midfield,Central Midfield,right,170.0,Wales,1990-03-14 00:00:00,22.0,Wales,CM
+96754,Fabio Borini,Attack,Left Winger,right,180.0,Italy,1991-03-29 00:00:00,21.0,Italy,LW
+95295,Samed Yesil,Attack,Centre-Forward,right,180.0,Germany,1994-05-25 00:00:00,18.0,Germany,CF
+4321,Steven Pienaar,Midfield,Left Midfield,both,170.0,South Africa,1982-03-17 00:00:00,30.0,South Africa,LW
+33951,Sebastien Bassong,Defender,Centre-Back,left,187.0,Cameroon,1986-07-09 00:00:00,26.0,Cameroon,CB
+12127,Michael Turner,Defender,Centre-Back,right,193.0,England,1983-11-09 00:00:00,28.0,England,CB
+12384,Alexander Tettey,Midfield,Defensive Midfield,right,181.0,Norway,1986-04-04 00:00:00,26.0,Norway,DM
+28990,Charlie Adam,Midfield,Central Midfield,left,185.0,Scotland,1985-12-10 00:00:00,26.0,Scotland,CM
+26066,Ivan Ramis,Defender,Centre-Back,right,189.0,Spain,1984-10-25 00:00:00,27.0,Spain,CB
+8552,Arouna Kone,Attack,Centre-Forward,right,181.0,Cote d'Ivoire,1983-11-11 00:00:00,28.0,Cote d'Ivoire,CF
+44065,Esteban Granero,Midfield,Central Midfield,right,180.0,Spain,1987-07-02 00:00:00,25.0,Spain,CM
+27470,Stephane Mbia,Midfield,Defensive Midfield,right,189.0,Cameroon,1986-05-20 00:00:00,26.0,Cameroon,DM
+136589,Samba Diakite,Midfield,Defensive Midfield,right,186.0,Mali,1989-01-24 00:00:00,23.0,Mali,DM
+4592,Ji-sung Park,Midfield,Attacking Midfield,both,178.0,"Korea, South",1981-02-25 00:00:00,31.0,"Korea, South",AM
+40205,Demba Ba,Attack,Centre-Forward,right,189.0,Senegal,1985-05-25 00:00:00,27.0,Senegal,CF
+57480,Mapou Yanga-Mbiwa,Defender,Centre-Back,right,184.0,France,1989-05-15 00:00:00,23.0,France,CB
+27306,Mathieu Debuchy,Defender,Centre-Back,right,177.0,France,1985-07-28 00:00:00,27.0,France,RB
+170929,Massadio Haidara,Defender,Left-Back,left,179.0,Mali,1992-12-02 00:00:00,20.0,Mali,LB
+23825,Yoan Gouffran,Attack,Left Winger,right,175.0,France,1986-05-25 00:00:00,26.0,France,CM
+46001,Moussa Sissoko,Midfield,Central Midfield,right,187.0,France,1989-08-16 00:00:00,23.0,France,CM
+43003,Nacho Monreal,Defender,Left-Back,left,179.0,Spain,1986-02-26 00:00:00,26.0,Spain,LB
+29152,Danny Graham,Attack,Centre-Forward,right,183.0,England,1985-08-12 00:00:00,27.0,England,CF
+55508,Lewis Holtby,Midfield,Central Midfield,left,176.0,Germany,1990-09-18 00:00:00,22.0,Germany,CM
+47082,Daniel Sturridge,Attack,Centre-Forward,left,182.0,England,1989-09-01 00:00:00,23.0,England,CF
+80444,Philippe Coutinho,Midfield,Attacking Midfield,right,172.0,Brazil,1992-06-12 00:00:00,20.0,Brazil,AM
+45121,Loic Remy,Attack,Centre-Forward,right,185.0,France,1987-01-02 00:00:00,26.0,France,CF
+12125,Stephen Kelly,Defender,Right-Back,right,184.0,Ireland,1983-09-06 00:00:00,29.0,Ireland,RB
+39679,Marouane Fellaini,Midfield,Central Midfield,right,194.0,Belgium,1987-11-22 00:00:00,25.0,Belgium,CM
+46104,Stevan Jovetic,Attack,Centre-Forward,right,183.0,Montenegro,1989-11-02 00:00:00,23.0,Montenegro,CF
+18644,Alvaro Negredo,Attack,Centre-Forward,left,186.0,Spain,1985-08-20 00:00:00,27.0,Spain,CF
+15956,Jesus Navas,Midfield,Right Midfield,right,170.0,Spain,1985-11-21 00:00:00,27.0,Spain,RB
+2963,Martin Demichelis,Defender,Centre-Back,right,184.0,Argentina,1980-12-20 00:00:00,32.0,Argentina,CB
+58205,Andre Schurrle,Attack,Left Winger,right,184.0,Germany,1990-11-06 00:00:00,22.0,Germany,LW
+35664,Mesut Ozil,Midfield,Attacking Midfield,left,180.0,Germany,1988-10-15 00:00:00,24.0,Germany,AM
+111630,Erik Lamela,Attack,Right Winger,left,184.0,Argentina,1992-03-04 00:00:00,21.0,Argentina,RW
+34870,Roberto Soldado,Attack,Centre-Forward,right,180.0,Spain,1985-05-27 00:00:00,28.0,Spain,CF
+63494,Etienne Capoue,Midfield,Defensive Midfield,right,189.0,France,1988-07-11 00:00:00,25.0,France,DM
+101118,Joel Robles,Goalkeeper,Goalkeeper,right,194.0,Spain,1990-06-17 00:00:00,23.0,Spain,GK
+47713,Mamadou Sakho,Defender,Centre-Back,left,187.0,France,1990-02-13 00:00:00,23.0,France,CB
+72047,Iago Aspas,Attack,Centre-Forward,left,176.0,Spain,1987-08-01 00:00:00,25.0,Spain,CF
+50219,Simon Mignolet,Goalkeeper,Goalkeeper,right,193.0,Belgium,1988-03-06 00:00:00,25.0,Belgium,GK
+58436,Luis Alberto,Midfield,Defensive Midfield,right,183.0,Brazil,1983-11-17 00:00:00,20.0,Spain,CM
+37157,Stephane Sessegnon,Midfield,Attacking Midfield,right,172.0,Benin,1984-06-01 00:00:00,29.0,Benin,AM
+39532,Victor Anichebe,Attack,Centre-Forward,right,190.0,Nigeria,1988-04-23 00:00:00,25.0,Nigeria,CF
+71292,Jonjo Shelvey,Midfield,Central Midfield,right,184.0,England,1992-02-27 00:00:00,21.0,England,CM
+85289,Jordi Amat,Defender,Centre-Back,right,185.0,Indonesia,1992-03-21 00:00:00,21.0,Spain,CB
+188853,Alejandro Pozuelo,Midfield,Attacking Midfield,both,172.0,Spain,1991-09-20 00:00:00,21.0,Spain,AM
+48066,Andy Carroll,Attack,Centre-Forward,left,193.0,England,1989-01-06 00:00:00,24.0,England,CF
+4063,Stewart Downing,Attack,Left Winger,left,180.0,England,1984-07-22 00:00:00,29.0,England,LM
+23218,Javier Garrido,Defender,Left-Back,left,179.0,Spain,1985-03-15 00:00:00,28.0,Spain,LB
+4311,Maarten Stekelenburg,Goalkeeper,Goalkeeper,right,197.0,,1982-09-22 00:00:00,30.0,Netherlands,GK
+3785,Scott Parker,Midfield,Central Midfield,right,180.0,England,1980-10-13 00:00:00,32.0,England,CM
+41384,Marko Arnautovic,Attack,Centre-Forward,both,192.0,Austria,1989-04-19 00:00:00,24.0,Austria,CF
+37389,Daniel Osvaldo,Attack,Centre-Forward,right,182.0,Italy,1986-01-12 00:00:00,27.0,Italy,CF
+37838,Dejan Lovren,Defender,Centre-Back,right,188.0,Croatia,1989-07-05 00:00:00,23.0,Croatia,CB
+63824,Libor Kozak,Attack,Centre-Forward,right,193.0,Czech Republic,1989-05-30 00:00:00,24.0,Czech Republic,CF
+126516,Antonio Luna,Defender,Left-Back,left,178.0,Spain,1991-03-17 00:00:00,22.0,Spain,LB
+110867,Jed Steer,Goalkeeper,Goalkeeper,left,183.0,England,1992-09-23 00:00:00,20.0,England,GK
+84835,Emanuele Giaccherini,Midfield,Left Midfield,right,167.0,Italy,1985-05-05 00:00:00,28.0,Italy,LM
+33781,Vito Mannone,Goalkeeper,Goalkeeper,right,188.0,Italy,1988-03-02 00:00:00,25.0,Italy,GK
+60889,Gary Medel,Midfield,Defensive Midfield,right,171.0,Chile,1987-08-03 00:00:00,26.0,Chile,CB
+121280,Steven Caulker,Defender,Centre-Back,right,191.0,Sierra Leone,1991-12-29 00:00:00,21.0,Sierra Leone,CB
+12516,Peter Odemwingie,Attack,Right Winger,right,181.0,Nigeria,1981-07-15 00:00:00,32.0,Nigeria,RW
+60603,Kevin Theophile-Catherine,Defender,Centre-Back,right,183.0,Martinique,1989-10-28 00:00:00,23.0,Martinique,CB
+13465,Tom Huddlestone,Midfield,Defensive Midfield,right,188.0,England,1986-12-28 00:00:00,26.0,England,DM
+66333,Ahmed Elmohamady,Defender,Right-Back,right,182.0,Egypt,1987-09-09 00:00:00,25.0,Egypt,RB
+60591,Yannick Sagbo,Attack,Centre-Forward,right,183.0,Cote d'Ivoire,1988-04-12 00:00:00,25.0,Cote d'Ivoire,CF
+61561,Barry Bannan,Midfield,Central Midfield,left,169.0,Scotland,1989-12-01 00:00:00,23.0,Scotland,CM
+120095,Jose Campana,Midfield,Central Midfield,right,179.0,Spain,1993-05-31 00:00:00,20.0,Spain,CM
+19085,Marouane Chamakh,Attack,Centre-Forward,right,188.0,Morocco,1984-01-10 00:00:00,29.0,Morocco,CF
+44068,Juan Mata,Midfield,Attacking Midfield,left,170.0,Spain,1988-04-28 00:00:00,25.0,Spain,AM
+157509,Kurt Zouma,Defender,Centre-Back,right,190.0,France,1994-10-27 00:00:00,19.0,France,CB
+67089,Juan Cala,Defender,Centre-Back,right,186.0,,1989-11-26 00:00:00,24.0,Spain,CB
+37304,Shane Long,Attack,Centre-Forward,both,180.0,Ireland,1987-01-22 00:00:00,26.0,Ireland,CF
+25742,Nikica Jelavic,Attack,Centre-Forward,both,188.0,Croatia,1985-08-27 00:00:00,28.0,Croatia,CF
+47995,Jason Puncheon,Midfield,Central Midfield,left,173.0,England,1986-06-18 00:00:00,27.0,England,CM
+40433,Alexis Sanchez,Attack,Second Striker,right,169.0,Chile,1988-12-19 00:00:00,25.0,Chile,CF
+215118,Calum Chambers,Defender,Centre-Back,right,182.0,England,1995-01-20 00:00:00,19.0,England,RB
+67063,Danny Welbeck,Attack,Centre-Forward,right,185.0,England,1990-11-26 00:00:00,23.0,England,CF
+73396,David Ospina,Goalkeeper,Goalkeeper,right,183.0,Colombia,1988-08-31 00:00:00,25.0,Colombia,GK
+51226,Carlos Sanchez,Midfield,Defensive Midfield,left,182.0,Colombia,1986-02-06 00:00:00,28.0,Colombia,DM
+57515,Aly Cissokho,Defender,Centre-Back,left,187.0,France,1987-09-15 00:00:00,26.0,France,CB
+45623,George Boyd,Attack,Left Winger,left,186.0,Scotland,1985-10-02 00:00:00,28.0,Scotland,LW
+25366,Michael Kightly,Attack,Left Winger,right,173.0,England,1986-01-24 00:00:00,28.0,England,LM
+44779,Diego Costa,Attack,Centre-Forward,right,186.0,Spain,1988-10-07 00:00:00,25.0,Spain,CF
+8806,Cesc Fabregas,Midfield,Central Midfield,right,179.0,Spain,1987-05-04 00:00:00,27.0,Spain,CM
+21725,Filipe Luis,Defender,Left-Back,left,182.0,Brazil,1985-08-09 00:00:00,28.0,Brazil,LB
+141655,Zeki Fryers,Defender,Left-Back,left,185.0,England,1992-09-09 00:00:00,21.0,England,LB
+78959,Martin Kelly,Defender,Right-Back,right,191.0,England,1990-04-27 00:00:00,24.0,England,RB
+96341,Romelu Lukaku,Attack,Centre-Forward,left,190.0,Belgium,1993-05-13 00:00:00,21.0,Belgium,CF
+76608,Abel Hernandez,Attack,Centre-Forward,left,185.0,Uruguay,1990-08-08 00:00:00,24.0,Uruguay,CF
+61832,Jake Livermore,Midfield,Defensive Midfield,right,180.0,England,1989-11-14 00:00:00,24.0,England,DM
+70950,Mohamed Diame,Midfield,Central Midfield,right,184.0,Senegal,1987-06-14 00:00:00,27.0,Senegal,CM
+9988,Michael Dawson,Defender,Centre-Back,right,189.0,England,1983-11-18 00:00:00,30.0,England,CB
+37442,Danny Simpson,Defender,Right-Back,right,176.0,England,1987-01-04 00:00:00,27.0,England,RB
+43530,Adam Lallana,Midfield,Attacking Midfield,both,172.0,England,1988-05-10 00:00:00,26.0,England,AM
+45146,Mario Balotelli,Attack,Centre-Forward,right,189.0,Italy,1990-08-12 00:00:00,24.0,Italy,CF
+207917,Alberto Moreno,Defender,Left-Back,left,171.0,Spain,1992-07-05 00:00:00,22.0,Spain,LB
+148368,Divock Origi,Attack,Centre-Forward,right,189.0,Belgium,1995-04-18 00:00:00,19.0,Belgium,CF
+119296,Emre Can,Defender,Centre-Back,right,186.0,Germany,1994-01-12 00:00:00,20.0,Germany,DM
+49655,Rickie Lambert,Attack,Centre-Forward,right,187.0,England,1982-02-16 00:00:00,32.0,England,CF
+19948,Willy Caballero,Goalkeeper,Goalkeeper,right,186.0,Argentina,1981-09-28 00:00:00,32.0,Argentina,GK
+45320,Angel Di Maria,Attack,Right Winger,left,178.0,Argentina,1988-02-14 00:00:00,26.0,Argentina,RW
+183288,Luke Shaw,Defender,Left-Back,left,178.0,England,1995-07-12 00:00:00,18.0,England,LB
+99343,Ander Herrera,Midfield,Central Midfield,right,182.0,Spain,1989-08-14 00:00:00,24.0,Spain,CM
+113707,Remy Cabella,Midfield,Attacking Midfield,right,172.0,France,1990-03-08 00:00:00,24.0,France,AM
+61637,Emmanuel Riviere,Attack,Centre-Forward,right,182.0,Martinique,1990-03-03 00:00:00,24.0,Martinique,CF
+59368,Sandro,Defender,Centre-Back,right,188.0,Portugal,1982-12-05 00:00:00,25.0,Brazil,DM
+128909,Jack Robinson,Defender,Centre-Back,left,180.0,England,1993-09-01 00:00:00,20.0,England,LB
+44675,Bojan Krkic,Attack,Second Striker,right,173.0,Spain,1990-08-28 00:00:00,23.0,Spain,SS
+52119,Patrick van Aanholt,Defender,Left-Back,left,176.0,Netherlands,1990-08-29 00:00:00,23.0,Netherlands,LB
+85475,Federico Fernandez,Defender,Centre-Back,right,190.0,Argentina,1989-02-21 00:00:00,25.0,Argentina,CB
+192765,Ben Davies,Defender,Centre-Back,left,181.0,Wales,1993-04-24 00:00:00,21.0,Wales,LB
+45314,Federico Fazio,Defender,Centre-Back,right,195.0,Argentina,1987-03-17 00:00:00,27.0,Argentina,CB
+127160,Benjamin Stambouli,Midfield,Defensive Midfield,right,180.0,France,1990-08-13 00:00:00,24.0,France,DM
+26276,Michel Vorm,Goalkeeper,Goalkeeper,right,183.0,Netherlands,1983-10-20 00:00:00,30.0,Netherlands,GK
+17804,Sebastien Pocognoli,Defender,Left-Back,left,181.0,Belgium,1987-08-01 00:00:00,26.0,Belgium,LB
+120610,Diafra Sakho,Attack,Centre-Forward,right,184.0,Senegal,1989-12-24 00:00:00,24.0,Senegal,CF
+39883,Morgan Amalfitano,Midfield,Right Midfield,right,178.0,France,1985-03-20 00:00:00,29.0,France,RW
+149498,Gabriel Paulista,Defender,Centre-Back,right,185.0,Brazil,1990-11-26 00:00:00,24.0,Brazil,CB
+127987,Carles Gil,Midfield,Attacking Midfield,left,171.0,Spain,1992-11-22 00:00:00,22.0,Spain,AM
+91970,Juan Cuadrado,Midfield,Right Midfield,right,176.0,Colombia,1988-05-26 00:00:00,26.0,Colombia,RB
+57207,Jordon Mutch,Midfield,Central Midfield,right,184.0,England,1991-12-02 00:00:00,23.0,England,CM
+125868,Pape Souare,Defender,Left-Back,left,178.0,Senegal,1990-06-06 00:00:00,24.0,Senegal,LB
+145988,Wilfried Zaha,Attack,Left Winger,right,180.0,Cote d'Ivoire,1992-11-10 00:00:00,22.0,Cote d'Ivoire,LW
+81808,Wilfried Bony,Attack,Centre-Forward,right,183.0,Cote d'Ivoire,1988-12-10 00:00:00,26.0,Cote d'Ivoire,CF
+40611,Ryan Bertrand,Defender,Left-Back,left,179.0,England,1989-08-05 00:00:00,25.0,England,LB
+66219,Kyle Naughton,Defender,Right-Back,right,181.0,England,1988-11-17 00:00:00,26.0,England,RB
+40613,Jack Cork,Midfield,Defensive Midfield,right,185.0,England,1989-06-25 00:00:00,25.0,England,DM
+57840,Pedro,Midfield,Central Midfield,right,180.0,Spain,1984-03-10 00:00:00,28.0,Spain,RW
+224884,Abdul-Rahman Baba,Defender,Left-Back,left,179.0,Ghana,1994-07-02 00:00:00,21.0,Ghana,LB
+33873,Asmir Begovic,Goalkeeper,Goalkeeper,right,199.0,Bosnia-Herzegovina,1987-06-20 00:00:00,28.0,Bosnia-Herzegovina,GK
+136610,Papy Djilobodji,Defender,Centre-Back,left,193.0,Senegal,1988-12-01 00:00:00,26.0,Senegal,CB
+88755,Kevin De Bruyne,Midfield,Attacking Midfield,right,181.0,Belgium,1991-06-28 00:00:00,24.0,Belgium,AM
+134425,Raheem Sterling,Attack,Right Winger,right,170.0,England,1994-12-08 00:00:00,20.0,England,LW
+54781,Nicolas Otamendi,Defender,Centre-Back,right,182.0,Argentina,1988-02-12 00:00:00,27.0,Argentina,CB
+50362,Fabian Delph,Midfield,Central Midfield,left,174.0,England,1989-11-21 00:00:00,25.0,England,CM
+5658,Petr Cech,Goalkeeper,Goalkeeper,left,196.0,Czech Republic,1982-05-20 00:00:00,33.0,Czech Republic,GK
+182877,Anthony Martial,Attack,Centre-Forward,right,184.0,France,1995-12-05 00:00:00,19.0,France,CF
+56818,Morgan Schneiderlin,Midfield,Defensive Midfield,right,186.0,France,1989-11-08 00:00:00,25.0,France,DM
+54906,Matteo Darmian,Defender,Right-Back,right,183.0,Italy,1989-12-02 00:00:00,25.0,Italy,RB
+2514,Bastian Schweinsteiger,Midfield,Central Midfield,,,Germany,1984-08-01 00:00:00,30.0,Germany,CM
+91845,Heung-min Son,Attack,Left Winger,both,183.0,"Korea, South",1992-07-08 00:00:00,23.0,"Korea, South",LW
+42710,Toby Alderweireld,Defender,Centre-Back,right,187.0,Belgium,1989-03-02 00:00:00,26.0,Belgium,CB
+241119,Clinton N'Jie,Attack,Right Winger,right,175.0,Cameroon,1993-08-15 00:00:00,22.0,Cameroon,RW
+122675,Kevin Wimmer,Defender,Centre-Back,left,187.0,Austria,1992-11-15 00:00:00,22.0,Austria,CB
+50201,Christian Benteke,Attack,Centre-Forward,right,190.0,Belgium,1990-12-03 00:00:00,24.0,Belgium,CF
+131789,Roberto Firmino,Attack,Centre-Forward,right,181.0,Brazil,1991-10-02 00:00:00,23.0,Brazil,CF
+85177,Nathaniel Clyne,Defender,Right-Back,right,175.0,England,1991-04-05 00:00:00,24.0,England,RB
+66100,Oriol Romeu,Midfield,Defensive Midfield,right,183.0,Spain,1991-09-24 00:00:00,23.0,Spain,DM
+126737,Juanmi,Attack,Left Winger,right,172.0,Spain,1993-05-20 00:00:00,22.0,Spain,RW
+66413,Franck Tabanou,Defender,Left-Back,left,178.0,France,1989-01-30 00:00:00,26.0,France,LB
+86792,Xherdan Shaqiri,Midfield,Attacking Midfield,left,169.0,Switzerland,1991-10-10 00:00:00,23.0,Switzerland,RW
+81999,Joselu,Attack,Centre-Forward,right,191.0,Spain,1990-03-27 00:00:00,25.0,Spain,CF
+53173,Philipp Wollscheid,Defender,Centre-Back,,,Germany,1989-03-06 00:00:00,26.0,Germany,CB
+29434,Yohan Cabaye,Midfield,Central Midfield,right,173.0,France,1986-01-14 00:00:00,29.0,France,CM
+95435,Connor Wickham,Attack,Centre-Forward,right,189.0,England,1993-03-31 00:00:00,22.0,England,CF
+129476,Gerard Deulofeu,Attack,Centre-Forward,right,177.0,Spain,1994-03-13 00:00:00,21.0,Spain,LW
+14221,Aaron Lennon,Attack,Right Winger,right,165.0,England,1987-04-16 00:00:00,28.0,England,RW
+37647,Dimitri Payet,Midfield,Attacking Midfield,right,175.0,France,1987-03-29 00:00:00,28.0,France,AM
+48002,Angelo Ogbonna,Defender,Centre-Back,left,191.0,Italy,1988-05-23 00:00:00,27.0,Italy,CB
+101213,Pedro Obiang,Midfield,Central Midfield,right,186.0,Equatorial Guinea,1992-03-27 00:00:00,23.0,Equatorial Guinea,CM
+42412,Jonny Evans,Defender,Centre-Back,both,188.0,Northern Ireland,1988-01-03 00:00:00,27.0,Northern Ireland,CB
+79642,Shinji Okazaki,Attack,Centre-Forward,right,175.0,Japan,,29.0,Japan,CF
+225083,N'Golo Kante,Midfield,Defensive Midfield,right,168.0,France,1991-03-29 00:00:00,24.0,France,DM
+19041,Gokhan Inler,Midfield,Defensive Midfield,both,183.0,Switzerland,1984-06-27 00:00:00,31.0,Switzerland,DM
+50477,Yohan Benalouane,Defender,Centre-Back,right,185.0,Tunisia,1987-03-28 00:00:00,28.0,Tunisia,CB
+2998,Robert Huth,Defender,Centre-Back,,,Germany,1984-08-18 00:00:00,30.0,Germany,CB
+184892,Florian Thauvin,Attack,Right Winger,left,181.0,France,1993-01-26 00:00:00,22.0,France,RW
+76077,Ricardo Alvarez,Midfield,Central Midfield,left,188.0,Argentina,1988-04-12 00:00:00,27.0,Argentina,CM
+27114,Younes Kaboul,Defender,Centre-Back,right,192.0,France,1986-01-04 00:00:00,29.0,France,CB
+102427,Sebastian Coates,Defender,Centre-Back,right,196.0,Uruguay,1990-10-07 00:00:00,24.0,Uruguay,CB
+108354,Jordan Ayew,Attack,Centre-Forward,right,182.0,Ghana,1991-09-11 00:00:00,23.0,Ghana,CF
+241229,Jordan Amavi,Defender,Left-Back,left,176.0,France,1994-03-09 00:00:00,21.0,France,LB
+164771,Jordan Veretout,Midfield,Central Midfield,right,177.0,France,1993-03-01 00:00:00,22.0,France,CM
+126665,Idrissa Gueye,Midfield,Defensive Midfield,right,174.0,Senegal,1989-09-26 00:00:00,25.0,Senegal,DM
+4241,Joleon Lescott,Defender,Centre-Back,left,191.0,England,1982-08-16 00:00:00,33.0,England,CB
+28140,Max Gradel,Attack,Left Winger,right,175.0,Cote d'Ivoire,1987-11-30 00:00:00,27.0,Cote d'Ivoire,LW
+45693,Glenn Murray,Attack,Centre-Forward,right,186.0,England,1983-09-25 00:00:00,31.0,England,CF
+101500,Matej Vydra,Attack,Centre-Forward,right,180.0,Czech Republic,1992-05-01 00:00:00,23.0,Czech Republic,CF
+21905,Valon Behrami,Midfield,Defensive Midfield,right,184.0,Switzerland,1985-04-19 00:00:00,30.0,Switzerland,DM
+41112,Jose Cholevas,Defender,Left-Back,left,184.0,Greece,1984-06-27 00:00:00,31.0,Greece,LB
+36608,Graham Dorrans,Midfield,Central Midfield,right,177.0,Scotland,1987-05-05 00:00:00,28.0,Scotland,CM
+68306,Alberto Paloschi,Attack,Centre-Forward,right,183.0,Italy,1990-01-04 00:00:00,26.0,Italy,CF
+61842,Andros Townsend,Attack,Right Winger,left,181.0,England,1991-07-16 00:00:00,24.0,England,RW
+51540,Henri Saivet,Midfield,Attacking Midfield,right,175.0,Senegal,1990-10-26 00:00:00,25.0,Senegal,AM
+103565,Wahbi Khazri,Attack,Left Winger,right,176.0,Tunisia,1991-02-08 00:00:00,24.0,Tunisia,CF
+57420,Lamine Kone,Defender,Centre-Back,right,188.0,Cote d'Ivoire,1989-02-01 00:00:00,26.0,Cote d'Ivoire,CB
+49734,Jan Kirchhoff,Defender,Centre-Back,right,195.0,Germany,1990-10-01 00:00:00,25.0,Germany,CB
+35413,Lewis Grabban,Attack,Centre-Forward,right,183.0,Jamaica,1988-01-12 00:00:00,27.0,Jamaica,CF
+308801,Adalberto Penaranda,Attack,Left Winger,right,186.0,Venezuela,1997-05-31 00:00:00,18.0,Venezuela,CF
+127187,Abdoulaye Doucoure,Midfield,Attacking Midfield,right,183.0,Mali,1993-01-01 00:00:00,23.0,France,CM
+55619,Nordin Amrabat,Attack,Right Winger,right,178.0,Morocco,1987-03-31 00:00:00,28.0,Morocco,RW
+37337,Mario Suarez,Defender,Centre-Back,right,189.0,Spain,1987-02-24 00:00:00,28.0,Spain,DM
+12763,Steven Naismith,Attack,Second Striker,right,178.0,Scotland,1986-09-14 00:00:00,29.0,Scotland,SS
+65255,Timm Klose,Defender,Centre-Back,right,195.0,Switzerland,1988-05-09 00:00:00,27.0,Switzerland,CB
+15921,Matt Jarvis,Attack,Left Winger,,173.0,England,1986-05-22 00:00:00,29.0,England,LW
+111051,Nampalys Mendy,Midfield,Defensive Midfield,right,168.0,Senegal,1992-06-23 00:00:00,24.0,Senegal,DM
+111455,Granit Xhaka,Midfield,Defensive Midfield,left,183.0,Switzerland,1992-09-27 00:00:00,23.0,Switzerland,DM
+88590,Shkodran Mustafi,Defender,Centre-Back,right,184.0,Germany,1992-04-17 00:00:00,24.0,Germany,CB
+73185,Lucas Perez,Attack,Centre-Forward,left,180.0,Spain,1988-09-10 00:00:00,27.0,Spain,CF
+77760,Victor Wanyama,Midfield,Defensive Midfield,right,184.0,Kenya,1991-06-25 00:00:00,25.0,Kenya,DM
+215679,Georges-Kevin N'Koudou,Attack,Left Winger,right,172.0,Cameroon,1995-02-13 00:00:00,21.0,France,LW
+186590,John Stones,Defender,Centre-Back,right,188.0,England,1994-05-28 00:00:00,22.0,England,CB
+192565,Leroy Sane,Attack,Right Winger,left,183.0,Germany,1996-01-11 00:00:00,20.0,Germany,LW
+53622,Ilkay Gundogan,Midfield,Central Midfield,right,180.0,Germany,1990-10-24 00:00:00,25.0,Germany,CM
+40423,Claudio Bravo,Goalkeeper,Goalkeeper,right,184.0,Chile,1983-04-13 00:00:00,33.0,Chile,GK
+70934,Nolito,Attack,Left Winger,right,175.0,Spain,1986-10-15 00:00:00,29.0,Spain,LW
+122153,Paul Pogba,Midfield,Central Midfield,both,191.0,France,1993-03-15 00:00:00,23.0,France,CM
+55735,Henrikh Mkhitaryan,Midfield,Central Midfield,both,177.0,Armenia,1989-01-21 00:00:00,27.0,Armenia,AM
+286384,Eric Bailly,Defender,Centre-Back,right,187.0,Cote d'Ivoire,1994-04-12 00:00:00,22.0,Cote d'Ivoire,CB
+232271,Sofiane Boufal,Midfield,Attacking Midfield,right,175.0,Morocco,1993-09-17 00:00:00,22.0,Morocco,LW
+95976,Alex McCarthy,Goalkeeper,Goalkeeper,right,193.0,England,1989-12-03 00:00:00,26.0,England,GK
+45403,Andre Ayew,Attack,Centre-Forward,left,175.0,Ghana,1989-12-17 00:00:00,26.0,Ghana,LW
+200512,Sadio Mane,Attack,Left Winger,right,175.0,Senegal,1992-04-10 00:00:00,24.0,Senegal,LW
+85864,Loris Karius,Goalkeeper,Goalkeeper,right,191.0,Germany,1993-06-22 00:00:00,23.0,Germany,GK
+26669,Ragnar Klavan,Defender,Centre-Back,left,187.0,Estonia,1985-10-30 00:00:00,30.0,Estonia,CB
+179184,Michy Batshuayi,Attack,Centre-Forward,right,185.0,Belgium,1993-10-02 00:00:00,22.0,Belgium,CF
+46741,David Luiz,Defender,Centre-Back,right,189.0,Brazil,1987-04-22 00:00:00,29.0,Brazil,CB
+112515,Marcos Alonso,Defender,Centre-Back,left,188.0,Spain,1990-12-28 00:00:00,25.0,Spain,LB
+75471,Yannick Bolasie,Attack,Centre-Forward,right,185.0,DR Congo,1989-05-24 00:00:00,27.0,DR Congo,LW
+67355,Ashley Williams,Defender,Centre-Back,right,183.0,Wales,1984-08-23 00:00:00,31.0,Wales,CB
+85324,Borja Baston,Attack,Centre-Forward,right,186.0,Spain,1992-08-25 00:00:00,23.0,Spain,CF
+35564,Fernando Llorente,Attack,Centre-Forward,right,195.0,Spain,1985-02-26 00:00:00,31.0,Spain,CF
+295331,Isaac Success,Attack,Centre-Forward,right,182.0,Nigeria,1996-01-07 00:00:00,20.0,Nigeria,CF
+112302,Roberto Pereyra,Midfield,Central Midfield,both,182.0,Argentina,1991-01-07 00:00:00,25.0,Argentina,AM
+93690,Brice Dja Djedje,Midfield,Defensive Midfield,right,176.0,Cote d'Ivoire,1990-12-23 00:00:00,25.0,Cote d'Ivoire,DM
+59631,Nacer Chadli,Attack,Left Winger,right,187.0,Belgium,1989-08-02 00:00:00,27.0,Belgium,LW
+111508,Allan Nyom,Defender,Right-Back,right,189.0,Cameroon,1988-05-10 00:00:00,28.0,Cameroon,RB
+61592,James Tomkins,Defender,Centre-Back,right,192.0,England,1989-03-29 00:00:00,27.0,England,CB
+195652,Jordon Ibe,Attack,Right Winger,right,176.0,England,1995-12-08 00:00:00,20.0,England,RW
+175745,Brad Smith,Defender,Left-Back,left,178.0,Australia,1994-04-09 00:00:00,22.0,Australia,LB
+30456,Marc Wilson,Defender,Centre-Back,both,188.0,Ireland,1987-08-17 00:00:00,28.0,Ireland,CB
+210081,Didier Ndong,Midfield,Central Midfield,right,179.0,Gabon,1994-06-17 00:00:00,22.0,Gabon,CM
+167268,Paddy McNair,Defender,Centre-Back,right,189.0,Northern Ireland,1995-04-27 00:00:00,21.0,Northern Ireland,CB
+133179,Marten de Roon,Midfield,Defensive Midfield,right,186.0,Netherlands,1991-03-29 00:00:00,25.0,Netherlands,DM
+32522,Antonio Barragan,Defender,Right-Back,right,186.0,Spain,1987-06-12 00:00:00,29.0,Spain,RB
+61834,Ryan Mason,Midfield,Central Midfield,right,175.0,England,1991-06-13 00:00:00,25.0,England,CM
+118535,Will Keane,Attack,Centre-Forward,right,188.0,Ireland,1993-01-11 00:00:00,23.0,Ireland,CF
+112343,Manolo Gabbiadini,Attack,Centre-Forward,left,186.0,Italy,1991-11-26 00:00:00,25.0,Italy,CF
+22614,Robert Snodgrass,Attack,Right Winger,left,182.0,Scotland,1987-09-07 00:00:00,29.0,Scotland,RW
+33829,Jose Fonte,Defender,Centre-Back,right,191.0,Portugal,1983-12-22 00:00:00,33.0,Portugal,CB
+128897,Saido Berahino,Attack,Centre-Forward,right,180.0,Burundi,1993-08-04 00:00:00,23.0,Burundi,CF
+121279,Tom Carroll,Midfield,Central Midfield,left,177.0,England,1992-05-28 00:00:00,24.0,England,CM
+26456,Mauro Zarate,Attack,Centre-Forward,right,175.0,Argentina,1987-03-18 00:00:00,29.0,Argentina,CF
+157506,Jeffrey Schlupp,Midfield,Left Midfield,left,178.0,Ghana,1992-12-23 00:00:00,24.0,Ghana,LM
+42413,Darron Gibson,Midfield,Central Midfield,right,183.0,Ireland,1987-10-25 00:00:00,29.0,Ireland,CM
+124983,Bryan Oviedo,Defender,Left-Back,left,172.0,Costa Rica,1990-02-18 00:00:00,26.0,Costa Rica,LB
+183334,Patrick Bamford,Attack,Centre-Forward,left,185.0,England,1993-09-05 00:00:00,23.0,England,CF
+74768,Adlene Guedioura,Midfield,Central Midfield,right,178.0,Algeria,1985-11-12 00:00:00,31.0,Algeria,CM
+37920,Kamil Grosicki,Attack,Left Winger,right,180.0,Poland,1988-06-08 00:00:00,28.0,Poland,LW
+128223,Alvaro Morata,Attack,Centre-Forward,right,189.0,Spain,1992-10-23 00:00:00,24.0,Spain,CF
+182618,Tiemoue Bakayoko,Midfield,Defensive Midfield,right,189.0,France,1994-08-17 00:00:00,22.0,France,DM
+73491,Danny Drinkwater,Midfield,Central Midfield,right,178.0,England,1990-03-05 00:00:00,27.0,England,CM
+86202,Antonio Rudiger,Defender,Centre-Back,right,190.0,Germany,1993-03-03 00:00:00,24.0,Germany,CB
+173859,Davide Zappacosta,Midfield,Right Midfield,right,182.0,Italy,1992-06-11 00:00:00,25.0,Italy,RB
+127032,Serge Aurier,Defender,Right-Back,right,176.0,Cote d'Ivoire,1992-12-24 00:00:00,24.0,Cote d'Ivoire,RB
+157495,Benjamin Mendy,Defender,Left-Back,left,185.0,France,1994-07-17 00:00:00,23.0,France,LB
+95424,Kyle Walker,Defender,Right-Back,right,183.0,England,1990-05-28 00:00:00,27.0,England,RB
+241641,Bernardo Silva,Midfield,Attacking Midfield,left,173.0,Portugal,1994-08-10 00:00:00,22.0,Portugal,AM
+32816,Danilo,Defender,Centre-Back,right,185.0,Brazil,1984-05-10 00:00:00,26.0,Brazil,RB
+148455,Mohamed Salah,Attack,Right Winger,left,175.0,Egypt,1992-06-15 00:00:00,25.0,Egypt,RW
+143424,Alex Oxlade-Chamberlain,Midfield,Central Midfield,right,180.0,England,1993-08-15 00:00:00,24.0,England,CM
+93720,Alexandre Lacazette,Attack,Centre-Forward,right,175.0,France,1991-05-28 00:00:00,26.0,France,CF
+74683,Nemanja Matic,Midfield,Defensive Midfield,left,194.0,Serbia,1988-08-01 00:00:00,28.0,Serbia,DM
+118534,Michael Keane,Defender,Centre-Back,right,188.0,England,1993-01-11 00:00:00,24.0,England,CB
+199369,Sandro Ramirez,Attack,Centre-Forward,right,174.0,Spain,1995-07-09 00:00:00,21.0,Spain,CF
+170934,Mario Lemina,Midfield,Defensive Midfield,right,184.0,Gabon,1993-09-01 00:00:00,23.0,Gabon,DM
+253765,Wesley Hoedt,Defender,Centre-Back,left,193.0,Netherlands,1994-03-06 00:00:00,23.0,Netherlands,CB
+177476,Nathan Ake,Defender,Centre-Back,left,180.0,Netherlands,1995-02-18 00:00:00,22.0,Netherlands,CB
+341317,Oliver Burke,Attack,Centre-Forward,right,188.0,Scotland,1997-04-07 00:00:00,20.0,Scotland,CF
+53360,Jay Rodriguez,Attack,Centre-Forward,right,185.0,England,1989-07-29 00:00:00,27.0,England,CF
+44792,Kieran Gibbs,Defender,Left-Back,left,181.0,England,1989-09-26 00:00:00,27.0,England,LB
+3291,Gareth Barry,Midfield,Defensive Midfield,left,184.0,England,1981-02-23 00:00:00,36.0,England,DM
+50935,Chicharito,Attack,Centre-Forward,right,175.0,Mexico,1988-06-01 00:00:00,29.0,Mexico,CF
+295330,Kelechi Iheanacho,Attack,Centre-Forward,left,185.0,Nigeria,1996-10-03 00:00:00,20.0,Nigeria,CF
+65467,Vicente Iborra,Midfield,Defensive Midfield,right,190.0,Spain,1988-01-16 00:00:00,29.0,Spain,CM
+202984,Roque Mesa,Midfield,Central Midfield,right,172.0,Spain,1989-06-07 00:00:00,28.0,Spain,CM
+173483,Nahki Wells,Attack,Centre-Forward,right,170.0,Bermuda,1990-06-01 00:00:00,27.0,Bermuda,CF
+3306,Jonathan Walters,Attack,Right Winger,right,183.0,Ireland,1983-09-20 00:00:00,33.0,Ireland,RW
+15773,Phil Bardsley,Defender,Right-Back,right,180.0,Scotland,1985-06-28 00:00:00,32.0,Scotland,RB
+120565,Andre Gray,Attack,Centre-Forward,right,178.0,Jamaica,1991-06-26 00:00:00,26.0,Jamaica,CF
+73484,Tom Cleverley,Midfield,Central Midfield,right,175.0,England,1989-08-12 00:00:00,27.0,England,CM
+128900,Nathaniel Chalobah,Midfield,Defensive Midfield,right,185.0,England,1994-12-12 00:00:00,22.0,England,DM
+127108,Florian Lejeune,Defender,Centre-Back,right,190.0,France,1991-05-20 00:00:00,26.0,France,CB
+186997,Christian Atsu,Attack,Left Winger,left,165.0,Ghana,1992-01-10 00:00:00,25.0,Ghana,LW
+162029,Javier Manquillo,Defender,Right-Back,right,178.0,Spain,1994-05-05 00:00:00,23.0,Spain,RB
+128969,Mathew Ryan,Goalkeeper,Goalkeeper,right,184.0,Australia,1992-04-08 00:00:00,25.0,Australia,GK
+238639,Steve Mounie,Attack,Centre-Forward,right,189.0,Benin,1994-09-29 00:00:00,22.0,Benin,CF
+123951,Aaron Mooy,Midfield,Central Midfield,right,174.0,Australia,1990-09-15 00:00:00,26.0,Australia,CM
+39073,Emerson,Defender,Left-Back,left,187.0,Brazil,1986-02-23 00:00:00,23.0,Italy,LB
+131978,Ross Barkley,Midfield,Central Midfield,right,189.0,England,1993-12-05 00:00:00,24.0,England,CM
+77100,Lucas Moura,Attack,Right Winger,right,172.0,Brazil,1992-08-13 00:00:00,25.0,Brazil,RW
+176553,Aymeric Laporte,Defender,Centre-Back,left,191.0,Spain,1994-05-27 00:00:00,23.0,Spain,CB
+139208,Virgil van Dijk,Defender,Centre-Back,right,195.0,Netherlands,1991-07-08 00:00:00,26.0,Netherlands,CB
+58864,Pierre-Emerick Aubameyang,Attack,Centre-Forward,right,187.0,Gabon,1989-06-18 00:00:00,28.0,Gabon,CF
+33713,Theo Walcott,Attack,Right Winger,both,175.0,England,1989-03-16 00:00:00,28.0,England,RW
+184672,Guido Carrillo,Attack,Centre-Forward,right,187.0,Argentina,1991-05-25 00:00:00,26.0,Argentina,CF
+171424,Riyad Mahrez,Attack,Right Winger,left,179.0,Algeria,1991-02-21 00:00:00,27.0,Algeria,RW
+105470,Alisson,Goalkeeper,Goalkeeper,right,193.0,Brazil,1992-10-02 00:00:00,25.0,Brazil,GK
+302215,Naby Keita,Midfield,Central Midfield,right,172.0,Guinea,1995-02-10 00:00:00,23.0,Guinea,CM
+163058,Fabinho,Missing,,left,178.0,Brazil,1991-04-28 00:00:00,24.0,Brazil,DM
+192279,Kepa Arrizabalaga,Goalkeeper,Goalkeeper,right,188.0,Spain,1994-10-03 00:00:00,23.0,Spain,GK
+102017,Jorginho,Midfield,Defensive Midfield,right,180.0,Italy,1991-12-20 00:00:00,26.0,Italy,DM
+318077,Lucas Torreira,Midfield,Defensive Midfield,right,166.0,Uruguay,1996-02-11 00:00:00,22.0,Uruguay,DM
+72476,Bernd Leno,Goalkeeper,Goalkeeper,right,190.0,Germany,1992-03-04 00:00:00,26.0,Germany,GK
+34322,Sokratis Papastathopoulos,Defender,Centre-Back,right,186.0,Greece,1988-06-09 00:00:00,30.0,Greece,CB
+40204,Joe Hart,Goalkeeper,Goalkeeper,right,196.0,England,1987-04-19 00:00:00,31.0,England,GK
+378710,Richarlison,Attack,Centre-Forward,right,184.0,Brazil,1997-05-10 00:00:00,21.0,Brazil,CF
+289446,Yerry Mina,Defender,Centre-Back,right,195.0,Colombia,1994-09-23 00:00:00,23.0,Colombia,CB
+126664,Lucas Digne,Defender,Left-Back,left,178.0,France,1993-07-20 00:00:00,25.0,France,LB
+320141,Caglar Soyuncu,Defender,Centre-Back,both,185.0,Türkiye,1996-05-23 00:00:00,22.0,Turkey,CB
+118287,Rachid Ghezzal,Attack,Right Winger,left,182.0,Algeria,1992-05-09 00:00:00,26.0,Algeria,RW
+124172,Danny Ward,Attack,Centre-Forward,left,180.0,England,1990-12-09 00:00:00,25.0,Wales,GK
+230541,Yoshinori Muto,Attack,Centre-Forward,right,179.0,Japan,1992-07-15 00:00:00,26.0,Japan,CF
+338424,Mikel Merino,Midfield,Central Midfield,left,188.0,Spain,1996-06-22 00:00:00,22.0,Spain,CM
+66934,Cheikhou Kouyate,Midfield,Defensive Midfield,right,189.0,Senegal,1989-12-21 00:00:00,28.0,Senegal,DM
+262980,Jefferson Lerma,Midfield,Defensive Midfield,right,180.0,Colombia,1994-10-25 00:00:00,23.0,Colombia,DM
+249513,Diego Rico,Defender,Left-Back,left,183.0,Spain,1993-02-23 00:00:00,25.0,Spain,LB
+159372,Felipe Anderson,Attack,Left Winger,right,175.0,Brazil,1993-04-15 00:00:00,25.0,Brazil,LW
+272622,Issa Diop,Defender,Centre-Back,right,194.0,Morocco,1997-01-09 00:00:00,21.0,France,CB
+69015,Andriy Yarmolenko,Attack,Right Winger,left,189.0,Ukraine,1989-10-23 00:00:00,28.0,Ukraine,RW
+286949,Adam Masina,Defender,Centre-Back,left,191.0,Morocco,1994-01-02 00:00:00,24.0,Morocco,LB
+335245,Marc Navarro,Midfield,Right Midfield,right,188.0,Spain,1995-07-02 00:00:00,22.0,Spain,RB
+391719,Domingos Quina,Midfield,Central Midfield,right,173.0,Portugal,1999-11-18 00:00:00,18.0,Portugal,CM
+410425,Yves Bissouma,Midfield,Defensive Midfield,right,182.0,Mali,1996-08-30 00:00:00,21.0,Mali,CM
+364258,Bernardo,Defender,Left-Back,left,186.0,Brazil,1995-05-14 00:00:00,23.0,Brazil,LB
+68645,Martin Montoya,Defender,Right-Back,right,175.0,Spain,1991-04-14 00:00:00,27.0,Spain,RB
+61814,David Button,Goalkeeper,Goalkeeper,right,191.0,England,1989-02-27 00:00:00,29.0,England,GK
+152651,Terence Kongolo,Defender,Centre-Back,left,188.0,Netherlands,1994-02-14 00:00:00,24.0,Netherlands,CB
+453594,Adama Diakhaby,Midfield,Central Midfield,left,184.0,France,1996-07-05 00:00:00,22.0,France,LW
+48870,Jonas Lossl,Goalkeeper,Goalkeeper,right,195.0,Denmark,1989-02-01 00:00:00,29.0,Denmark,GK
+99331,Jannik Vestergaard,Defender,Centre-Back,both,199.0,Denmark,1992-08-03 00:00:00,25.0,Denmark,CB
+201574,Angus Gunn,Goalkeeper,Goalkeeper,right,196.0,Scotland,1996-01-22 00:00:00,22.0,England,GK
+340950,Diogo Jota,Attack,Left Winger,right,178.0,Portugal,1996-12-04 00:00:00,21.0,Portugal,LW
+110858,Benik Afobe,Attack,Centre-Forward,right,183.0,DR Congo,1993-02-12 00:00:00,25.0,DR Congo,CF
+29364,Joao Moutinho,Midfield,Central Midfield,right,170.0,Portugal,1986-09-08 00:00:00,31.0,Portugal,CM
+357158,Ruben Vinagre,Midfield,Left Midfield,left,174.0,Portugal,1999-04-09 00:00:00,19.0,Portugal,LB
+178614,Jean Michael Seri,Midfield,Defensive Midfield,right,168.0,Cote d'Ivoire,1991-07-19 00:00:00,26.0,Cote d'Ivoire,CM
+51152,Aleksandar Mitrovic,Attack,Centre-Forward,right,189.0,Serbia,1994-09-16 00:00:00,23.0,Serbia,CF
+60558,Maxime Le Marchand,Defender,Centre-Back,left,185.0,France,1989-10-11 00:00:00,28.0,France,CB
+315779,Christian Pulisic,Attack,Right Winger,right,177.0,United States,1998-09-18 00:00:00,20.0,United States,RW
+258889,Dominic Solanke,Attack,Centre-Forward,right,186.0,England,1997-09-14 00:00:00,21.0,England,CF
+175446,Jonny Otto,Defender,Right-Back,both,175.0,Spain,1994-03-03 00:00:00,24.0,Spain,LB
+182712,Joao Cancelo,Defender,Right-Back,right,182.0,Portugal,1994-05-27 00:00:00,25.0,Portugal,RB
+8163,Rodri,Defender,Centre-Back,right,185.0,Spain,1984-08-17 00:00:00,23.0,Spain,DM
+51471,Mateo Kovacic,Midfield,Central Midfield,right,178.0,Croatia,1994-05-06 00:00:00,25.0,Croatia,CM
+450936,Tanguy Ndombele,Midfield,Central Midfield,right,181.0,France,1996-12-28 00:00:00,22.0,France,CM
+343052,Nicolas Pepe,Attack,Right Winger,left,183.0,Cote d'Ivoire,1995-05-29 00:00:00,24.0,Cote d'Ivoire,RW
+495666,William Saliba,Defender,Centre-Back,right,192.0,France,2001-03-24 00:00:00,18.0,France,CB
+177907,Harry Maguire,Defender,Centre-Back,right,194.0,England,1993-03-05 00:00:00,26.0,England,CB
+477758,Aaron Wan-Bissaka,Defender,Right-Back,right,183.0,DR Congo,1997-11-26 00:00:00,21.0,England,RB
+265078,Patrick Cutrone,Attack,Centre-Forward,right,183.0,Italy,1998-01-03 00:00:00,21.0,Italy,CF
+487465,Pedro Neto,Attack,Right Winger,left,174.0,Portugal,2000-03-09 00:00:00,19.0,Portugal,LW
+415646,Bruno Jordao,Midfield,Defensive Midfield,right,180.0,Portugal,1998-10-12 00:00:00,20.0,Portugal,CM
+242631,Alex Iwobi,Attack,Left Winger,right,183.0,Nigeria,1996-05-03 00:00:00,23.0,Nigeria,LW
+364135,Moise Kean,Attack,Centre-Forward,right,183.0,Italy,2000-02-28 00:00:00,19.0,Italy,CF
+182894,Jean-Philippe Gbamin,Defender,Centre-Back,right,186.0,Cote d'Ivoire,1995-09-25 00:00:00,23.0,Cote d'Ivoire,DM
+221025,Andre Gomes,Midfield,Central Midfield,right,190.0,Portugal,1993-07-30 00:00:00,25.0,Portugal,CM
+249565,Youri Tielemans,Midfield,Central Midfield,right,176.0,Belgium,1997-05-07 00:00:00,22.0,Belgium,CM
+246968,Ayoze Perez,Attack,Centre-Forward,right,178.0,Spain,1993-07-29 00:00:00,25.0,Spain,SS
+129588,Dennis Praet,Midfield,Central Midfield,right,181.0,Belgium,1994-05-14 00:00:00,25.0,Belgium,CM
+181375,Sebastien Haller,Attack,Centre-Forward,right,190.0,Cote d'Ivoire,1994-06-22 00:00:00,25.0,Cote d'Ivoire,CF
+357885,Pablo Fornals,Midfield,Central Midfield,right,178.0,Spain,1996-02-22 00:00:00,23.0,Spain,AM
+410225,Ismaila Sarr,Attack,Right Winger,right,185.0,Senegal,1998-02-25 00:00:00,21.0,Senegal,RW
+45333,James McCarthy,Midfield,Central Midfield,right,180.0,Ireland,1990-11-12 00:00:00,28.0,Ireland,CM
+333241,Joelinton,Midfield,Central Midfield,right,186.0,Brazil,1996-08-14 00:00:00,22.0,Brazil,CF
+272642,Allan Saint-Maximin,Attack,Left Winger,right,173.0,France,1997-03-12 00:00:00,22.0,France,LW
+184528,Emil Krafth,Defender,Right-Back,right,184.0,Sweden,1994-08-02 00:00:00,25.0,Sweden,RB
+134294,Danny Ings,Attack,Centre-Forward,right,177.0,England,1992-07-23 00:00:00,26.0,England,CF
+236953,Sam Byram,Defender,Left-Back,right,183.0,England,1993-09-16 00:00:00,25.0,England,RB
+291422,Lys Mousset,Attack,Centre-Forward,right,186.0,France,1996-02-08 00:00:00,23.0,France,CF
+253677,Tyrone Mings,Defender,Centre-Back,left,196.0,England,1993-03-13 00:00:00,26.0,England,CB
+447661,Douglas Luiz,Midfield,Central Midfield,right,177.0,Brazil,1998-05-09 00:00:00,21.0,Brazil,DM
+250478,Matt Targett,Defender,Left-Back,left,183.0,England,1995-09-18 00:00:00,23.0,England,LB
+183720,Anwar El Ghazi,Attack,Right Winger,right,189.0,Netherlands,1995-05-03 00:00:00,24.0,Netherlands,RW
+34130,Tom Heaton,Goalkeeper,Goalkeeper,right,188.0,England,1986-04-15 00:00:00,33.0,England,GK
+193469,Bjorn Engels,Defender,Centre-Back,right,195.0,Belgium,1994-09-15 00:00:00,24.0,Belgium,CB
+233124,Kortney Hause,Defender,Centre-Back,left,191.0,England,1995-07-16 00:00:00,23.0,England,CB
+283528,Ignacio Pussetto,Attack,Centre-Forward,right,180.0,Argentina,1995-12-21 00:00:00,24.0,Argentina,RW
+82863,Lukas Rupp,Midfield,Central Midfield,right,178.0,Germany,1991-01-08 00:00:00,29.0,Germany,CM
+230784,Thomas Partey,Midfield,Defensive Midfield,right,185.0,Ghana,1993-06-13 00:00:00,27.0,Ghana,DM
+79242,Gabriel,Goalkeeper,Goalkeeper,right,194.0,Brazil,1992-09-27 00:00:00,22.0,Brazil,CB
+205657,Runar Alex Runarsson,Goalkeeper,Goalkeeper,right,186.0,Iceland,1995-02-18 00:00:00,25.0,Iceland,GK
+131996,Bertrand Traore,Attack,Right Winger,left,181.0,Burkina Faso,1995-09-06 00:00:00,25.0,Burkina Faso,RW
+111873,Emiliano Martinez,Goalkeeper,Goalkeeper,right,195.0,Argentina,1992-09-02 00:00:00,28.0,Argentina,GK
+49755,Dale Stephens,Midfield,Central Midfield,right,185.0,England,1989-06-12 00:00:00,31.0,England,CM
+309400,Kai Havertz,Attack,Centre-Forward,left,193.0,Germany,1999-06-11 00:00:00,21.0,Germany,AM
+170527,Timo Werner,Attack,Centre-Forward,right,180.0,Germany,1996-03-06 00:00:00,24.0,Germany,CF
+316125,Ben Chilwell,Defender,Left-Back,left,180.0,England,1996-12-21 00:00:00,23.0,England,LB
+442531,Edouard Mendy,Goalkeeper,Goalkeeper,right,194.0,Senegal,1992-03-01 00:00:00,28.0,Senegal,GK
+126422,Allan,Midfield,Defensive Midfield,right,175.0,Brazil,1991-01-08 00:00:00,29.0,Brazil,CM
+149237,Anthony Knockaert,Attack,Right Winger,left,172.0,France,1991-11-20 00:00:00,28.0,France,RW
+226973,Harrison Reed,Midfield,Central Midfield,right,181.0,England,1995-01-27 00:00:00,25.0,England,CM
+206746,Kenny Tete,Defender,Right-Back,right,180.0,Netherlands,1995-10-09 00:00:00,24.0,Netherlands,RB
+258878,Tosin Adarabioyo,Defender,Centre-Back,right,197.0,England,1997-09-24 00:00:00,23.0,England,CB
+131505,Rodrigo,Attack,Centre-Forward,left,182.0,Spain,1991-03-06 00:00:00,29.0,Spain,SS
+246291,Diego Llorente,Defender,Centre-Back,right,186.0,Spain,1993-08-16 00:00:00,27.0,Spain,CB
+411295,Raphinha,Attack,Left Winger,left,176.0,Brazil,1996-12-14 00:00:00,23.0,Brazil,RW
+173900,Helder Costa,Attack,Right Winger,left,179.0,Angola,1994-01-12 00:00:00,26.0,Angola,RW
+328784,Robin Koch,Defender,Centre-Back,right,192.0,Germany,1996-07-17 00:00:00,24.0,Germany,CB
+542586,Illan Meslier,Goalkeeper,Goalkeeper,left,197.0,France,2000-03-02 00:00:00,20.0,France,GK
+475411,Wesley Fofana,Defender,Centre-Back,right,188.0,France,2000-12-17 00:00:00,19.0,France,CB
+262226,Timothy Castagne,Defender,Right-Back,right,185.0,Belgium,1995-12-05 00:00:00,24.0,Belgium,RB
+37623,Thiago,Attack,Centre-Forward,right,171.0,Brazil,1988-10-22 00:00:00,29.0,Spain,CM
+398184,Ferran Torres,Attack,Centre-Forward,right,183.0,Spain,2000-02-29 00:00:00,20.0,Spain,RW
+341051,Kyle Walker-Peters,Defender,Right-Back,right,173.0,England,1997-04-13 00:00:00,23.0,England,RB
+42506,Ibrahima Diallo,Defender,Left-Back,left,180.0,Guinea,1985-09-26 00:00:00,21.0,France,DM
+563963,Mohammed Salisu,Defender,Centre-Back,left,188.0,Ghana,1999-04-17 00:00:00,21.0,Ghana,CB
+348795,Giovani Lo Celso,Midfield,Attacking Midfield,left,177.0,Argentina,1996-04-09 00:00:00,24.0,Argentina,CM
+282429,Sergio Reguilon,Defender,Left-Back,left,178.0,Spain,1996-12-16 00:00:00,23.0,Spain,LB
+171679,Matt Doherty,Defender,Right-Back,right,185.0,Ireland,1992-01-16 00:00:00,28.0,Ireland,RB
+342048,Grady Diangana,Attack,Right Winger,left,180.0,DR Congo,1998-04-19 00:00:00,22.0,England,LW
+231572,Nelson Semedo,Defender,Right-Back,right,179.0,Portugal,1993-11-16 00:00:00,26.0,Portugal,RB
+137745,Marcal,Defender,Left-Back,left,178.0,Brazil,1989-02-19 00:00:00,31.0,Brazil,LB
+174094,Morgan Sanson,Midfield,Central Midfield,right,180.0,France,1994-08-18 00:00:00,26.0,France,CM
+536835,Amad Diallo,Attack,Right Winger,left,173.0,Cote d'Ivoire,2002-07-11 00:00:00,18.0,Cote d'Ivoire,RW
+335721,Ben White,Defender,Right-Back,right,186.0,England,1997-10-08 00:00:00,23.0,England,CB
+316264,Martin degaard,Midfield,Attacking Midfield,left,178.0,Norway,1998-12-17 00:00:00,22.0,Norway,AM
+331560,Takehiro Tomiyasu,Defender,Right-Back,right,187.0,Japan,1998-11-05 00:00:00,22.0,Japan,RB
+321247,Emiliano Buendia,Attack,Left Winger,right,172.0,Argentina,1996-12-25 00:00:00,24.0,Argentina,RW
+387626,Leon Bailey,Attack,Right Winger,left,178.0,Jamaica,1997-08-09 00:00:00,23.0,Jamaica,LW
+388165,Yoane Wissa,Attack,Centre-Forward,right,176.0,DR Congo,1996-09-03 00:00:00,24.0,DR Congo,LW
+284857,Marc Cucurella,Defender,Left-Back,left,173.0,Spain,1998-07-22 00:00:00,23.0,Spain,LM
+234781,Maxwel Cornet,Attack,Left Winger,left,179.0,Cote d'Ivoire,1996-09-27 00:00:00,24.0,Cote d'Ivoire,LW
+260827,Joachim Andersen,Defender,Centre-Back,right,192.0,Denmark,1996-05-31 00:00:00,25.0,Denmark,CB
+207014,Will Hughes,Midfield,Central Midfield,left,185.0,England,1995-04-17 00:00:00,26.0,England,CM
+292417,Demarai Gray,Attack,Left Winger,right,183.0,Jamaica,1996-06-28 00:00:00,25.0,England,LW
+319301,Daniel James,Attack,Right Winger,right,171.0,Wales,1997-11-10 00:00:00,23.0,Wales,LW
+374139,Junior Firpo,Defender,Left-Back,left,184.0,Dominican Republic,1996-08-22 00:00:00,24.0,Dominican Republic,LB
+417346,Jack Harrison,Attack,Left Winger,left,175.0,England,1996-11-20 00:00:00,24.0,England,LW
+344605,Boubakary Soumare,Midfield,Defensive Midfield,right,188.0,France,1999-02-27 00:00:00,22.0,France,DM
+357119,Ibrahima Konate,Defender,Centre-Back,right,194.0,France,1999-05-25 00:00:00,22.0,France,CB
+203460,Jack Grealish,Attack,Left Winger,right,180.0,England,1995-09-10 00:00:00,25.0,England,LW
+401173,Jadon Sancho,Attack,Left Winger,right,180.0,England,2000-03-25 00:00:00,21.0,England,LW
+164770,Raphael Varane,Defender,Centre-Back,right,191.0,France,1993-04-25 00:00:00,28.0,France,CB
+8198,Cristiano Ronaldo,Attack,Centre-Forward,right,185.0,Portugal,1985-02-05 00:00:00,36.0,Portugal,CF
+340329,Joe Willock,Midfield,Central Midfield,right,186.0,England,1999-08-20 00:00:00,21.0,England,CM
+128904,Ben Gibson,Defender,Centre-Back,left,185.0,England,1993-01-15 00:00:00,28.0,England,CB
+377393,Pierre Lees-Melou,Midfield,Defensive Midfield,right,185.0,France,1993-05-25 00:00:00,28.0,France,CM
+318523,Romain Perraud,Defender,Left-Back,left,173.0,France,1997-09-22 00:00:00,23.0,France,LB
+379807,Lyanco,Defender,Centre-Back,right,187.0,Brazil,1997-02-01 00:00:00,24.0,Brazil,CB
+476344,Emerson Royal,Defender,Right-Back,right,183.0,Brazil,1999-01-14 00:00:00,22.0,Brazil,RB
+537382,Bryan Gil,Attack,Left Winger,left,175.0,Spain,2001-02-11 00:00:00,20.0,Spain,LW
+635336,Imran Louza,Midfield,Central Midfield,left,178.0,Morocco,1999-05-01 00:00:00,22.0,Morocco,CM
+121477,Craig Dawson,Defender,Centre-Back,right,188.0,England,1990-05-06 00:00:00,31.0,England,CB
+578391,Rayan Ait Nouri,Defender,Left-Back,left,180.0,Algeria,2001-06-06 00:00:00,20.0,France,LB
+29124,Aritz Aduriz,Attack,Centre-Forward,right,181.0,Spain,1981-02-11 00:00:00,31.0,Spain,CF
+141835,Alvaro Vazquez,Attack,Centre-Forward,right,182.0,Spain,1991-04-27 00:00:00,21.0,Spain,CF
+26065,Miguel Angel Moya,Goalkeeper,Goalkeeper,right,189.0,Spain,1984-04-02 00:00:00,28.0,Spain,GK
+65301,Xavi Torres,Midfield,Defensive Midfield,right,179.0,Spain,1986-11-21 00:00:00,25.0,Spain,DM
+66106,Sergio Canales,Midfield,Attacking Midfield,left,175.0,Spain,1991-02-16 00:00:00,21.0,Spain,AM
+38954,Fernando Gago,Midfield,Defensive Midfield,right,177.0,Argentina,1986-04-10 00:00:00,26.0,Argentina,DM
+35773,Carlos Vela,Attack,Right Winger,left,177.0,Mexico,1989-03-01 00:00:00,23.0,Mexico,RW
+39087,Cata Diaz,Defender,Centre-Back,right,183.0,Argentina,1979-07-13 00:00:00,32.0,Argentina,CB
+27992,Luka Modric,Midfield,Central Midfield,right,172.0,Croatia,1985-09-09 00:00:00,26.0,Croatia,CM
+72315,Javi Marquez,Midfield,Central Midfield,left,179.0,Spain,1986-05-11 00:00:00,26.0,Spain,CM
+44674,Giovani dos Santos,Attack,Second Striker,left,175.0,Mexico,1989-05-11 00:00:00,23.0,Mexico,SS
+31050,Damien Perquis,Defender,Centre-Back,right,184.0,Poland,1984-04-10 00:00:00,28.0,Poland,CB
+58013,Apono,Midfield,Central Midfield,right,174.0,Spain,1984-02-13 00:00:00,28.0,Spain,CM
+27394,Alex Song,Midfield,Defensive Midfield,right,185.0,Cameroon,1987-09-09 00:00:00,24.0,Cameroon,DM
+69751,Jordi Alba,Defender,Left-Back,left,170.0,Spain,1989-03-21 00:00:00,23.0,Spain,LB
+60890,Fabian Orellana,Attack,Right Winger,right,168.0,Chile,1986-01-27 00:00:00,27.0,Chile,RW
+34370,Diego Lopez,Goalkeeper,Goalkeeper,right,196.0,Spain,1981-11-03 00:00:00,31.0,Spain,GK
+45646,Diego Buonanotte,Midfield,Attacking Midfield,left,161.0,Argentina,1988-04-19 00:00:00,24.0,Argentina,AM
+7841,Carlos Aranda,Attack,Centre-Forward,right,183.0,Spain,1980-07-27 00:00:00,32.0,Spain,CF
+93704,Josuha Guilavogui,Midfield,Defensive Midfield,right,188.0,France,1990-09-19 00:00:00,22.0,France,DM
+221899,Leo Baptistao,Attack,Centre-Forward,right,183.0,Brazil,1992-08-26 00:00:00,20.0,Brazil,CF
+7980,David Villa,Attack,Centre-Forward,both,174.0,Spain,1981-12-03 00:00:00,31.0,Spain,CF
+65237,Andreu Fontas,Defender,Centre-Back,left,186.0,Spain,1989-11-14 00:00:00,23.0,Spain,CB
+16335,Charles,Midfield,Defensive Midfield,right,175.0,Brazil,1985-02-14 00:00:00,29.0,Brazil,CF
+65331,Michel Herrero,Midfield,Central Midfield,right,182.0,Spain,1988-07-29 00:00:00,24.0,Spain,CM
+51587,Pedro Leon,Attack,Right Winger,right,183.0,Spain,1986-11-24 00:00:00,26.0,Spain,RW
+93935,Sergio Escudero,Defender,Left-Back,left,176.0,Spain,1989-09-02 00:00:00,23.0,Spain,LB
+109256,Haris Seferovic,Attack,Centre-Forward,left,189.0,,1992-02-22 00:00:00,21.0,Switzerland,CF
+27389,Kevin Gameiro,Attack,Centre-Forward,right,172.0,France,1987-05-09 00:00:00,26.0,France,CF
+39381,Gareth Bale,Attack,Right Winger,left,186.0,Wales,1989-07-16 00:00:00,24.0,Wales,RW
+59344,Asier Illarramendi,Midfield,Defensive Midfield,right,179.0,Spain,1990-03-08 00:00:00,23.0,Spain,DM
+85288,Isco,Midfield,Attacking Midfield,right,176.0,Spain,1992-04-21 00:00:00,21.0,Spain,AM
+138927,Daniel Carvajal,Defender,Right-Back,right,173.0,Spain,1992-01-11 00:00:00,21.0,Spain,RB
+40888,Benat Etxebarria,Midfield,Central Midfield,right,176.0,Spain,1987-02-19 00:00:00,26.0,Spain,CM
+51532,Kike Sola,Attack,Centre-Forward,right,184.0,Spain,1986-02-25 00:00:00,27.0,Spain,CF
+51474,Mikel Rico,Midfield,Central Midfield,right,178.0,Spain,1984-11-04 00:00:00,28.0,Spain,CM
+85258,Mikel Balenziaga,Defender,Left-Back,left,177.0,Spain,1988-02-29 00:00:00,25.0,Spain,LB
+60517,Yacine Brahimi,Attack,Left Winger,right,175.0,Algeria,1990-02-08 00:00:00,23.0,Algeria,LW
+4248,Diego,Midfield,Attacking Midfield,right,173.0,Brazil,1985-02-28 00:00:00,28.0,Brazil,CM
+125781,Antoine Griezmann,Attack,Second Striker,left,176.0,France,1991-03-21 00:00:00,23.0,France,SS
+34572,Mario Mandzukic,Attack,Centre-Forward,right,190.0,Croatia,1986-05-21 00:00:00,28.0,Croatia,CF
+21748,Alessio Cerci,Attack,Right Winger,left,180.0,Italy,1987-07-23 00:00:00,27.0,Italy,RW
+44373,Guilherme Siqueira,Defender,Left-Back,left,182.0,Brazil,1986-04-28 00:00:00,28.0,Brazil,LB
+29055,Jesus Gamez,Defender,Right-Back,right,177.0,Spain,1985-04-10 00:00:00,29.0,Spain,RB
+44352,Luis Suarez,Attack,Centre-Forward,right,182.0,Uruguay,1987-01-24 00:00:00,27.0,Uruguay,CF
+5404,Jeremy Mathieu,Defender,Left-Back,left,189.0,France,1983-10-29 00:00:00,30.0,France,CB
+15904,Thomas Vermaelen,Defender,Centre-Back,left,183.0,Belgium,1985-11-14 00:00:00,28.0,Belgium,CB
+32467,Ivan Rakitic,Midfield,Central Midfield,right,184.0,Croatia,1988-03-10 00:00:00,26.0,Croatia,CM
+74857,Marc-Andre ter Stegen,Goalkeeper,Goalkeeper,right,187.0,Germany,1992-04-30 00:00:00,22.0,Germany,GK
+88103,James Rodriguez,Midfield,Attacking Midfield,left,181.0,Colombia,1991-07-12 00:00:00,23.0,Colombia,AM
+31909,Toni Kroos,Midfield,Central Midfield,right,183.0,Germany,1990-01-04 00:00:00,24.0,Germany,CM
+79422,Keylor Navas,Goalkeeper,Goalkeeper,right,185.0,Costa Rica,1986-12-15 00:00:00,27.0,Costa Rica,GK
+45184,Grzegorz Krychowiak,Midfield,Defensive Midfield,right,187.0,Poland,1990-01-29 00:00:00,24.0,Poland,DM
+84085,Timothee Kolodziejczak,Defender,Centre-Back,left,183.0,France,1991-10-01 00:00:00,22.0,France,CB
+88490,Aleix Vidal,Attack,Right Winger,right,177.0,Spain,1989-08-21 00:00:00,24.0,Spain,RB
+12249,Ever Banega,Midfield,Central Midfield,right,174.0,Argentina,1988-06-29 00:00:00,26.0,Argentina,CM
+51710,Sergio Asenjo,Goalkeeper,Goalkeeper,right,189.0,Spain,1989-06-28 00:00:00,25.0,Spain,GK
+60445,Jonathan dos Santos,Midfield,Defensive Midfield,right,172.0,Mexico,1990-04-26 00:00:00,24.0,Mexico,CM
+110309,Lucas Orban,Defender,Centre-Back,left,179.0,Argentina,1989-02-03 00:00:00,25.0,Argentina,CB
+170472,Dimitri Foulquier,Defender,Right-Back,right,183.0,Guadeloupe,1993-03-23 00:00:00,21.0,Guadeloupe,RB
+91885,Jesus Fernandez,Goalkeeper,Goalkeeper,left,190.0,Spain,1988-06-11 00:00:00,26.0,Spain,GK
+21369,Arda Turan,Attack,Left Winger,right,177.0,Turkey,1987-01-30 00:00:00,28.0,Turkey,LW
+27486,Kiko Casilla,Goalkeeper,Goalkeeper,right,190.0,Spain,1986-10-02 00:00:00,28.0,Spain,GK
+221316,Lucas Vazquez,Defender,Right-Back,right,173.0,Spain,1991-07-01 00:00:00,24.0,Spain,RW
+214316,Luciano Vietto,Attack,Centre-Forward,right,173.0,Argentina,1993-12-05 00:00:00,21.0,Argentina,LW
+140776,Yannick Carrasco,Attack,Left Winger,right,181.0,Belgium,1993-09-04 00:00:00,21.0,Belgium,LW
+107010,Stefan Savic,Defender,Centre-Back,right,187.0,Montenegro,1991-01-08 00:00:00,24.0,Montenegro,CB
+108830,Aymen Abdennour,Defender,Centre-Back,left,187.0,Tunisia,1989-08-06 00:00:00,26.0,Tunisia,CB
+255653,Santi Mina,Attack,Centre-Forward,right,181.0,Spain,1995-12-07 00:00:00,19.0,Spain,CF
+58115,Yoel Rodriguez,Goalkeeper,Goalkeeper,right,184.0,Spain,1988-08-28 00:00:00,26.0,Spain,GK
+73734,Steven Nzonzi,Midfield,Defensive Midfield,right,196.0,France,1988-12-15 00:00:00,26.0,France,DM
+74297,Gael Kakuta,Midfield,Attacking Midfield,left,174.0,DR Congo,1991-06-21 00:00:00,24.0,DR Congo,AM
+54155,Mariano,Defender,Right-Back,right,177.0,Brazil,1986-06-23 00:00:00,29.0,Brazil,RB
+51118,Adil Rami,Defender,Centre-Back,right,191.0,France,1985-12-27 00:00:00,29.0,France,CB
+195171,Samu Castillejo,Attack,Right Winger,left,182.0,Spain,1995-01-18 00:00:00,20.0,Spain,RW
+208890,Samu Garcia,Attack,Right Winger,right,177.0,Spain,1990-07-13 00:00:00,24.0,Spain,RW
+165007,Denis Suarez,Midfield,Attacking Midfield,right,176.0,Spain,1994-01-06 00:00:00,21.0,Spain,AM
+62920,Victor Ruiz,Defender,Centre-Back,left,184.0,Spain,1989-01-25 00:00:00,26.0,Spain,CB
+34601,Raul Garcia,Attack,Centre-Forward,right,184.0,Spain,1986-07-11 00:00:00,29.0,Spain,CF
+177467,Gerard Moreno,Attack,Centre-Forward,left,180.0,Spain,1992-04-07 00:00:00,23.0,Spain,CF
+73092,Rene Krhin,Midfield,Defensive Midfield,right,189.0,Slovenia,1990-05-21 00:00:00,25.0,Slovenia,CM
+98249,Takashi Inui,Attack,Left Winger,right,169.0,Japan,1988-06-02 00:00:00,27.0,Japan,LW
+96540,Alfredo Ortuno,Attack,Centre-Forward,both,182.0,Spain,1991-01-21 00:00:00,24.0,Spain,CF
+7663,Joaquin,Attack,Right Winger,right,181.0,Spain,1981-07-21 00:00:00,34.0,Spain,RW
+163086,Cristiano Piccini,Defender,Centre-Back,right,189.0,Italy,1992-09-26 00:00:00,22.0,Italy,RB
+138803,Francisco Portillo,Attack,Right Winger,right,169.0,Spain,1990-06-13 00:00:00,25.0,Spain,RW
+57403,Foued Kadir,Midfield,Attacking Midfield,right,180.0,Algeria,1983-12-05 00:00:00,31.0,Algeria,AM
+39151,Augusto Fernandez,Midfield,Central Midfield,right,177.0,Argentina,1986-04-10 00:00:00,29.0,Argentina,CM
+105521,Ciro Immobile,Attack,Centre-Forward,right,185.0,Italy,1990-02-20 00:00:00,25.0,Italy,CF
+58818,Claudio Beauvue,Attack,Centre-Forward,right,175.0,Guadeloupe,1988-04-16 00:00:00,27.0,Guadeloupe,CF
+83895,Marcelo Diaz,Midfield,Defensive Midfield,right,167.0,Chile,1986-12-30 00:00:00,29.0,Chile,DM
+126716,Paco Alcacer,Attack,Centre-Forward,right,175.0,Spain,1993-08-30 00:00:00,23.0,Spain,CF
+126540,Samuel Umtiti,Defender,Centre-Back,left,182.0,France,1993-11-14 00:00:00,22.0,France,CB
+76061,Sime Vrsaljko,Defender,Right-Back,right,181.0,Croatia,1992-01-10 00:00:00,24.0,Croatia,RB
+63186,Roberto Soriano,Midfield,Attacking Midfield,right,182.0,Italy,1991-02-08 00:00:00,25.0,Italy,AM
+82048,Nicola Sansone,Attack,Left Winger,right,174.0,Italy,1991-09-10 00:00:00,24.0,Italy,LW
+77737,Alfred N'Diaye,Midfield,Defensive Midfield,right,189.0,Senegal,1990-03-06 00:00:00,26.0,Senegal,DM
+98322,Denis Cheryshev,Attack,Left Winger,left,179.0,Russia,1990-12-26 00:00:00,25.0,Russia,LW
+55957,Alvaro Gonzalez,Midfield,Central Midfield,right,176.0,Uruguay,1984-10-29 00:00:00,26.0,Spain,CB
+234523,Antonio Sanabria,Attack,Centre-Forward,right,180.0,Paraguay,1996-03-04 00:00:00,20.0,Paraguay,CF
+127142,Jonas Martin,Midfield,Defensive Midfield,right,184.0,France,1990-04-09 00:00:00,26.0,France,CM
+227081,Joaquin Correa,Attack,Second Striker,right,188.0,Argentina,1994-08-13 00:00:00,21.0,Argentina,SS
+76163,Franco Vazquez,Midfield,Attacking Midfield,left,187.0,Argentina,1989-02-22 00:00:00,27.0,Argentina,AM
+146854,Wissam Ben Yedder,Attack,Centre-Forward,both,170.0,France,1990-08-12 00:00:00,25.0,France,CF
+167291,Gabriel Pires,Midfield,Defensive Midfield,left,187.0,Brazil,1993-09-18 00:00:00,22.0,Brazil,CM
+129444,David Lopez,Defender,Centre-Back,right,185.0,Spain,1989-10-09 00:00:00,26.0,Spain,DM
+28261,Jose Manuel Jurado,Midfield,Attacking Midfield,right,176.0,Spain,1986-06-29 00:00:00,30.0,Spain,AM
+56134,Javi Fuego,Midfield,Defensive Midfield,right,182.0,Spain,1984-01-04 00:00:00,32.0,Spain,DM
+128488,Alejandro Galvez,Defender,Centre-Back,right,190.0,Spain,1989-06-06 00:00:00,27.0,Spain,CB
+71548,Anaitz Arbilla,Defender,Centre-Back,right,178.0,Spain,1987-05-15 00:00:00,29.0,Spain,CB
+238868,Ruben Pena,Defender,Right-Back,right,170.0,Spain,1991-07-18 00:00:00,24.0,Spain,RB
+66112,Keko Gontan,Missing,,right,174.0,Spain,1991-12-27 00:00:00,24.0,Spain,RW
+57186,Bakary Kone,Defender,Centre-Back,right,188.0,Burkina Faso,1988-04-27 00:00:00,28.0,Burkina Faso,CB
+253839,Alvaro Medran,Midfield,Central Midfield,right,177.0,Spain,1994-03-15 00:00:00,22.0,Spain,CM
+182904,Clement Lenglet,Defender,Centre-Back,left,186.0,France,1995-06-17 00:00:00,21.0,France,CB
+229604,Geronimo Rulli,Goalkeeper,Goalkeeper,right,189.0,Argentina,1992-05-20 00:00:00,24.0,Argentina,GK
+62945,Luis Hernandez,Defender,Centre-Back,right,182.0,Spain,1989-04-14 00:00:00,27.0,Spain,CB
+339808,Theo Hernandez,Defender,Left-Back,left,184.0,France,1997-10-06 00:00:00,19.0,France,LB
+319745,Dani Ceballos,Midfield,Central Midfield,right,179.0,Spain,1996-08-07 00:00:00,20.0,Spain,CM
+288230,Ousmane Dembele,Attack,Centre-Forward,both,178.0,France,1997-05-15 00:00:00,20.0,France,RW
+27667,Vitolo,Midfield,Central Midfield,right,168.0,Spain,1983-09-09 00:00:00,27.0,Spain,LW
+119228,Luis Muriel,Attack,Centre-Forward,right,180.0,Colombia,1991-04-16 00:00:00,26.0,Colombia,CF
+102744,Sebastien Corchia,Defender,Right-Back,right,176.0,France,1990-11-01 00:00:00,26.0,France,RB
+251106,Enes Unal,Attack,Centre-Forward,right,187.0,Türkiye,1997-05-10 00:00:00,20.0,Turkey,CF
+177847,Adnan Januzaj,Attack,Right Winger,left,186.0,Belgium,1995-02-05 00:00:00,22.0,Belgium,RW
+56067,Pablo Piatti,Attack,Left Winger,left,163.0,Argentina,1989-03-31 00:00:00,28.0,Argentina,LW
+246277,Burgui,Attack,Left Winger,right,186.0,Spain,1993-10-29 00:00:00,23.0,Spain,LW
+176140,Rodrigo Ely,Defender,Centre-Back,right,188.0,Brazil,1993-11-03 00:00:00,23.0,Brazil,CB
+85383,Ruben Sobrino,Attack,Centre-Forward,right,185.0,Spain,1992-06-01 00:00:00,25.0,Spain,CF
+177046,Ruben Duarte,Defender,Centre-Back,left,178.0,Spain,1995-10-18 00:00:00,21.0,Spain,LB
+263727,Joan Jordan,Midfield,Central Midfield,right,185.0,Spain,1994-07-06 00:00:00,23.0,Spain,CM
+96828,Simone Zaza,Attack,Centre-Forward,left,186.0,Italy,1991-06-25 00:00:00,26.0,Italy,CF
+43630,Neto,Defender,Right-Back,right,175.0,Brazil,1981-02-07 00:00:00,27.0,Brazil,GK
+283223,Emre Mor,Attack,Right Winger,left,169.0,Türkiye,1997-07-24 00:00:00,20.0,Turkey,RW
+77826,Ryad Boudebouz,Midfield,Attacking Midfield,left,177.0,Algeria,1990-02-19 00:00:00,27.0,Algeria,AM
+263856,Victor Camarasa,Midfield,Central Midfield,right,183.0,Spain,1994-05-28 00:00:00,23.0,Spain,CM
+141834,Cristian Tello,Attack,Left Winger,both,178.0,Spain,1991-08-11 00:00:00,25.0,Spain,LW
+129386,Zouhair Feddal,Defender,Centre-Back,left,191.0,Morocco,1989-12-23 00:00:00,27.0,Morocco,CB
+54160,Guilherme,Midfield,Attacking Midfield,both,174.0,Brazil,1988-10-22 00:00:00,26.0,Brazil,DM
+135343,Fabian Schar,Defender,Centre-Back,right,186.0,Switzerland,1991-12-20 00:00:00,25.0,Switzerland,CB
+7542,Juanfran,Defender,Left-Back,left,182.0,Spain,1976-07-15 00:00:00,28.0,Spain,RB
+75127,Ezequiel Munoz,Defender,Centre-Back,right,185.0,Argentina,1990-10-08 00:00:00,26.0,Argentina,CB
+129679,Cheick Doukoure,Midfield,Defensive Midfield,right,180.0,Cote d'Ivoire,1992-09-11 00:00:00,24.0,Cote d'Ivoire,DM
+49347,Mitchell Langerak,Goalkeeper,Goalkeeper,right,193.0,Australia,1988-08-22 00:00:00,29.0,Australia,GK
+339820,Amath Ndiaye,Attack,Right Winger,right,173.0,Senegal,1996-07-16 00:00:00,21.0,Senegal,LW
+28285,Dani Pacheco,Midfield,Defensive Midfield,both,170.0,Spain,1991-01-05 00:00:00,26.0,Spain,LW
+188838,Bruno Gonzalez,Defender,Centre-Back,right,184.0,Spain,1990-05-24 00:00:00,27.0,Spain,CB
+51046,Hector Moreno,Defender,Centre-Back,left,186.0,Mexico,1988-01-17 00:00:00,30.0,Mexico,CB
+158863,Inigo Martinez,Defender,Centre-Back,left,182.0,Spain,1991-05-17 00:00:00,26.0,Spain,CB
+74869,Francis Coquelin,Midfield,Defensive Midfield,right,177.0,France,1991-05-13 00:00:00,26.0,France,DM
+171167,Jairo Samperio,Attack,Right Winger,right,172.0,Spain,1993-07-11 00:00:00,24.0,Spain,LW
+99922,Marc Bartra,Defender,Centre-Back,right,184.0,Spain,1991-01-15 00:00:00,27.0,Spain,CB
+61812,Yuri Berchiche,Defender,Left-Back,left,181.0,Spain,1990-02-10 00:00:00,28.0,Spain,LB
+197545,Ander Capa,Defender,Right-Back,right,175.0,Spain,1992-02-08 00:00:00,26.0,Spain,RB
+205562,Thomas Lemar,Midfield,Attacking Midfield,left,171.0,France,1995-11-12 00:00:00,22.0,France,AM
+36371,Nikola Kalinic,Attack,Centre-Forward,both,187.0,Croatia,1988-01-05 00:00:00,30.0,Croatia,CF
+44062,Antonio Adan,Goalkeeper,Goalkeeper,left,190.0,Spain,1987-05-13 00:00:00,31.0,Spain,GK
+98596,John Guidetti,Attack,Centre-Forward,right,185.0,Sweden,1992-04-15 00:00:00,26.0,Sweden,CF
+323704,Malcom,Attack,Right Winger,left,172.0,Brazil,1997-02-26 00:00:00,21.0,Brazil,RW
+37666,Arturo Vidal,Midfield,Central Midfield,right,180.0,Chile,1987-05-22 00:00:00,31.0,Chile,CM
+273152,Nemanja Maksimovic,Midfield,Central Midfield,right,189.0,Serbia,1995-01-26 00:00:00,23.0,Serbia,DM
+281755,Ivan Alejo,Attack,Right Winger,right,186.0,Spain,1995-02-10 00:00:00,23.0,Spain,RW
+226012,David Soria,Goalkeeper,Goalkeeper,right,192.0,Spain,1993-04-04 00:00:00,25.0,Spain,GK
+262939,Johan Mojica,Defender,Left-Back,left,184.0,Colombia,1992-08-21 00:00:00,25.0,Colombia,LB
+71905,Coke,Defender,Right-Back,right,176.0,Spain,1987-04-26 00:00:00,31.0,Spain,RB
+423444,Fran Beltran,Midfield,Central Midfield,right,165.0,Spain,1999-02-03 00:00:00,19.0,Spain,CM
+278359,Borja Iglesias,Attack,Centre-Forward,right,187.0,Spain,1993-01-17 00:00:00,25.0,Spain,CF
+142021,Sergi Darder,Midfield,Central Midfield,right,180.0,Spain,1993-12-22 00:00:00,24.0,Spain,CM
+108390,Thibaut Courtois,Goalkeeper,Goalkeeper,left,199.0,Belgium,1992-05-11 00:00:00,26.0,Belgium,GK
+280730,Alvaro Odriozola,Defender,Right-Back,right,175.0,Spain,1995-12-14 00:00:00,22.0,Spain,RB
+225020,Mariano Diaz,Attack,Centre-Forward,right,180.0,Dominican Republic,1993-08-01 00:00:00,25.0,Dominican Republic,CF
+142031,Omar Mascarell,Midfield,Defensive Midfield,right,181.0,Equatorial Guinea,1993-02-02 00:00:00,25.0,Spain,DM
+75446,Pablo de Blasis,Midfield,Attacking Midfield,right,165.0,Argentina,1988-02-04 00:00:00,30.0,Argentina,LW
+205503,Ibrahim Amadou,Midfield,Defensive Midfield,right,183.0,France,1993-04-06 00:00:00,25.0,France,DM
+378954,Joris Gnagnon,Defender,Centre-Back,right,182.0,France,1997-01-13 00:00:00,21.0,France,CB
+92947,Sergi Gomez,Defender,Centre-Back,right,185.0,Spain,1992-03-28 00:00:00,26.0,Spain,CB
+225122,Goncalo Guedes,Attack,Left Winger,right,179.0,Portugal,1996-11-29 00:00:00,21.0,Portugal,LW
+127189,Geoffrey Kondogbia,Midfield,Defensive Midfield,left,188.0,Central African Republic,1993-02-15 00:00:00,25.0,Central African Republic,DM
+346289,Mouctar Diakhaby,Defender,Centre-Back,right,192.0,Guinea,1996-12-19 00:00:00,21.0,France,CB
+131102,Jeison Murillo,Defender,Centre-Back,right,182.0,Colombia,1992-05-27 00:00:00,26.0,Colombia,CB
+63463,Daniel Wass,Midfield,Central Midfield,right,181.0,Denmark,1989-05-31 00:00:00,29.0,Denmark,CM
+315110,Karl Toko Ekambi,Attack,Centre-Forward,right,182.0,Cameroon,1992-09-14 00:00:00,25.0,Cameroon,LW
+11111,Ramiro Funes Mori,Defender,Centre-Back,left,187.0,Argentina,1991-03-05 00:00:00,27.0,Argentina,CB
+119235,Carlos Bacca,Attack,Centre-Forward,right,181.0,Colombia,1986-09-08 00:00:00,31.0,Colombia,CF
+153427,Bebe,Attack,Left Winger,right,190.0,Cape Verde,1990-07-12 00:00:00,28.0,Portugal,LW
+58497,Alberto Garcia,Goalkeeper,Goalkeeper,right,182.0,Spain,1985-02-09 00:00:00,33.0,Spain,GK
+247250,Ruben Alcaraz,Midfield,Central Midfield,right,180.0,Spain,1991-05-01 00:00:00,27.0,Spain,CM
+127837,Ibai Gomez,Attack,Left Winger,right,178.0,Spain,1989-11-11 00:00:00,29.0,Spain,RW
+605184,Jean-Clair Todibo,Defender,Centre-Back,right,190.0,France,1999-12-30 00:00:00,19.0,France,CB
+314678,Brahim Diaz,Attack,Right Winger,both,170.0,Morocco,1999-08-03 00:00:00,19.0,Spain,AM
+223725,Munir El Haddadi,Midfield,Attacking Midfield,left,177.0,Morocco,1995-09-01 00:00:00,23.0,Morocco,CF
+282411,Marcos Llorente,Defender,Right-Back,right,183.0,Spain,1995-01-30 00:00:00,24.0,Spain,CM
+281769,Mario Hermoso,Defender,Centre-Back,left,184.0,Spain,1995-06-18 00:00:00,24.0,Spain,CB
+95810,Kieran Trippier,Defender,Right-Back,right,173.0,England,1990-09-19 00:00:00,28.0,England,RB
+257462,Luka Jovic,Attack,Centre-Forward,right,182.0,Serbia,1997-12-23 00:00:00,21.0,Serbia,CF
+291417,Ferland Mendy,Defender,Left-Back,left,180.0,France,1995-06-08 00:00:00,24.0,France,LB
+146227,Jasper Cillessen,Goalkeeper,Goalkeeper,right,187.0,Netherlands,1989-04-22 00:00:00,30.0,Netherlands,GK
+396894,Maxi Gomez,Attack,Centre-Forward,right,186.0,Uruguay,1996-08-14 00:00:00,22.0,Uruguay,CF
+411975,Jules Kounde,Defender,Right-Back,right,180.0,France,1998-11-12 00:00:00,20.0,France,CB
+174694,Rony Lopes,Attack,Right Winger,left,174.0,Portugal,1995-12-28 00:00:00,23.0,Portugal,RW
+189441,Lucas Ocampos,Attack,Left Winger,right,178.0,Argentina,1994-07-11 00:00:00,24.0,Argentina,LW
+329145,Diego Carlos,Defender,Centre-Back,right,185.0,Brazil,1993-03-15 00:00:00,26.0,Brazil,CB
+349066,Alexander Isak,Attack,Centre-Forward,right,190.0,Sweden,1999-09-21 00:00:00,19.0,Sweden,CF
+357884,Fernando Calero,Defender,Centre-Back,right,184.0,Spain,1995-09-14 00:00:00,23.0,Spain,CB
+131708,Kenneth Omeruo,Defender,Centre-Back,right,185.0,Nigeria,1993-10-17 00:00:00,25.0,Nigeria,CB
+203496,Nabil Fekir,Midfield,Attacking Midfield,left,173.0,France,1993-07-18 00:00:00,26.0,France,AM
+15452,Raul Albiol,Defender,Centre-Back,right,190.0,Spain,1985-09-04 00:00:00,33.0,Spain,CB
+257851,Ruben Vezo,Defender,Centre-Back,right,182.0,Portugal,1994-04-25 00:00:00,25.0,Portugal,CB
+145769,Sergio Leon,Attack,Centre-Forward,right,176.0,Spain,1989-01-06 00:00:00,30.0,Spain,CF
+142027,Pablo Hervias,Attack,Right Winger,right,174.0,Spain,1993-03-08 00:00:00,26.0,Spain,RW
+213260,Ruben Garcia,Attack,Right Winger,left,172.0,Spain,1993-07-14 00:00:00,25.0,Spain,RW
+443222,Marc Cardona,Attack,Centre-Forward,right,182.0,Spain,1995-07-08 00:00:00,23.0,Spain,CF
+242532,Rober Ibanez,Attack,Right Winger,right,175.0,Spain,1993-03-22 00:00:00,26.0,Spain,RW
+251680,Brandon Thomas,Attack,Left Winger,right,173.0,Spain,1995-02-04 00:00:00,24.0,Spain,CF
+95641,Darko Brasanac,Midfield,Central Midfield,right,178.0,Serbia,1992-02-12 00:00:00,27.0,Serbia,CM
+61546,Facundo Roncaglia,Defender,Centre-Back,right,179.0,Argentina,1987-02-10 00:00:00,32.0,Argentina,CB
+211251,Darwin Machis,Attack,Left Winger,right,170.0,Venezuela,1993-02-07 00:00:00,26.0,Venezuela,LW
+297784,Yan Eteki,Midfield,Defensive Midfield,right,182.0,Cameroon,1997-08-26 00:00:00,21.0,Cameroon,CM
+162079,Fede Vico,Midfield,Attacking Midfield,left,179.0,Spain,1994-07-04 00:00:00,24.0,Spain,AM
+95732,Martin Braithwaite,Attack,Centre-Forward,right,177.0,Denmark,1991-06-05 00:00:00,28.0,Denmark,CF
+302991,Erick Cabaco,Defender,Centre-Back,right,185.0,Uruguay,1995-04-19 00:00:00,24.0,Uruguay,CB
+433049,Youssef En-Nesyri,Attack,Centre-Forward,left,188.0,Morocco,1997-06-01 00:00:00,22.0,Morocco,CF
+102423,Leandro Cabrera,Defender,Centre-Back,left,190.0,Uruguay,1991-06-17 00:00:00,28.0,Uruguay,CB
+8176,Oier Olazabal,Goalkeeper,Goalkeeper,left,189.0,Spain,1989-09-14 00:00:00,30.0,Spain,GK
+44162,Miralem Pjanic,Midfield,Central Midfield,right,181.0,Bosnia-Herzegovina,1990-04-02 00:00:00,30.0,Bosnia-Herzegovina,CM
+111961,Suso,Midfield,Attacking Midfield,left,177.0,Spain,1993-11-19 00:00:00,26.0,Spain,RW
+284884,Oscar Rodriguez,Midfield,Attacking Midfield,right,174.0,Spain,1998-06-28 00:00:00,22.0,Spain,AM
+182579,Karim Rekik,Defender,Centre-Back,left,186.0,Netherlands,1994-12-02 00:00:00,25.0,Netherlands,CB
+59561,Dani Parejo,Midfield,Central Midfield,right,182.0,Spain,1989-04-16 00:00:00,31.0,Spain,CM
+338425,Alex Berenguer,Attack,Left Winger,right,175.0,Spain,1995-07-04 00:00:00,25.0,Spain,LW
+60542,Maxime Gonalons,Midfield,Defensive Midfield,right,187.0,France,1989-03-10 00:00:00,31.0,France,DM
+487688,Alberto Soro,Attack,Right Winger,left,173.0,Spain,1999-03-09 00:00:00,21.0,Spain,RW
+169497,Juan Cruz,Defender,Left-Back,left,182.0,Spain,1992-07-28 00:00:00,28.0,Spain,LB
+114060,Enric Gallego,Attack,Centre-Forward,left,189.0,Spain,1986-09-12 00:00:00,33.0,Spain,CF
+213670,Lucas Torro,Midfield,Defensive Midfield,right,190.0,Spain,1994-07-19 00:00:00,26.0,Spain,DM
+142419,Raul Navas,Defender,Centre-Back,right,187.0,Spain,1988-05-11 00:00:00,32.0,Spain,CB
+422460,Dani Gomez,Attack,Centre-Forward,right,178.0,Spain,1998-07-30 00:00:00,22.0,Spain,CF
+455181,Jorge de Frutos,Attack,Right Winger,right,173.0,Spain,1997-02-20 00:00:00,23.0,Spain,RW
+340853,Javi Sanchez,Defender,Centre-Back,right,189.0,Spain,1997-03-14 00:00:00,23.0,Spain,CB
+235412,Jawad El Yamiq,Defender,Centre-Back,right,193.0,Morocco,1992-02-29 00:00:00,28.0,Morocco,CB
+139434,Raul Carnero,Defender,Left-Back,left,179.0,Spain,1989-04-30 00:00:00,31.0,Spain,LB
+57522,Andres Fernandez,Goalkeeper,Goalkeeper,right,185.0,Spain,1986-12-16 00:00:00,33.0,Spain,GK
+171362,Pablo Insua,Defender,Centre-Back,right,187.0,Spain,1993-09-09 00:00:00,26.0,Spain,CB
+20005,Papu Gomez,Attack,Left Winger,right,167.0,Argentina,1988-02-15 00:00:00,32.0,Argentina,SS
+216464,Carlos Fernandez,Attack,Centre-Forward,left,185.0,Spain,1996-05-22 00:00:00,24.0,Spain,CF
+255901,Rodrigo de Paul,Midfield,Central Midfield,right,178.0,Argentina,1994-05-24 00:00:00,27.0,Argentina,CM
+517894,Matheus Cunha,Attack,Left Winger,right,183.0,Brazil,1999-05-27 00:00:00,22.0,Brazil,CF
+640428,Eduardo Camavinga,Midfield,Central Midfield,left,182.0,France,2002-11-10 00:00:00,18.0,France,CM
+361254,Rafa Mir,Attack,Centre-Forward,right,191.0,Spain,1997-06-18 00:00:00,24.0,Spain,CF
+91849,Thomas Delaney,Midfield,Central Midfield,left,182.0,Denmark,1991-09-03 00:00:00,29.0,Denmark,DM
+480763,Juan Foyth,Defender,Centre-Back,right,187.0,Argentina,1998-01-12 00:00:00,23.0,Argentina,CB
+626913,Boulaye Dia,Attack,Centre-Forward,right,180.0,Senegal,1996-11-16 00:00:00,24.0,Senegal,CF
+113133,German Pezzella,Defender,Centre-Back,right,187.0,Argentina,1991-06-27 00:00:00,30.0,Argentina,CB
+162074,Alvaro Vadillo,Attack,Left Winger,right,180.0,Spain,1994-09-12 00:00:00,26.0,Spain,LW
+46413,Ante Budimir,Attack,Centre-Forward,left,190.0,Croatia,1991-07-22 00:00:00,29.0,Croatia,CF
+282700,Enric Franquesa,Defender,Left-Back,left,175.0,Spain,1997-02-26 00:00:00,24.0,Spain,LB
+319160,Jakub Jankto,Midfield,Left Midfield,left,184.0,Czech Republic,1996-01-19 00:00:00,25.0,Czech Republic,LM
+284854,Carles Alena,Midfield,Central Midfield,left,180.0,Spain,1998-01-05 00:00:00,23.0,Spain,CM
+143029,Stefan Mitrovic,Defender,Centre-Back,right,189.0,Serbia,1990-05-22 00:00:00,31.0,Serbia,CB
+334222,Lucas Boye,Attack,Centre-Forward,right,183.0,Argentina,1996-02-28 00:00:00,25.0,Argentina,CF
+63531,Kwadwo Asamoah,Midfield,Left Midfield,left,173.0,Ghana,1988-12-09 00:00:00,23.0,Ghana,LM
+43722,Mauricio Isla,Defender,Right-Back,right,176.0,Chile,1988-06-12 00:00:00,24.0,Chile,RB
+52312,Sebastian Giovinco,Attack,Second Striker,right,164.0,Italy,1987-01-26 00:00:00,25.0,Italy,SS
+54935,Martin Caceres,Defender,Centre-Back,right,180.0,Uruguay,1987-04-07 00:00:00,25.0,Uruguay,CB
+119213,Richmond Boakye,Attack,Centre-Forward,right,186.0,,1993-01-28 00:00:00,19.0,Ghana,CF
+19447,Giampaolo Pazzini,Attack,Centre-Forward,right,180.0,Italy,1984-08-02 00:00:00,28.0,Italy,CF
+131075,Francesco Acerbi,Defender,Centre-Back,left,192.0,Italy,1988-02-10 00:00:00,24.0,Italy,CB
+4672,Nigel de Jong,Midfield,Defensive Midfield,right,174.0,Netherlands,1984-11-30 00:00:00,27.0,Netherlands,DM
+73926,Davide Faraoni,Defender,Right-Back,right,180.0,Italy,1991-10-25 00:00:00,20.0,Italy,RB
+114340,Gabriel Silva,Defender,Left-Back,left,179.0,Brazil,1991-05-13 00:00:00,21.0,Brazil,LB
+62379,Cristian Pasquato,Attack,Second Striker,right,173.0,Italy,1989-07-20 00:00:00,22.0,Italy,SS
+12906,Michael Ciani,Defender,Centre-Back,right,189.0,France,1984-04-06 00:00:00,28.0,France,CB
+12563,Goran Pandev,Attack,Second Striker,left,184.0,North Macedonia,1983-07-27 00:00:00,28.0,North Macedonia,SS
+16868,Alessandro Gamberini,Defender,Centre-Back,right,185.0,Italy,1981-08-27 00:00:00,30.0,Italy,CB
+16744,Giandomenico Mesto,Defender,Right-Back,right,181.0,Italy,1982-05-25 00:00:00,30.0,Italy,RB
+28021,Samir Handanovic,Goalkeeper,Goalkeeper,right,193.0,,1984-07-14 00:00:00,27.0,Slovenia,GK
+39099,Rodrigo Palacio,Attack,Centre-Forward,right,176.0,Argentina,1982-02-05 00:00:00,30.0,Argentina,CF
+5962,Antonio Cassano,Attack,Second Striker,right,175.0,Italy,1982-07-12 00:00:00,30.0,Italy,SS
+21876,Federico Balzaretti,Defender,Left-Back,left,180.0,Italy,1981-12-06 00:00:00,30.0,Italy,LB
+30593,Michael Bradley,Midfield,Central Midfield,right,189.0,United States,1987-07-31 00:00:00,24.0,United States,CM
+62415,Panagiotis Tachtsidis,Midfield,Defensive Midfield,left,193.0,Greece,1991-02-15 00:00:00,21.0,Greece,DM
+145416,Junior Tallo,Attack,Centre-Forward,right,185.0,Cote d'Ivoire,1992-12-21 00:00:00,19.0,Cote d'Ivoire,CF
+45567,Jonathan Biabiany,Attack,Right Winger,right,177.0,France,1988-04-28 00:00:00,24.0,France,RW
+111039,Ishak Belfodil,Attack,Centre-Forward,right,192.0,Algeria,1992-01-12 00:00:00,20.0,Algeria,CF
+56817,Fabiano Santacroce,Defender,Centre-Back,right,181.0,Italy,1986-08-24 00:00:00,25.0,Italy,CB
+35703,Robert Acquafresca,Attack,Centre-Forward,right,184.0,Italy,1987-09-11 00:00:00,24.0,Italy,CF
+17130,Michele Pazienza,Midfield,Defensive Midfield,right,175.0,Italy,1982-08-05 00:00:00,30.0,Italy,DM
+96853,Adrian Stoian,Attack,Left Winger,both,177.0,Romania,1991-02-11 00:00:00,21.0,Romania,LW
+83458,Mirco Antenucci,Attack,Centre-Forward,right,180.0,Italy,1984-09-08 00:00:00,27.0,Italy,CF
+30873,German Denis,Attack,Centre-Forward,right,182.0,Argentina,1981-09-10 00:00:00,30.0,Argentina,CF
+47085,Nenad Tomovic,Defender,Centre-Back,right,184.0,Serbia,1987-08-30 00:00:00,25.0,Serbia,CB
+21859,Mattia Cassani,Defender,Right-Back,right,184.0,Italy,1983-08-26 00:00:00,28.0,Italy,RB
+5957,Alberto Aquilani,Midfield,Central Midfield,right,186.0,Italy,1984-07-07 00:00:00,28.0,Italy,CM
+28851,Manuel Coppola,Midfield,Central Midfield,right,172.0,Italy,1982-05-11 00:00:00,30.0,Italy,CM
+25318,Matteo Contini,Defender,Centre-Back,left,184.0,Italy,1980-04-16 00:00:00,32.0,Italy,CB
+88683,Mattia Destro,Attack,Centre-Forward,right,182.0,Italy,1991-03-20 00:00:00,21.0,Italy,CF
+41989,Francesco Valiani,Midfield,Central Midfield,right,175.0,Italy,1980-10-29 00:00:00,31.0,Italy,CM
+6160,Mauricio Pinilla,Attack,Centre-Forward,right,187.0,Chile,1984-02-04 00:00:00,28.0,Chile,CF
+29962,Daniele Dessena,Midfield,Central Midfield,right,182.0,Italy,1987-05-10 00:00:00,25.0,Italy,CM
+60128,Luca Rossettini,Defender,Centre-Back,right,187.0,Italy,1985-05-09 00:00:00,27.0,Italy,CB
+16137,Franco Brienza,Midfield,Attacking Midfield,left,172.0,Italy,1979-03-19 00:00:00,33.0,Italy,AM
+4793,Steve von Bergen,Defender,Centre-Back,right,182.0,Switzerland,1983-06-10 00:00:00,29.0,Switzerland,CB
+19438,Michele Canini,Defender,Centre-Back,right,187.0,Italy,1985-06-05 00:00:00,27.0,Italy,CB
+165894,Giammario Piscitella,Attack,Left Winger,right,175.0,Italy,1993-03-24 00:00:00,19.0,Italy,LW
+162961,Valerio Verre,Midfield,Attacking Midfield,both,181.0,Italy,1994-01-11 00:00:00,18.0,Italy,CM
+99227,Andrea Bertolacci,Midfield,Central Midfield,left,179.0,Italy,1991-01-11 00:00:00,21.0,Italy,CM
+92701,Vladimir Weiss,Attack,Left Winger,right,173.0,Slovakia,1989-11-30 00:00:00,22.0,Slovakia,LW
+102470,Antonino Ragusa,Attack,Left Winger,right,183.0,Italy,1990-03-27 00:00:00,22.0,Italy,LW
+146752,Gianluca Caprari,Attack,Second Striker,right,171.0,Italy,1993-07-30 00:00:00,18.0,Italy,SS
+28827,Alessandro Gazzi,Midfield,Defensive Midfield,left,184.0,Italy,1983-01-28 00:00:00,29.0,Italy,DM
+22149,Jean-Francois Gillet,Goalkeeper,Goalkeeper,right,181.0,Belgium,1979-05-31 00:00:00,33.0,Belgium,GK
+33042,Migjen Basha,Midfield,Defensive Midfield,right,180.0,Albania,1987-01-05 00:00:00,25.0,Albania,DM
+43760,Kevin Constant,Midfield,Central Midfield,left,184.0,Guinea,1987-05-10 00:00:00,25.0,Guinea,CM
+5993,Cristian Zaccardo,Defender,Centre-Back,,,Italy,1981-12-21 00:00:00,31.0,Italy,CB
+119164,Ezequiel Schelotto,Defender,Right-Back,right,187.0,Italy,1989-05-23 00:00:00,23.0,Italy,RB
+25441,Zdravko Kuzmanovic,Midfield,Central Midfield,right,186.0,Serbia,1987-09-22 00:00:00,25.0,Serbia,CM
+6026,Tommaso Rocchi,Attack,Centre-Forward,right,177.0,Italy,1977-09-19 00:00:00,35.0,Italy,CF
+104290,Alessandro Iacobucci,Goalkeeper,Goalkeeper,left,187.0,Italy,1991-06-03 00:00:00,21.0,Italy,GK
+95438,Marko Livaja,Attack,Centre-Forward,right,184.0,Croatia,1993-08-26 00:00:00,19.0,Croatia,AM
+7499,Lionel Scaloni,Defender,Right-Back,right,182.0,Argentina,1978-05-16 00:00:00,34.0,Argentina,RB
+9340,Marvin Compper,Defender,Centre-Back,left,185.0,Germany,1985-06-14 00:00:00,27.0,Germany,CB
+23345,Barreto,Attack,Second Striker,right,171.0,Brazil,1985-07-12 00:00:00,27.0,Brazil,SS
+84846,Gianluca Sansone,Attack,Centre-Forward,left,174.0,Italy,1987-05-12 00:00:00,25.0,Italy,CF
+4276,Carlos Tevez,Attack,Second Striker,right,171.0,Argentina,1984-02-05 00:00:00,29.0,Argentina,SS
+21763,Federico Peluso,Defender,Left-Back,left,188.0,Italy,1984-01-20 00:00:00,29.0,Italy,CB
+177843,Domenico Berardi,Attack,Right Winger,left,183.0,Italy,1994-08-01 00:00:00,19.0,Italy,RW
+199633,Raman Chibsah,Midfield,Central Midfield,right,177.0,Ghana,1993-03-10 00:00:00,20.0,Ghana,CM
+124769,Luca Marrone,Defender,Centre-Back,right,186.0,,1990-03-28 00:00:00,23.0,Italy,CB
+54916,Jonathan Rossini,Defender,Centre-Back,right,190.0,Switzerland,1989-04-05 00:00:00,24.0,Switzerland,CB
+39153,Gonzalo Higuain,Attack,Centre-Forward,right,184.0,Argentina,1987-12-10 00:00:00,25.0,Argentina,CF
+61253,Jose Callejon,Attack,Right Winger,right,178.0,Spain,1987-02-11 00:00:00,26.0,Spain,RW
+73786,Pablo Armero,Defender,Left-Back,left,174.0,Colombia,1986-11-02 00:00:00,26.0,Colombia,LB
+67084,Fabian Monzon,Defender,Left-Back,left,183.0,Argentina,1987-04-13 00:00:00,26.0,Argentina,LB
+47646,Marco Biagianti,Midfield,Defensive Midfield,right,180.0,Italy,1984-04-19 00:00:00,29.0,Italy,DM
+71019,Bartosz Salamon,Defender,Centre-Back,right,194.0,Poland,1991-05-01 00:00:00,22.0,Poland,CB
+62725,Alessandro De Vitis,Midfield,Defensive Midfield,right,184.0,Italy,1992-02-15 00:00:00,21.0,Italy,DM
+163283,Riccardo Casini,Midfield,Central Midfield,right,180.0,Italy,1992-02-02 00:00:00,21.0,Italy,DM
+136130,Andrea Romano,Midfield,Central Midfield,both,183.0,Italy,1993-07-23 00:00:00,19.0,Italy,CM
+77603,Dejan Lazarevic,Attack,Right Winger,right,177.0,Slovenia,1990-02-15 00:00:00,23.0,Slovenia,RW
+46105,Ivan Radovanovic,Midfield,Defensive Midfield,right,187.0,Serbia,1988-08-29 00:00:00,24.0,Serbia,CB
+33218,Luca Cigarini,Midfield,Defensive Midfield,right,175.0,Italy,1986-06-20 00:00:00,27.0,Italy,DM
+171410,Prince Gouano,Defender,Centre-Back,right,186.0,France,1993-12-24 00:00:00,19.0,France,CB
+40660,Alessandro Matri,Attack,Centre-Forward,right,183.0,Italy,1984-08-19 00:00:00,29.0,Italy,CF
+34344,Cristian Zapata,Defender,Centre-Back,right,187.0,Colombia,1986-09-30 00:00:00,26.0,Colombia,CB
+44834,Andrea Poli,Midfield,Central Midfield,right,182.0,Italy,1989-09-29 00:00:00,23.0,Italy,CM
+26105,Valter Birsa,Midfield,Attacking Midfield,left,184.0,Slovenia,1986-08-07 00:00:00,27.0,Slovenia,AM
+6288,Mario Gomez,Attack,Centre-Forward,right,189.0,Germany,1985-07-10 00:00:00,28.0,Germany,CF
+188335,Marko Bakic,Midfield,Central Midfield,right,186.0,Montenegro,1993-11-01 00:00:00,19.0,Montenegro,CM
+5946,Cesare Bovo,Defender,Centre-Back,right,181.0,Italy,1983-01-14 00:00:00,30.0,Italy,CB
+5755,Emiliano Moretti,Defender,Centre-Back,left,182.0,Italy,1981-06-11 00:00:00,32.0,Italy,CB
+185593,Nicolas Lopez,Attack,Centre-Forward,left,178.0,Uruguay,1993-10-01 00:00:00,19.0,Uruguay,RW
+32213,Naldo,Defender,Centre-Back,right,198.0,Brazil,1982-09-10 00:00:00,24.0,Brazil,CB
+25488,Antonio Candreva,Midfield,Right Midfield,right,180.0,Italy,1987-02-28 00:00:00,26.0,Italy,RM
+160986,Matteo Bianchetti,Defender,Centre-Back,right,189.0,Italy,1993-03-17 00:00:00,20.0,Italy,CB
+149946,Raphael Martinho,Midfield,Left Midfield,left,183.0,Brazil,1988-04-15 00:00:00,25.0,Brazil,LM
+56841,Michelangelo Albertazzi,Defender,Left-Back,left,186.0,Italy,1991-01-07 00:00:00,22.0,Italy,LB
+85605,Fabrizio Cacciatore,Defender,Right-Back,right,182.0,Italy,1986-10-08 00:00:00,26.0,Italy,RB
+17171,Alessandro Agostini,Defender,Left-Back,left,177.0,Italy,1979-07-23 00:00:00,33.0,Italy,LB
+96806,Jacopo Sala,Midfield,Central Midfield,right,181.0,Italy,1991-12-05 00:00:00,21.0,Italy,RB
+88712,Rodney Strasser,Midfield,Defensive Midfield,right,181.0,Sierra Leone,1990-03-30 00:00:00,23.0,Sierra Leone,DM
+6721,Mario Santana,Attack,Second Striker,right,180.0,Argentina,1981-12-23 00:00:00,31.0,Argentina,SS
+99327,Isaac Cofie,Midfield,Defensive Midfield,right,184.0,Ghana,1991-09-20 00:00:00,21.0,Ghana,DM
+7797,Albano Bizzarri,Goalkeeper,Goalkeeper,right,188.0,Argentina,1977-11-09 00:00:00,35.0,Argentina,GK
+22598,Gianni Munari,Midfield,Central Midfield,right,190.0,Italy,1983-06-24 00:00:00,30.0,Italy,CM
+15762,Carlos Garcia,Defender,Centre-Back,left,185.0,Spain,1984-04-29 00:00:00,20.0,Sweden,CB
+68863,Mauro Icardi,Attack,Centre-Forward,right,181.0,Argentina,1993-02-19 00:00:00,20.0,Argentina,CF
+144779,Saphir Taider,Midfield,Central Midfield,right,180.0,Algeria,1992-02-29 00:00:00,21.0,Algeria,CM
+13749,Gaby Mudingayi,Midfield,Defensive Midfield,right,180.0,Belgium,1981-10-01 00:00:00,31.0,Belgium,DM
+45124,Medhi Benatia,Defender,Centre-Back,right,190.0,Morocco,1987-04-17 00:00:00,26.0,Morocco,CB
+69374,Adem Ljajic,Midfield,Attacking Midfield,right,182.0,Serbia,1991-09-29 00:00:00,21.0,Serbia,AM
+33481,Gervinho,Attack,Left Winger,right,179.0,Cote d'Ivoire,1987-05-27 00:00:00,26.0,Cote d'Ivoire,LW
+5880,Morgan De Sanctis,Goalkeeper,Goalkeeper,right,190.0,Italy,1977-03-26 00:00:00,36.0,Italy,GK
+5588,Michael Essien,Midfield,Defensive Midfield,right,178.0,Ghana,1982-12-03 00:00:00,31.0,Ghana,DM
+126656,Faouzi Ghoulam,Defender,Left-Back,left,184.0,Algeria,1991-02-01 00:00:00,22.0,Algeria,LB
+52897,Hernanes,Midfield,Attacking Midfield,both,180.0,Brazil,1985-05-29 00:00:00,28.0,Brazil,AM
+55769,Danilo D'Ambrosio,Defender,Centre-Back,right,180.0,Italy,1988-09-09 00:00:00,25.0,Italy,RB
+220793,Douglas Santos,Defender,Left-Back,left,173.0,Brazil,1994-03-22 00:00:00,19.0,Brazil,LB
+30638,Sergio Floccari,Attack,Centre-Forward,right,180.0,Italy,1981-11-12 00:00:00,32.0,Italy,CF
+84921,Lorenzo Ariaudo,Defender,Centre-Back,left,186.0,Italy,1989-06-11 00:00:00,24.0,Italy,CB
+99232,Marco D'Alessandro,Attack,Right Winger,right,173.0,Italy,1991-02-17 00:00:00,23.0,Italy,RW
+291266,Godfred Donsah,Midfield,Central Midfield,right,175.0,Ghana,1996-06-07 00:00:00,18.0,Ghana,CM
+102745,Luca Ceppitelli,Defender,Centre-Back,both,186.0,Italy,1989-08-11 00:00:00,24.0,Italy,CB
+57285,Simone Colombi,Goalkeeper,Goalkeeper,right,188.0,Italy,1991-07-01 00:00:00,23.0,Italy,GK
+99923,Simone Benedetti,Defender,Centre-Back,right,190.0,Italy,1992-04-03 00:00:00,22.0,Italy,CB
+8206,Emmanuel Cascione,Midfield,Central Midfield,right,187.0,Italy,1983-09-22 00:00:00,30.0,Italy,CM
+125611,Mohamed Traore,Defender,Right-Back,right,179.0,Guinea,1991-10-13 00:00:00,22.0,Guinea,RB
+138584,Luka Krajnc,Defender,Centre-Back,left,187.0,Slovenia,1994-09-19 00:00:00,19.0,Slovenia,CB
+70203,Ze Eduardo,Midfield,Defensive Midfield,right,186.0,Brazil,1991-08-16 00:00:00,22.0,Brazil,DM
+6012,Stefano Lucchini,Defender,Centre-Back,right,186.0,Italy,1980-10-02 00:00:00,33.0,Italy,CB
+28817,Gabriele Perico,Defender,Right-Back,right,183.0,Italy,1984-03-11 00:00:00,30.0,Italy,RB
+107958,Nicola Bellomo,Midfield,Attacking Midfield,right,174.0,Italy,1991-02-18 00:00:00,23.0,Italy,AM
+139307,Raffaele Pucino,Defender,Right-Back,right,183.0,Italy,1991-05-03 00:00:00,23.0,Italy,RB
+40633,Milan Badelj,Midfield,Defensive Midfield,right,186.0,Croatia,1989-02-25 00:00:00,25.0,Croatia,DM
+59340,Iago Falque,Attack,Right Winger,left,174.0,Spain,1990-01-04 00:00:00,24.0,Spain,RW
+34239,Aleandro Rosi,Defender,Right-Back,right,180.0,Italy,1987-05-17 00:00:00,27.0,Italy,RB
+54984,Diego Perotti,Attack,Left Winger,right,179.0,Argentina,1988-07-26 00:00:00,25.0,Argentina,LW
+121756,Romulo,Midfield,Central Midfield,right,178.0,Italy,1987-05-22 00:00:00,27.0,Italy,CM
+37633,Guillermo Rodriguez,Defender,Centre-Back,left,185.0,Uruguay,1984-03-21 00:00:00,30.0,Uruguay,CB
+21829,Francesco Benussi,Goalkeeper,Goalkeeper,right,189.0,Italy,1981-10-15 00:00:00,32.0,Italy,GK
+167859,Stefano Sturaro,Midfield,Central Midfield,right,181.0,Italy,1993-03-09 00:00:00,21.0,Italy,CM
+52585,James Troisi,Midfield,Attacking Midfield,left,176.0,Australia,1988-07-03 00:00:00,25.0,Australia,AM
+55000,Vincenzo Fiorillo,Goalkeeper,Goalkeeper,left,190.0,Italy,1990-01-13 00:00:00,24.0,Italy,GK
+5285,Patrice Evra,Defender,Left-Back,left,174.0,France,1981-05-15 00:00:00,33.0,France,LB
+242940,Edoardo Goldaniga,Defender,Centre-Back,right,193.0,Italy,1993-11-02 00:00:00,20.0,Italy,CB
+84545,Marco Parolo,Midfield,Central Midfield,right,184.0,Italy,1985-01-25 00:00:00,29.0,Italy,CM
+57280,Giacomo Bonaventura,Midfield,Attacking Midfield,right,180.0,Italy,1989-08-22 00:00:00,25.0,Italy,CM
+31067,Jonathan de Guzman,Midfield,Central Midfield,right,173.0,Netherlands,1987-09-13 00:00:00,26.0,Netherlands,CM
+22210,Luca Rigoni,Midfield,Central Midfield,right,185.0,Italy,1984-12-07 00:00:00,29.0,Italy,CM
+42796,Nicola Ravaglia,Goalkeeper,Goalkeeper,right,184.0,Italy,1988-12-12 00:00:00,25.0,Italy,GK
+34336,Andrea Costa,Defender,Centre-Back,left,182.0,Italy,1986-02-01 00:00:00,28.0,Italy,CB
+72857,Pedro Mendes,Defender,Centre-Back,right,186.0,Portugal,1990-10-01 00:00:00,23.0,Portugal,CB
+81455,Juan Iturbe,Attack,Left Winger,left,173.0,Paraguay,1993-06-04 00:00:00,21.0,Paraguay,LW
+41982,Radja Nainggolan,Midfield,Central Midfield,right,177.0,,1988-05-04 00:00:00,26.0,Belgium,CM
+33571,Lorenzo De Silvestri,Defender,Right-Back,right,187.0,Italy,1988-05-23 00:00:00,26.0,Italy,RB
+167791,Stefano Beltrame,Attack,Second Striker,right,183.0,Italy,1993-02-08 00:00:00,21.0,Italy,AM
+35865,Andrea Consigli,Goalkeeper,Goalkeeper,right,189.0,Italy,1987-01-27 00:00:00,27.0,Italy,GK
+16893,Antonio Floro Flores,Attack,Centre-Forward,right,183.0,Italy,1983-06-18 00:00:00,31.0,Italy,CF
+22186,Davide Biondini,Midfield,Central Midfield,right,180.0,Italy,1983-01-24 00:00:00,31.0,Italy,CM
+5858,Paolo Cannavaro,Defender,Centre-Back,right,185.0,Italy,1981-06-26 00:00:00,33.0,Italy,CB
+201040,Marco Benassi,Midfield,Central Midfield,right,184.0,Italy,1994-09-08 00:00:00,19.0,Italy,CM
+22328,Fabio Quagliarella,Attack,Centre-Forward,right,180.0,,1983-01-31 00:00:00,31.0,Italy,CF
+29316,Cyril Thereau,Attack,Second Striker,right,189.0,France,1983-04-24 00:00:00,31.0,France,SS
+30767,Gabriel Paletta,Defender,Centre-Back,right,190.0,Italy,1986-02-15 00:00:00,28.0,Italy,CB
+7767,Fernando Torres,Attack,Centre-Forward,right,186.0,Spain,1984-03-20 00:00:00,30.0,Spain,CF
+241527,Federico Bonazzoli,Attack,Centre-Forward,left,185.0,Italy,1997-05-21 00:00:00,17.0,Italy,CF
+206050,Paulo Dybala,Attack,Second Striker,left,177.0,Argentina,1993-11-15 00:00:00,21.0,Argentina,SS
+199635,Eric Lanini,Attack,Centre-Forward,right,186.0,Italy,1994-02-25 00:00:00,21.0,Italy,CF
+19694,Dusan Basta,Defender,Right-Back,right,183.0,Serbia,1984-08-18 00:00:00,30.0,Serbia,RB
+123261,Vlad Chiriches,Midfield,Defensive Midfield,right,184.0,Romania,1989-11-14 00:00:00,25.0,Romania,CB
+7825,Pepe Reina,Goalkeeper,Goalkeeper,right,188.0,Spain,1982-08-31 00:00:00,32.0,Spain,GK
+257127,Michael Ventre,Attack,Second Striker,right,175.0,Italy,1996-01-05 00:00:00,19.0,Italy,SS
+64793,Leonardo Pavoletti,Attack,Centre-Forward,right,188.0,Italy,1988-11-26 00:00:00,26.0,Italy,CF
+183494,Issa Cissokho,Defender,Right-Back,right,173.0,Senegal,1985-02-23 00:00:00,30.0,Senegal,RB
+44059,Ervin Zukanovic,Defender,Centre-Back,left,188.0,Bosnia-Herzegovina,1987-02-11 00:00:00,28.0,Bosnia-Herzegovina,CB
+184894,Alfred Duncan,Midfield,Central Midfield,left,178.0,Ghana,1993-03-10 00:00:00,22.0,Ghana,CM
+42460,Ivan Perisic,Attack,Left Winger,both,186.0,Croatia,1989-02-02 00:00:00,26.0,Croatia,LM
+84344,Davide Santon,Defender,Left-Back,right,187.0,Italy,1991-01-02 00:00:00,24.0,Italy,RB
+167727,Andrea Belotti,Attack,Centre-Forward,right,181.0,Italy,1993-12-20 00:00:00,21.0,Italy,CF
+134883,Daniele Baselli,Midfield,Central Midfield,right,182.0,Italy,1992-03-12 00:00:00,23.0,Italy,CM
+145581,Afriyie Acquah,Midfield,Central Midfield,right,179.0,Ghana,1992-01-05 00:00:00,23.0,Ghana,CM
+45581,Joel Obi,Midfield,Central Midfield,left,178.0,Nigeria,1991-05-22 00:00:00,24.0,Nigeria,CM
+197747,Alessio Romagnoli,Defender,Centre-Back,left,185.0,Italy,1995-01-12 00:00:00,20.0,Italy,CB
+45565,Luca Antonelli,Defender,Left-Back,left,184.0,Italy,1987-02-11 00:00:00,28.0,Italy,LB
+74943,Juraj Kucka,Midfield,Central Midfield,right,186.0,Slovakia,1987-02-26 00:00:00,28.0,Slovakia,CM
+130360,Simone Verdi,Midfield,Attacking Midfield,both,174.0,Italy,1992-07-12 00:00:00,22.0,Italy,AM
+74615,Abdelhamid El Kaoutari,Defender,Centre-Back,left,180.0,Morocco,1990-03-17 00:00:00,25.0,Morocco,CB
+165900,Federico Viviani,Midfield,Defensive Midfield,right,180.0,Italy,1992-03-24 00:00:00,23.0,Italy,DM
+56609,Eros Pisano,Defender,Right-Back,right,186.0,Italy,1987-03-31 00:00:00,28.0,Italy,RB
+39831,Leandro Greco,Midfield,Central Midfield,left,184.0,Italy,1986-07-19 00:00:00,28.0,Italy,CM
+53288,Marquinho,Midfield,Attacking Midfield,left,182.0,Brazil,1986-07-03 00:00:00,29.0,Brazil,AM
+85825,Jasmin Kurtic,Midfield,Central Midfield,right,186.0,Slovenia,1989-01-10 00:00:00,26.0,Slovenia,CM
+204659,Isnik Alimi,Midfield,Central Midfield,left,186.0,Albania,1994-02-02 00:00:00,21.0,Albania,CM
+162952,Gaetano Monachello,Attack,Centre-Forward,left,185.0,Italy,1994-03-03 00:00:00,21.0,Italy,CF
+207715,Ibrahima Mbaye,Defender,Right-Back,right,188.0,Senegal,1994-11-19 00:00:00,20.0,Senegal,RB
+57110,Anthony Mounier,Attack,Left Winger,left,174.0,France,1987-09-27 00:00:00,27.0,France,LW
+308279,Rolando Mandragora,Midfield,Defensive Midfield,left,183.0,Italy,1997-06-29 00:00:00,18.0,Italy,DM
+197473,Alberto Grassi,Midfield,Defensive Midfield,right,183.0,Italy,1995-03-07 00:00:00,20.0,Italy,CM
+226025,Luca Mazzitelli,Midfield,Central Midfield,right,184.0,Italy,1995-11-15 00:00:00,20.0,Italy,CM
+62713,Ryder Matos,Attack,Second Striker,right,182.0,Brazil,1993-02-27 00:00:00,22.0,Brazil,SS
+189432,Gaspar Iniguez,Midfield,Central Midfield,left,172.0,Argentina,1994-03-26 00:00:00,21.0,Argentina,CM
+199258,Andrea Petagna,Attack,Centre-Forward,left,190.0,Italy,1995-06-30 00:00:00,20.0,Italy,CF
+167895,Luca Rizzo,Midfield,Central Midfield,right,188.0,Italy,1992-04-24 00:00:00,24.0,Italy,CM
+110928,Lorenzo Crisetig,Midfield,Defensive Midfield,left,184.0,Italy,1993-01-20 00:00:00,23.0,Italy,DM
+56703,Simone Padoin,Midfield,Central Midfield,right,177.0,Italy,1984-03-18 00:00:00,32.0,Italy,LM
+84442,Leonardo Capezzi,Midfield,Central Midfield,right,178.0,Italy,1995-03-28 00:00:00,21.0,Italy,DM
+197744,Nicolo Fazzi,Midfield,Right Midfield,right,183.0,Italy,1995-03-02 00:00:00,21.0,Italy,RM
+87210,Davide Astori,Defender,Centre-Back,left,189.0,Italy,1987-01-07 00:00:00,29.0,Italy,CB
+230552,Diego Laxalt,Defender,Left-Back,left,178.0,Uruguay,1993-02-07 00:00:00,23.0,Uruguay,LB
+38824,Davide Brivio,Defender,Left-Back,left,184.0,Italy,1988-03-17 00:00:00,28.0,Italy,LB
+168944,Nikola Ninkovic,Midfield,Attacking Midfield,right,182.0,Serbia,1994-12-19 00:00:00,21.0,Serbia,LW
+30782,Santiago Gentiletti,Defender,Centre-Back,left,182.0,Argentina,1985-01-09 00:00:00,31.0,Argentina,CB
+33357,Miranda,Defender,Centre-Back,right,186.0,Brazil,1984-09-07 00:00:00,31.0,Brazil,CB
+55854,Cristian Ansaldi,Defender,Left-Back,both,181.0,Argentina,1986-09-20 00:00:00,29.0,Argentina,LB
+37418,Eder,Attack,Centre-Forward,right,177.0,Italy,1986-11-15 00:00:00,29.0,Italy,SS
+101823,Dodo,Attack,Centre-Forward,right,174.0,Brazil,1987-10-16 00:00:00,24.0,Brazil,LB
+82243,Moritz Leitner,Midfield,Central Midfield,right,178.0,Germany,1992-12-08 00:00:00,23.0,Germany,CM
+130394,Gianluca Lapadula,Attack,Centre-Forward,left,178.0,Peru,1990-02-07 00:00:00,26.0,Peru,CF
+181136,Piotr Zielinski,Midfield,Central Midfield,both,180.0,Poland,1994-05-20 00:00:00,22.0,Poland,AM
+355501,Amadou Diawara,Midfield,Defensive Midfield,right,183.0,Guinea,1997-07-17 00:00:00,19.0,Guinea,DM
+35934,Slobodan Rajkovic,Defender,Centre-Back,left,191.0,Serbia,1989-02-03 00:00:00,27.0,Serbia,CB
+124555,Cristiano Biraghi,Defender,Left-Back,left,185.0,Italy,1992-09-01 00:00:00,23.0,Italy,LB
+121402,Ahmad Benali,Midfield,Central Midfield,right,173.0,Libya,1992-02-07 00:00:00,24.0,Libya,CM
+130369,Stefano Pettinari,Attack,Centre-Forward,right,185.0,Italy,1992-01-27 00:00:00,24.0,Italy,CF
+96758,Alessandro Crescenzi,Defender,Left-Back,both,178.0,Italy,1991-09-25 00:00:00,24.0,Italy,LB
+28833,Andrea Coda,Defender,Centre-Back,right,188.0,Italy,1985-04-25 00:00:00,31.0,Italy,CB
+94529,Stephan El Shaarawy,Attack,Left Winger,right,178.0,Italy,1992-10-27 00:00:00,23.0,Italy,LW
+28396,Edin Dzeko,Attack,Centre-Forward,right,193.0,Bosnia-Herzegovina,1986-03-17 00:00:00,30.0,Bosnia-Herzegovina,CF
+24316,Emiliano Viviano,Goalkeeper,Goalkeeper,left,195.0,,1985-12-01 00:00:00,30.0,Italy,GK
+165895,Matteo Politano,Attack,Right Winger,left,171.0,Italy,1993-08-03 00:00:00,22.0,Italy,RW
+277167,Gian Marco Ferrari,Defender,Centre-Back,left,189.0,Italy,1992-05-15 00:00:00,24.0,Italy,CB
+84903,Mirko Valdifiori,Midfield,Defensive Midfield,right,185.0,Italy,1986-04-21 00:00:00,30.0,Italy,DM
+245072,Stipe Perica,Attack,Centre-Forward,right,192.0,Croatia,1995-07-07 00:00:00,20.0,Croatia,CF
+28855,Raffaele Palladino,Attack,Left Winger,right,182.0,Italy,1984-04-17 00:00:00,32.0,Italy,LW
+197470,Mattia Caldara,Defender,Centre-Back,right,187.0,Italy,1994-05-05 00:00:00,22.0,Italy,CB
+75942,Tomas Rincon,Midfield,Defensive Midfield,right,175.0,Venezuela,1988-01-13 00:00:00,28.0,Venezuela,DM
+80351,Josip Ilicic,Midfield,Attacking Midfield,left,190.0,Slovenia,1988-01-29 00:00:00,29.0,Slovenia,SS
+200192,Fabio Eguelfi,Defender,Left-Back,left,178.0,Italy,1995-01-19 00:00:00,22.0,Italy,LB
+77825,Etrit Berisha,Goalkeeper,Goalkeeper,left,194.0,Albania,1989-03-10 00:00:00,28.0,Albania,GK
+332179,Matteo Pessina,Midfield,Central Midfield,left,187.0,Italy,1997-04-21 00:00:00,20.0,Italy,AM
+264514,Luca Vido,Attack,Centre-Forward,right,182.0,Italy,1997-02-03 00:00:00,20.0,Italy,CF
+395083,Andreaw Gravillon,Defender,Centre-Back,right,189.0,Guadeloupe,1998-02-08 00:00:00,19.0,Guadeloupe,CB
+339982,Bright Gyamfi,Defender,Right-Back,right,178.0,Ghana,1996-01-20 00:00:00,21.0,Ghana,RB
+198067,Filip Helander,Defender,Centre-Back,left,192.0,Sweden,1993-04-22 00:00:00,24.0,Sweden,CB
+256678,Filippo Romagna,Defender,Centre-Back,right,186.0,Italy,1997-05-26 00:00:00,20.0,Italy,CB
+249552,Senna Miangue,Defender,Centre-Back,left,192.0,Belgium,1997-02-05 00:00:00,20.0,Congo,LB
+195051,Gianluca Gaudino,Midfield,Central Midfield,both,179.0,Germany,1996-11-11 00:00:00,20.0,Germany,CM
+291400,Giovanni Crociata,Midfield,Central Midfield,right,174.0,Italy,1997-08-11 00:00:00,19.0,Italy,CM
+282388,Giovanni Simeone,Attack,Centre-Forward,right,180.0,Argentina,1995-07-05 00:00:00,22.0,Argentina,CF
+126687,Valentin Eysseric,Midfield,Attacking Midfield,right,181.0,France,1992-03-25 00:00:00,25.0,France,AM
+188157,Sebastian Cristoforo,Midfield,Central Midfield,right,175.0,Uruguay,1993-08-23 00:00:00,23.0,Uruguay,CM
+115507,Bruno Zuculini,Midfield,Defensive Midfield,right,182.0,Argentina,1993-04-02 00:00:00,24.0,Argentina,DM
+110931,Marco Fossati,Midfield,Defensive Midfield,right,180.0,Italy,1992-10-05 00:00:00,24.0,Italy,DM
+204069,Milan Skriniar,Defender,Centre-Back,right,187.0,Slovakia,1995-02-11 00:00:00,22.0,Slovakia,CB
+315853,Alessandro Bastoni,Defender,Centre-Back,left,190.0,Italy,1999-04-13 00:00:00,18.0,Italy,CB
+143812,Matias Vecino,Midfield,Central Midfield,right,187.0,Uruguay,1991-08-24 00:00:00,25.0,Uruguay,CM
+312862,Dalbert,Defender,Left-Back,left,181.0,Brazil,1993-09-08 00:00:00,23.0,Brazil,LB
+197471,Roberto Gagliardini,Midfield,Central Midfield,right,188.0,Italy,1994-04-07 00:00:00,23.0,Italy,CM
+40372,Borja Valero,Midfield,Central Midfield,right,175.0,Spain,1985-01-12 00:00:00,32.0,Spain,CM
+197300,Federico Bernardeschi,Attack,Right Winger,left,183.0,Italy,1994-02-16 00:00:00,23.0,Italy,RW
+33923,Blaise Matuidi,Midfield,Central Midfield,left,175.0,France,1987-04-09 00:00:00,30.0,France,CM
+44058,Wojciech Szczesny,Goalkeeper,Goalkeeper,right,195.0,Poland,1990-04-18 00:00:00,27.0,Poland,GK
+88682,Mattia De Sciglio,Defender,Right-Back,right,183.0,Italy,1992-10-20 00:00:00,24.0,Italy,RB
+110475,Dario Del Fabro,Defender,Centre-Back,right,190.0,Italy,1995-03-24 00:00:00,22.0,Italy,CB
+41414,Lucas Leiva,Midfield,Defensive Midfield,right,179.0,Brazil,1987-01-09 00:00:00,30.0,Brazil,DM
+37834,Felipe Caicedo,Attack,Centre-Forward,left,183.0,Ecuador,1988-09-05 00:00:00,28.0,Ecuador,CF
+39983,Leonardo Bonucci,Defender,Centre-Back,right,189.0,Italy,1987-05-01 00:00:00,30.0,Italy,CB
+111227,Andrea Conti,Defender,Right-Back,right,184.0,Italy,1994-03-02 00:00:00,23.0,Italy,RB
+126414,Hakan Calhanoglu,Midfield,Defensive Midfield,right,178.0,Türkiye,1994-02-08 00:00:00,23.0,Turkey,CM
+26721,Lucas Biglia,Midfield,Defensive Midfield,right,178.0,Argentina,1986-01-30 00:00:00,31.0,Argentina,DM
+45653,Mateo Musacchio,Defender,Centre-Back,right,182.0,Argentina,1990-08-26 00:00:00,26.0,Argentina,CB
+86784,Ricardo Rodriguez,Defender,Left-Back,left,182.0,Switzerland,1992-08-25 00:00:00,24.0,Switzerland,LB
+124715,Nikola Maksimovic,Defender,Centre-Back,right,193.0,Serbia,1991-11-25 00:00:00,25.0,Serbia,CB
+159337,Roberto Inglese,Attack,Centre-Forward,right,186.0,Italy,1991-11-12 00:00:00,25.0,Italy,CF
+400485,Adam Ounas,Attack,Right Winger,left,172.0,Algeria,1996-11-11 00:00:00,20.0,Algeria,RW
+148751,Bruno Peres,Defender,Right-Back,right,178.0,Brazil,1990-03-01 00:00:00,27.0,Brazil,RB
+286297,Lorenzo Pellegrini,Midfield,Attacking Midfield,right,186.0,Italy,1996-06-19 00:00:00,21.0,Italy,CM
+121985,Juan Jesus,Defender,Centre-Back,left,185.0,Brazil,1991-06-10 00:00:00,26.0,Brazil,CB
+46156,Aleksandar Kolarov,Defender,Left-Back,left,187.0,Serbia,1985-11-10 00:00:00,31.0,Serbia,LB
+171399,Nicola Murru,Defender,Left-Back,left,180.0,Italy,1994-12-16 00:00:00,22.0,Italy,LB
+240306,Bruno Fernandes,Midfield,Attacking Midfield,right,183.0,Portugal,1994-09-08 00:00:00,22.0,Portugal,AM
+39799,Ivan Strinic,Defender,Left-Back,left,186.0,Croatia,1987-07-17 00:00:00,30.0,Croatia,LB
+301236,Francesco Cassata,Midfield,Central Midfield,right,183.0,Italy,1997-07-16 00:00:00,20.0,Italy,CM
+394300,Davide Frattesi,Midfield,Central Midfield,right,178.0,Italy,1999-09-22 00:00:00,17.0,Italy,CM
+297645,Riccardo Marchizza,Defender,Left-Back,left,186.0,Italy,1998-03-26 00:00:00,19.0,Italy,LB
+198086,Federico Ricci,Attack,Right Winger,left,175.0,Italy,1994-05-27 00:00:00,23.0,Italy,RW
+197743,Filippo Costa,Defender,Left-Back,left,175.0,Italy,1995-05-21 00:00:00,22.0,Italy,LB
+5825,Marco Borriello,Attack,Centre-Forward,left,186.0,Italy,1982-06-18 00:00:00,35.0,Italy,CF
+17127,Felipe,Defender,Centre-Back,left,188.0,Brazil,1984-07-31 00:00:00,32.0,Brazil,CB
+200194,Federico Mattiello,Defender,Right-Back,right,184.0,Italy,1995-07-14 00:00:00,22.0,Italy,RB
+149446,Bryan Dabo,Midfield,Central Midfield,right,187.0,Burkina Faso,1992-02-18 00:00:00,25.0,Burkina Faso,CM
+87884,Mario Rui,Defender,Left-Back,left,168.0,Portugal,1991-05-27 00:00:00,26.0,Portugal,LB
+298975,Pol Lirola,Defender,Right-Back,right,183.0,Spain,1997-08-13 00:00:00,20.0,Spain,RB
+291432,Mattia Vitale,Midfield,Central Midfield,left,184.0,Italy,1997-10-01 00:00:00,20.0,Italy,CM
+357995,Davide Bettella,Defender,Centre-Back,right,185.0,Italy,2000-04-07 00:00:00,18.0,Italy,CB
+297630,Marco Carraro,Midfield,Defensive Midfield,left,187.0,Italy,1998-01-09 00:00:00,20.0,Italy,DM
+315850,Marco Tumminello,Attack,Centre-Forward,left,180.0,Italy,1998-11-06 00:00:00,19.0,Italy,CF
+80894,Lukasz Skorupski,Goalkeeper,Goalkeeper,right,188.0,Poland,1991-05-05 00:00:00,27.0,Poland,GK
+119115,Diego Falcinelli,Attack,Centre-Forward,left,186.0,Italy,1991-06-26 00:00:00,27.0,Italy,CF
+240897,Arturo Calabresi,Defender,Centre-Back,right,186.0,Italy,1996-03-17 00:00:00,22.0,Italy,RB
+105892,Lucas Castro,Midfield,Attacking Midfield,right,182.0,Argentina,1989-04-09 00:00:00,29.0,Argentina,AM
+210363,Mariusz Stepinski,Attack,Centre-Forward,right,183.0,Poland,1995-05-12 00:00:00,23.0,Poland,CF
+357117,Alban Lafont,Goalkeeper,Goalkeeper,right,196.0,Cote d'Ivoire,1999-01-23 00:00:00,19.0,France,GK
+131248,Joel Campbell,Attack,Second Striker,left,178.0,Costa Rica,1992-06-26 00:00:00,26.0,Costa Rica,RW
+199941,Andrea Beghetto,Defender,Left-Back,left,182.0,Italy,1994-10-11 00:00:00,23.0,Italy,LB
+110925,Francesco Bardi,Goalkeeper,Goalkeeper,right,188.0,Italy,1992-01-18 00:00:00,26.0,Italy,GK
+164091,Marco Capuano,Defender,Centre-Back,left,186.0,Italy,1991-10-14 00:00:00,26.0,Italy,CB
+315871,Federico Valietti,Defender,Right-Back,right,185.0,Italy,1999-01-25 00:00:00,19.0,Italy,RB
+324804,Yann Karamoh,Attack,Left Winger,right,184.0,France,1998-07-08 00:00:00,19.0,Cote d'Ivoire,LW
+75615,Douglas Costa,Attack,Right Winger,left,172.0,Brazil,1990-09-14 00:00:00,27.0,Brazil,LW
+110923,Mattia Perin,Goalkeeper,Goalkeeper,right,188.0,Italy,1992-11-10 00:00:00,25.0,Italy,GK
+135208,Riza Durmisi,Defender,Left-Back,left,173.0,Denmark,1994-01-08 00:00:00,24.0,Denmark,LB
+350219,Fabian Ruiz,Midfield,Central Midfield,left,188.0,Spain,1996-04-03 00:00:00,22.0,Spain,CM
+126711,Kevin Malcuit,Defender,Right-Back,right,178.0,France,1991-07-31 00:00:00,27.0,France,RB
+165531,Jacopo Dezi,Midfield,Central Midfield,right,178.0,Italy,1992-02-10 00:00:00,26.0,Italy,CM
+242086,Patrik Schick,Attack,Centre-Forward,left,191.0,Czech Republic,1996-01-24 00:00:00,22.0,Czech Republic,CF
+55215,Javier Pastore,Midfield,Attacking Midfield,right,187.0,Argentina,1989-06-20 00:00:00,29.0,Argentina,AM
+163222,Gregoire Defrel,Attack,Centre-Forward,left,179.0,France,1991-06-17 00:00:00,27.0,Martinique,CF
+392085,Nicolo Zaniolo,Attack,Second Striker,left,190.0,Italy,1999-07-02 00:00:00,18.0,Italy,RW
+22141,Antonio Mirante,Goalkeeper,Goalkeeper,right,193.0,Italy,1983-07-08 00:00:00,34.0,Italy,GK
+73794,Duvan Zapata,Attack,Centre-Forward,right,188.0,Colombia,1991-04-01 00:00:00,27.0,Colombia,CF
+273236,Marlon,Defender,Centre-Back,right,182.0,Brazil,1995-09-07 00:00:00,22.0,Brazil,CB
+38607,Federico Di Francesco,Attack,Left Winger,right,171.0,Italy,1994-06-14 00:00:00,24.0,Italy,LW
+124902,Khouma Babacar,Attack,Centre-Forward,right,185.0,Senegal,1993-03-17 00:00:00,25.0,Senegal,CF
+310458,Giangiacomo Magnani,Defender,Centre-Back,right,192.0,Italy,1995-10-04 00:00:00,22.0,Italy,CB
+345590,Jens Odgaard,Midfield,Attacking Midfield,left,188.0,Denmark,1999-03-31 00:00:00,19.0,Denmark,CF
+163568,Alfred Gomis,Goalkeeper,Goalkeeper,right,196.0,Senegal,1993-09-05 00:00:00,24.0,Senegal,GK
+157501,M'Baye Niang,Attack,Centre-Forward,right,188.0,Senegal,1994-12-19 00:00:00,23.0,Senegal,CF
+164913,Soualiho Meite,Midfield,Defensive Midfield,right,187.0,France,1994-03-17 00:00:00,24.0,France,DM
+32113,Armando Izzo,Defender,Centre-Back,right,183.0,Italy,1992-03-02 00:00:00,26.0,Italy,CB
+60577,Nicolas N'Koulou,Defender,Centre-Back,right,184.0,Cameroon,1990-03-27 00:00:00,28.0,Cameroon,CB
+129505,Marcello Trotta,Attack,Centre-Forward,left,188.0,Italy,1992-09-29 00:00:00,26.0,Italy,CF
+327757,Krzysztof Piatek,Attack,Centre-Forward,right,183.0,Poland,1995-07-01 00:00:00,23.0,Poland,CF
+55801,Marco Sau,Attack,Centre-Forward,right,169.0,Italy,1987-11-03 00:00:00,31.0,Italy,CF
+368482,Riccardo Orsolini,Attack,Right Winger,left,186.0,Italy,1997-01-24 00:00:00,22.0,Italy,RW
+242078,Ales Mateju,Defender,Right-Back,right,185.0,Czech Republic,1996-06-03 00:00:00,23.0,Czech Republic,RB
+197751,Alberto Cerri,Attack,Centre-Forward,right,194.0,Italy,1996-04-16 00:00:00,23.0,Italy,CF
+215616,Erick Pulgar,Midfield,Defensive Midfield,right,188.0,Chile,1994-01-15 00:00:00,25.0,Chile,DM
+16922,Kevin-Prince Boateng,Midfield,Attacking Midfield,right,186.0,Ghana,1987-03-06 00:00:00,32.0,Ghana,AM
+303657,Ionut Radu,Goalkeeper,Goalkeeper,right,188.0,Romania,1997-05-28 00:00:00,22.0,Romania,GK
+340151,Andrea Favilli,Attack,Centre-Forward,right,191.0,Italy,1997-05-17 00:00:00,22.0,Italy,CF
+167105,Lukas Lerager,Midfield,Defensive Midfield,right,188.0,Denmark,1993-07-12 00:00:00,25.0,Denmark,CM
+163542,Alberto Almici,Defender,Right-Back,right,179.0,Italy,1993-01-11 00:00:00,26.0,Italy,RB
+165722,Antonio Di Gaudio,Attack,Left Winger,right,169.0,Italy,1989-08-16 00:00:00,29.0,Italy,LW
+186368,Valentino Lazaro,Midfield,Right Midfield,right,181.0,Austria,1996-03-24 00:00:00,23.0,Austria,RB
+459661,Eddie Salcedo,Attack,Centre-Forward,right,178.0,Italy,2001-10-01 00:00:00,17.0,Italy,CF
+371247,Gabriel Brazao,Goalkeeper,Goalkeeper,right,192.0,Brazil,2000-10-05 00:00:00,18.0,Brazil,GK
+355915,Cristian Romero,Defender,Centre-Back,right,185.0,Argentina,1998-04-27 00:00:00,21.0,Argentina,CB
+346567,Luca Pellegrini,Defender,Left-Back,left,178.0,Italy,1999-03-07 00:00:00,20.0,Italy,LB
+340879,Merih Demiral,Defender,Centre-Back,right,190.0,Türkiye,1998-03-05 00:00:00,21.0,Turkey,CB
+331401,Manuel Lazzari,Defender,Right-Back,right,174.0,Italy,1993-11-29 00:00:00,25.0,Italy,RM
+124002,Biagio Meccariello,Defender,Centre-Back,right,187.0,Italy,1991-03-27 00:00:00,28.0,Italy,CB
+357164,Rafael Leao,Attack,Left Winger,right,188.0,Portugal,1999-06-10 00:00:00,20.0,Portugal,LW
+294808,Franck Kessie,Midfield,Central Midfield,right,183.0,Cote d'Ivoire,1996-12-19 00:00:00,22.0,Cote d'Ivoire,CM
+104752,Konstantinos Manolas,Defender,Centre-Back,right,185.0,Greece,1991-06-14 00:00:00,28.0,Greece,CB
+240414,Alex Meret,Goalkeeper,Goalkeeper,left,190.0,Italy,1997-03-22 00:00:00,22.0,Italy,GK
+16408,Orestis Karnezis,Goalkeeper,Goalkeeper,right,190.0,Greece,1985-07-11 00:00:00,33.0,Greece,GK
+409553,Franco Ferrari,Attack,Centre-Forward,right,193.0,Italy,1995-08-10 00:00:00,23.0,Italy,CF
+364206,Andrea Adorante,Attack,Centre-Forward,right,184.0,Italy,2000-02-05 00:00:00,19.0,Italy,CF
+199274,Mattia Sprocati,Attack,Right Winger,both,178.0,Italy,1993-04-28 00:00:00,26.0,Italy,RW
+94936,Vincent Laurini,Defender,Right-Back,right,173.0,France,1989-06-10 00:00:00,30.0,France,RB
+118689,Leonardo Spinazzola,Defender,Left-Back,right,186.0,Italy,1993-03-25 00:00:00,26.0,Italy,LB
+286415,Pau Lopez,Goalkeeper,Goalkeeper,left,189.0,Spain,1994-12-13 00:00:00,24.0,Spain,GK
+199248,Bryan Cristante,Midfield,Defensive Midfield,right,186.0,Italy,1995-03-03 00:00:00,24.0,Italy,CM
+256339,Emil Audero,Goalkeeper,Goalkeeper,right,192.0,Indonesia,1997-01-18 00:00:00,22.0,Italy,GK
+197491,Alex Ferrari,Defender,Centre-Back,right,191.0,Italy,1994-07-01 00:00:00,25.0,Italy,CB
+265088,Manuel Locatelli,Midfield,Defensive Midfield,right,185.0,Italy,1998-01-08 00:00:00,21.0,Italy,DM
+481344,Alessandro Russo,Goalkeeper,Goalkeeper,right,193.0,Italy,2001-03-31 00:00:00,18.0,Italy,GK
+401527,Rogerio,Defender,Left-Back,left,178.0,Brazil,1998-01-13 00:00:00,21.0,Brazil,LB
+392570,Marco Sala,Defender,Left-Back,left,182.0,Italy,1999-06-04 00:00:00,20.0,Italy,LM
+289061,Alessandro Murgia,Midfield,Central Midfield,right,185.0,Italy,1996-08-09 00:00:00,22.0,Italy,CM
+287700,Mohamed Fares,Defender,Left-Back,left,183.0,Algeria,1996-02-15 00:00:00,23.0,Algeria,LM
+167741,Mattia Valoti,Midfield,Central Midfield,right,187.0,Italy,1993-09-06 00:00:00,25.0,Italy,CM
+236490,Ola Aina,Defender,Right-Back,right,184.0,Nigeria,1996-10-08 00:00:00,22.0,Nigeria,RB
+183031,Koffi Djidji,Defender,Centre-Back,right,184.0,Cote d'Ivoire,1992-11-30 00:00:00,26.0,Cote d'Ivoire,CB
+56830,Sebastien De Maio,Defender,Centre-Back,right,190.0,France,1987-03-05 00:00:00,32.0,France,CB
+287579,Sofyan Amrabat,Midfield,Defensive Midfield,right,185.0,Morocco,1996-08-21 00:00:00,23.0,Morocco,DM
+34198,Andrea Masiello,Defender,Centre-Back,right,184.0,Italy,1986-02-05 00:00:00,33.0,Italy,CB
+69633,Christian Eriksen,Midfield,Attacking Midfield,right,182.0,Denmark,1992-02-14 00:00:00,27.0,Denmark,AM
+14086,Ashley Young,Defender,Right-Back,both,175.0,England,1985-07-09 00:00:00,34.0,England,LB
+431755,Dejan Kulusevski,Midfield,Attacking Midfield,left,186.0,Sweden,2000-04-25 00:00:00,19.0,Sweden,RW
+192735,Stanislav Lobotka,Midfield,Defensive Midfield,right,168.0,Slovakia,1994-11-25 00:00:00,25.0,Slovakia,DM
+257732,Amir Rrahmani,Defender,Centre-Back,right,192.0,Kosovo,1994-02-24 00:00:00,25.0,Kosovo,CB
+82070,Diego Demme,Midfield,Defensive Midfield,right,170.0,Germany,1991-11-21 00:00:00,28.0,Germany,DM
+92899,Marvin Zeegelaar,Defender,Left-Back,left,186.0,,1990-08-12 00:00:00,29.0,Netherlands,LB
+205938,Mario Pasalic,Midfield,Central Midfield,right,188.0,Croatia,1995-02-09 00:00:00,25.0,Croatia,CM
+297648,Simone Muratore,Midfield,Central Midfield,right,186.0,Italy,1998-05-30 00:00:00,22.0,Italy,CM
+46552,Kamil Glik,Defender,Centre-Back,right,190.0,Poland,1988-02-03 00:00:00,32.0,Poland,CB
+98888,Artur Ionita,Midfield,Central Midfield,both,184.0,Moldova,1990-08-17 00:00:00,30.0,Moldova,CM
+317482,Marko Rog,Midfield,Central Midfield,right,180.0,Croatia,1995-07-19 00:00:00,25.0,Croatia,CM
+357176,Alessandro Tripaldelli,Defender,Left-Back,left,182.0,Italy,1999-02-09 00:00:00,21.0,Italy,LB
+337725,Christian Kouame,Attack,Centre-Forward,right,193.0,Cote d'Ivoire,1997-12-06 00:00:00,22.0,Cote d'Ivoire,CF
+315865,Andrea Pinamonti,Attack,Centre-Forward,right,185.0,Italy,1999-05-19 00:00:00,21.0,Italy,CF
+176139,Mattia Bani,Defender,Centre-Back,right,188.0,Italy,1993-12-10 00:00:00,26.0,Italy,CB
+157507,Adrien Tameze,Midfield,Defensive Midfield,right,182.0,France,1994-02-04 00:00:00,26.0,Cameroon,DM
+115763,Koray Gunter,Defender,Centre-Back,right,185.0,Germany,1994-08-16 00:00:00,26.0,Germany,CB
+108484,Emmanuel Badu,Midfield,Central Midfield,right,173.0,Ghana,1990-12-02 00:00:00,29.0,Ghana,CM
+398073,Achraf Hakimi,Defender,Right-Back,right,180.0,Morocco,1998-11-04 00:00:00,21.0,Morocco,RB
+255942,Nicolo Barella,Midfield,Central Midfield,right,175.0,Italy,1997-02-07 00:00:00,23.0,Italy,CM
+216179,Stefano Sensi,Midfield,Central Midfield,right,168.0,Italy,1995-08-05 00:00:00,25.0,Italy,CM
+517518,Arthur,Defender,Centre-Back,right,190.0,Brazil,1999-06-17 00:00:00,24.0,Brazil,CM
+187587,Ante Rebic,Attack,Left Winger,right,185.0,Croatia,1993-09-21 00:00:00,26.0,Croatia,LW
+55282,Ciprian Tatarusanu,Goalkeeper,Goalkeeper,right,198.0,Romania,1986-02-09 00:00:00,34.0,Romania,GK
+401923,Victor Osimhen,Attack,Centre-Forward,right,186.0,Nigeria,1998-12-29 00:00:00,21.0,Nigeria,CF
+342341,Leonardo Candellone,Attack,Centre-Forward,right,186.0,Italy,1997-09-15 00:00:00,23.0,Italy,CF
+336960,Giuseppe Pezzella,Defender,Left-Back,left,187.0,Italy,1997-11-29 00:00:00,22.0,Italy,LB
+99254,Luigi Sepe,Goalkeeper,Goalkeeper,left,185.0,Italy,1991-05-08 00:00:00,29.0,Italy,GK
+256448,Gianluca Mancini,Defender,Centre-Back,right,190.0,Italy,1996-04-17 00:00:00,24.0,Italy,CB
+103427,Chris Smalling,Defender,Centre-Back,right,194.0,England,1989-11-22 00:00:00,30.0,England,CB
+282810,Carles Perez,Attack,Right Winger,left,173.0,Spain,1998-02-16 00:00:00,22.0,Spain,RW
+111347,Lorenzo Tonelli,Defender,Centre-Back,right,183.0,Italy,1990-01-17 00:00:00,30.0,Italy,CB
+284595,Tommaso Augello,Defender,Left-Back,left,180.0,Italy,1994-08-30 00:00:00,26.0,Italy,LB
+392500,Felice D'Amico,Midfield,Attacking Midfield,right,175.0,Italy,2000-08-22 00:00:00,20.0,Italy,LW
+225873,Karol Linetty,Midfield,Central Midfield,right,175.0,Poland,1995-02-02 00:00:00,25.0,Poland,CM
+322305,Jean-Victor Makengo,Midfield,Attacking Midfield,left,177.0,France,1998-06-12 00:00:00,22.0,France,CM
+394304,Manolo Portanova,Midfield,Central Midfield,right,183.0,Italy,2000-06-02 00:00:00,20.0,Italy,AM
+525704,Nicolo Rovella,Midfield,Defensive Midfield,right,179.0,Italy,2001-12-04 00:00:00,19.0,Italy,DM
+303254,Fikayo Tomori,Defender,Centre-Back,right,185.0,England,1997-12-19 00:00:00,23.0,England,CB
+182906,Mike Maignan,Goalkeeper,Goalkeeper,right,191.0,France,1995-07-03 00:00:00,25.0,France,GK
+395236,Yacine Adli,Midfield,Defensive Midfield,right,186.0,Algeria,2000-07-29 00:00:00,21.0,France,AM
+296422,Fode Ballo-Toure,Defender,Left-Back,left,182.0,Senegal,1997-01-03 00:00:00,24.0,Senegal,LB
+242359,Juan Musso,Goalkeeper,Goalkeeper,right,193.0,Argentina,1994-05-06 00:00:00,27.0,Argentina,GK
+459655,Matteo Lovato,Defender,Centre-Back,right,188.0,Italy,2000-02-14 00:00:00,21.0,Italy,CB
+334835,Toma Basic,Midfield,Central Midfield,left,190.0,Croatia,1996-11-25 00:00:00,24.0,Croatia,CM
+331726,Tammy Abraham,Attack,Centre-Forward,right,194.0,England,1997-10-02 00:00:00,23.0,England,CF
+371371,Marash Kumbulla,Defender,Centre-Back,right,191.0,Albania,2000-02-08 00:00:00,21.0,Albania,CB
+358166,Eldor Shomurodov,Attack,Centre-Forward,right,190.0,Uzbekistan,1995-06-29 00:00:00,26.0,Uzbekistan,CF
+45026,Rui Patricio,Goalkeeper,Goalkeeper,left,190.0,Portugal,1988-02-15 00:00:00,33.0,Portugal,GK
+524481,Roger Ibanez,Defender,Centre-Back,right,186.0,Brazil,1998-11-23 00:00:00,22.0,Brazil,CB
+129674,Jeremy Toljan,Defender,Right-Back,right,182.0,Germany,1994-08-08 00:00:00,26.0,Germany,RB
+357003,Martin Erlic,Defender,Centre-Back,right,192.0,Croatia,1998-01-24 00:00:00,23.0,Croatia,CB
+290862,Maxime Lopez,Midfield,Defensive Midfield,right,167.0,France,1997-12-04 00:00:00,23.0,France,CM
+287876,Antonino La Gumina,Attack,Centre-Forward,right,182.0,Italy,1996-03-06 00:00:00,25.0,Italy,CF
+391498,Mert Cetin,Defender,Centre-Back,right,189.0,Türkiye,1997-01-01 00:00:00,24.0,Turkey,CB
+272261,Antonin Barak,Midfield,Attacking Midfield,left,190.0,Czech Republic,1994-12-03 00:00:00,26.0,Czech Republic,AM
+163639,Federico Ceccherini,Defender,Centre-Back,right,187.0,Italy,1992-05-11 00:00:00,29.0,Italy,CB
+309393,Lennart Czyborra,Midfield,Left Midfield,left,181.0,Germany,1999-05-03 00:00:00,22.0,Germany,LB
+181382,Abdoulaye Toure,Midfield,Defensive Midfield,right,188.0,Guinea,1994-03-03 00:00:00,27.0,France,DM
+486624,Musa Barrow,Attack,Left Winger,right,184.0,The Gambia,1998-11-14 00:00:00,22.0,The Gambia,CF
+126673,Adama Soumaoro,Defender,Centre-Back,right,187.0,France,1992-06-18 00:00:00,29.0,France,CB
+528833,Lazar Samardzic,Midfield,Attacking Midfield,left,184.0,Serbia,2002-02-24 00:00:00,19.0,Germany,AM
+85528,Marco Silvestri,Goalkeeper,Goalkeeper,right,191.0,Italy,1991-03-02 00:00:00,30.0,Italy,GK
+546880,Brandon Soppy,Midfield,Right Midfield,right,180.0,France,2002-02-21 00:00:00,19.0,France,RB
+292772,Dimitrios Nikolaou,Defender,Centre-Back,left,188.0,Greece,1998-08-13 00:00:00,22.0,Greece,CB
+243225,Samuel Mraz,Attack,Centre-Forward,right,183.0,Slovakia,1997-05-13 00:00:00,24.0,Slovakia,CF
+258482,Boris Radunovic,Goalkeeper,Goalkeeper,right,194.0,Serbia,1996-05-26 00:00:00,25.0,Serbia,GK
+192638,Nicolas Haas,Midfield,Central Midfield,right,178.0,Switzerland,1996-01-23 00:00:00,25.0,Switzerland,CM
+435228,Ardian Ismajli,Defender,Centre-Back,right,187.0,Albania,1996-09-30 00:00:00,24.0,Albania,CB
+44017,Javi Martinez,Midfield,Defensive Midfield,right,189.0,Spain,1988-09-02 00:00:00,23.0,Spain,DM
+16136,Dante,Defender,Centre-Back,left,188.0,Brazil,1983-10-18 00:00:00,28.0,Brazil,CB
+35207,Marco Reus,Midfield,Attacking Midfield,right,180.0,Germany,1989-05-31 00:00:00,23.0,Germany,AM
+58124,Julian Schieber,Attack,Centre-Forward,left,186.0,Germany,,23.0,Germany,CF
+41663,Chinedu Obasi,Attack,Centre-Forward,right,188.0,Nigeria,1986-06-01 00:00:00,26.0,Nigeria,CF
+24155,Olivier Occean,Attack,Centre-Forward,right,185.0,Canada,1981-10-23 00:00:00,30.0,Canada,CF
+78553,Bamba Anderson,Defender,Centre-Back,,,Brazil,1988-01-10 00:00:00,24.0,Brazil,CB
+37247,Vadim Demidov,Defender,Centre-Back,,,Norway,1986-10-10 00:00:00,25.0,Norway,CB
+53437,Bastian Oczipka,Defender,Left-Back,left,185.0,Germany,1989-01-12 00:00:00,23.0,Germany,LB
+4192,Rafael van der Vaart,Midfield,Attacking Midfield,,,Netherlands,1983-02-11 00:00:00,29.0,Netherlands,AM
+63737,Petr Jiracek,Midfield,Central Midfield,left,180.0,Czech Republic,1986-03-02 00:00:00,26.0,Czech Republic,CM
+62915,Alvaro Dominguez,Defender,Centre-Back,,,Spain,1989-05-16 00:00:00,23.0,Spain,CB
+70280,Peniel Mlapa,Attack,Centre-Forward,right,193.0,Togo,1991-02-20 00:00:00,21.0,Togo,CF
+42463,Timo Gebhart,Midfield,Attacking Midfield,right,183.0,Germany,,23.0,Germany,AM
+1094,Emanuel Pogatetz,Defender,Centre-Back,left,191.0,Austria,1983-01-16 00:00:00,29.0,Austria,CB
+27805,Eljero Elia,Attack,Left Winger,right,176.0,Netherlands,1987-02-13 00:00:00,25.0,Netherlands,LW
+63022,Jan Moravek,Midfield,Central Midfield,right,180.0,Czech Republic,1989-11-01 00:00:00,22.0,Czech Republic,CM
+61591,Zoltan Stieber,Midfield,Attacking Midfield,left,175.0,Hungary,1988-10-16 00:00:00,23.0,Hungary,LW
+82110,Thanos Petsos,Midfield,Defensive Midfield,right,184.0,Greece,1991-06-05 00:00:00,21.0,Greece,DM
+47543,Eren Derdiyok,Attack,Centre-Forward,right,191.0,,1988-06-12 00:00:00,24.0,Switzerland,CF
+53408,Fabian Giefer,Goalkeeper,Goalkeeper,right,196.0,Germany,1990-05-17 00:00:00,22.0,Germany,GK
+31216,Tobias Levels,Defender,Right-Back,,,Germany,1986-11-22 00:00:00,25.0,Germany,RB
+1568,Stefan Reisinger,Attack,Centre-Forward,right,185.0,Germany,1981-09-14 00:00:00,30.0,Germany,CF
+64248,Florian Trinks,Midfield,Attacking Midfield,,,Germany,1992-03-11 00:00:00,20.0,Germany,AM
+58178,David Abraham,Defender,Centre-Back,right,188.0,Argentina,1986-07-15 00:00:00,26.0,Argentina,CB
+19548,Eugen Polanski,Midfield,Defensive Midfield,right,183.0,Poland,1986-03-17 00:00:00,26.0,Poland,DM
+74842,Mario Gotze,Midfield,Attacking Midfield,right,176.0,Germany,1992-06-03 00:00:00,21.0,Germany,AM
+88684,Giulio Donati,Defender,Right-Back,right,178.0,Italy,1990-02-05 00:00:00,23.0,Italy,RB
+25812,Emir Spahic,Defender,Centre-Back,,,Bosnia-Herzegovina,1980-08-18 00:00:00,32.0,Bosnia-Herzegovina,CB
+39106,Adam Szalai,Attack,Centre-Forward,right,193.0,Hungary,1987-12-09 00:00:00,25.0,Hungary,CF
+54312,Felipe Santana,Defender,Centre-Back,right,194.0,Brazil,1986-03-17 00:00:00,27.0,Brazil,CB
+38415,Johannes Flum,Midfield,Central Midfield,right,190.0,Germany,1987-12-14 00:00:00,25.0,Germany,CM
+27611,Stephan Schrock,Midfield,Attacking Midfield,right,170.0,Philippines,1986-08-21 00:00:00,26.0,Philippines,AM
+16520,Marco Russ,Defender,Centre-Back,right,190.0,Germany,1985-08-04 00:00:00,27.0,Germany,CB
+53602,Marvin Bakalorz,Midfield,Defensive Midfield,right,180.0,Germany,1989-09-13 00:00:00,23.0,Germany,CM
+79503,Lasse Sobiech,Defender,Centre-Back,right,196.0,Germany,1991-01-18 00:00:00,22.0,Germany,CB
+36182,Max Kruse,Attack,Second Striker,left,180.0,Germany,1988-03-19 00:00:00,25.0,Germany,SS
+93844,Leonardo Bittencourt,Midfield,Central Midfield,right,171.0,Germany,1993-12-19 00:00:00,19.0,Germany,AM
+39259,Makoto Hasebe,Defender,Centre-Back,right,180.0,Japan,1984-01-18 00:00:00,29.0,Japan,DM
+79501,Daniel Ginczek,Attack,Centre-Forward,right,191.0,Germany,1991-04-13 00:00:00,22.0,Germany,CF
+10471,Luiz Gustavo,Midfield,Defensive Midfield,left,187.0,Brazil,1987-07-23 00:00:00,26.0,Brazil,DM
+38410,Daniel Caligiuri,Attack,Right Winger,right,182.0,Italy,1988-01-15 00:00:00,25.0,Italy,RW
+61901,Mohammed Abdellaoue,Attack,Centre-Forward,,,Norway,1985-10-23 00:00:00,27.0,Norway,CF
+17885,Karim Haggui,Defender,Centre-Back,,,Tunisia,1984-01-20 00:00:00,29.0,Tunisia,CB
+60957,Sebastian Polter,Attack,Centre-Forward,right,192.0,Germany,1991-04-01 00:00:00,22.0,Germany,CF
+53534,Julian Koch,Midfield,Defensive Midfield,right,184.0,Germany,1990-11-11 00:00:00,22.0,Germany,DM
+42936,Nils Petersen,Attack,Centre-Forward,right,188.0,Germany,1988-12-06 00:00:00,24.0,Germany,CF
+14882,Cedric Makiadi,Midfield,Central Midfield,right,177.0,DR Congo,1984-02-23 00:00:00,29.0,DR Congo,CM
+88680,Luca Caldirola,Defender,Centre-Back,left,186.0,Italy,1991-02-01 00:00:00,22.0,Italy,CB
+50512,Anthony Modeste,Attack,Centre-Forward,right,188.0,France,1988-04-14 00:00:00,25.0,France,CF
+13023,Igor de Camargo,Attack,Centre-Forward,right,187.0,Belgium,1983-05-12 00:00:00,30.0,Belgium,CF
+79355,Hajime Hosogai,Midfield,Defensive Midfield,right,177.0,Japan,1986-06-10 00:00:00,27.0,Japan,DM
+31451,Torsten Oehrl,Attack,Centre-Forward,right,192.0,Germany,1986-01-07 00:00:00,27.0,Germany,CF
+91841,Ja-cheol Koo,Midfield,Central Midfield,right,184.0,"Korea, South",1989-02-27 00:00:00,24.0,"Korea, South",CM
+12106,Ludovic Obraniak,Midfield,Attacking Midfield,,,Poland,1984-11-10 00:00:00,29.0,Poland,AM
+45662,Alexander Esswein,Attack,Right Winger,right,182.0,Germany,1990-03-25 00:00:00,23.0,Germany,RW
+126719,Juan Bernat,Defender,Left-Back,left,170.0,Spain,1993-03-01 00:00:00,21.0,Spain,LB
+7476,Xabi Alonso,Midfield,Defensive Midfield,right,183.0,Spain,1981-11-25 00:00:00,32.0,Spain,DM
+124502,Matthias Ginter,Defender,Centre-Back,right,189.0,Germany,1994-01-19 00:00:00,20.0,Germany,CB
+73782,Adrian Ramos,Attack,Centre-Forward,right,185.0,Colombia,1986-01-22 00:00:00,28.0,Colombia,CF
+31095,Nuri Sahin,Midfield,Defensive Midfield,left,180.0,Turkey,1988-09-05 00:00:00,25.0,Turkey,DM
+39102,Sidney Sam,Attack,Right Winger,left,174.0,Germany,1988-01-31 00:00:00,26.0,Germany,RW
+19354,Dennis Aogo,Defender,Left-Back,left,184.0,Germany,1987-01-14 00:00:00,27.0,Germany,DM
+49730,Sebastian Jung,Defender,Right-Back,right,179.0,Germany,1990-06-22 00:00:00,24.0,Germany,RB
+42783,Andre Hahn,Attack,Right Winger,right,185.0,Germany,1990-08-13 00:00:00,23.0,Germany,RW
+89659,Shawn Parker,Attack,Centre-Forward,,,Germany,1993-03-07 00:00:00,21.0,Germany,CF
+55089,Oliver Baumann,Goalkeeper,Goalkeeper,right,187.0,Germany,1990-06-02 00:00:00,24.0,Germany,GK
+14533,Pirmin Schwegler,Midfield,Defensive Midfield,right,178.0,Switzerland,1987-03-09 00:00:00,27.0,Switzerland,DM
+7971,Salomon Kalou,Attack,Left Winger,right,184.0,Cote d'Ivoire,1985-08-05 00:00:00,29.0,Cote d'Ivoire,LW
+94199,Tolga Cigerci,Midfield,Defensive Midfield,right,185.0,Türkiye,1992-03-23 00:00:00,22.0,Turkey,DM
+18918,Per Ciljan Skjelbred,Midfield,Central Midfield,right,175.0,Norway,1987-06-16 00:00:00,27.0,Norway,CM
+51168,Jens Hegeler,Midfield,Central Midfield,,,Germany,1988-01-22 00:00:00,26.0,Germany,CM
+48164,Slobodan Medojevic,Midfield,Defensive Midfield,right,183.0,Serbia,1990-10-20 00:00:00,23.0,Serbia,DM
+160938,Marc Oliver Kempf,Defender,Centre-Back,left,186.0,Germany,1995-01-28 00:00:00,19.0,Germany,CB
+73013,Pierre-Michel Lasogga,Attack,Centre-Forward,right,189.0,Germany,1991-12-15 00:00:00,22.0,Germany,CF
+39426,Nicolai Muller,Midfield,Attacking Midfield,right,173.0,Germany,1987-09-25 00:00:00,26.0,Germany,AM
+34561,Johan Djourou,Defender,Centre-Back,right,192.0,Switzerland,1987-01-18 00:00:00,27.0,Switzerland,CB
+53669,Matthias Ostrzolek,Defender,Left-Back,left,178.0,Germany,1990-06-05 00:00:00,24.0,Germany,LB
+84435,Kevin Vogt,Defender,Centre-Back,right,194.0,Germany,1991-09-23 00:00:00,22.0,Germany,CB
+16956,Slawomir Peszko,Attack,Left Winger,right,173.0,Poland,1985-02-19 00:00:00,29.0,Poland,LW
+49501,Elias Kachunga,Attack,Centre-Forward,right,178.0,DR Congo,1992-04-22 00:00:00,22.0,DR Congo,RW
+206386,Tin Jedvaj,Defender,Centre-Back,right,185.0,Croatia,1995-11-28 00:00:00,19.0,Croatia,CB
+108880,Koen Casteels,Goalkeeper,Goalkeeper,left,197.0,Belgium,1992-06-25 00:00:00,22.0,Belgium,GK
+164265,Dong-won Ji,Attack,Centre-Forward,right,187.0,"Korea, South",1991-05-28 00:00:00,23.0,"Korea, South",CF
+7427,Ivica Olic,Attack,Centre-Forward,left,182.0,Croatia,1979-09-14 00:00:00,35.0,Croatia,CF
+161056,Joshua Kimmich,Midfield,Defensive Midfield,right,177.0,Germany,1995-02-08 00:00:00,20.0,Germany,DM
+40680,Sven Ulreich,Goalkeeper,Goalkeeper,right,192.0,Germany,1988-08-03 00:00:00,26.0,Germany,GK
+85148,Julian Draxler,Attack,Left Winger,right,185.0,Germany,1993-09-20 00:00:00,21.0,Germany,LW
+140579,Josip Drmic,Attack,Centre-Forward,right,184.0,Switzerland,1992-08-08 00:00:00,22.0,Switzerland,CF
+102226,Thorgan Hazard,Midfield,Attacking Midfield,right,175.0,Belgium,1993-03-29 00:00:00,22.0,Belgium,LW
+85867,Nico Schulz,Defender,Left-Back,left,180.0,Germany,1993-04-01 00:00:00,22.0,Germany,LB
+48298,Lars Stindl,Midfield,Attacking Midfield,right,181.0,Germany,1988-08-26 00:00:00,26.0,Germany,SS
+53418,Kevin Kampl,Midfield,Central Midfield,right,178.0,Slovenia,1990-10-09 00:00:00,24.0,Slovenia,CM
+196357,Jonathan Tah,Defender,Centre-Back,right,195.0,Germany,1996-02-11 00:00:00,19.0,Germany,CB
+58489,Kyriakos Papadopoulos,Defender,Centre-Back,right,185.0,Greece,1992-02-23 00:00:00,23.0,Greece,CB
+148967,Konstantinos Stafylidis,Defender,Left-Back,left,178.0,Greece,1993-12-02 00:00:00,21.0,Greece,LB
+118847,Dominik Kohr,Defender,Centre-Back,right,183.0,Germany,1994-01-31 00:00:00,21.0,Germany,CM
+89650,Johannes Geis,Midfield,Defensive Midfield,right,181.0,Germany,1993-08-17 00:00:00,21.0,Germany,DM
+59783,Franco Di Santo,Attack,Centre-Forward,right,193.0,Argentina,1989-04-07 00:00:00,26.0,Argentina,CF
+28947,Gonzalo Castro,Midfield,Central Midfield,right,172.0,Germany,1987-06-11 00:00:00,28.0,Germany,CM
+111900,Ju-ho Park,Defender,Left-Back,left,176.0,"Korea, South",1987-01-16 00:00:00,28.0,"Korea, South",LB
+89718,Eduardo Vargas,Attack,Centre-Forward,right,173.0,Chile,1989-11-20 00:00:00,25.0,Chile,SS
+142281,Anthony Ujah,Attack,Centre-Forward,right,180.0,Nigeria,1990-10-14 00:00:00,24.0,Nigeria,CF
+160285,Milos Jojic,Midfield,Central Midfield,right,177.0,Serbia,1992-03-19 00:00:00,23.0,Serbia,CM
+91716,Frederik Sorensen,Defender,Centre-Back,right,194.0,Denmark,1992-04-14 00:00:00,23.0,Denmark,CB
+38360,Mevlut Erdinc,Attack,Centre-Forward,right,181.0,Turkey,1987-02-25 00:00:00,28.0,Turkey,CF
+4687,Aaron Hunt,Midfield,Attacking Midfield,left,183.0,Germany,1986-09-04 00:00:00,28.0,Germany,AM
+52530,Sven Schipplock,Attack,Centre-Forward,right,186.0,Germany,1988-11-08 00:00:00,26.0,Germany,CF
+103310,Gotoku Sakai,Defender,Right-Back,right,176.0,Japan,1991-03-14 00:00:00,24.0,Japan,LB
+187496,Maurice Multhaup,Attack,Right Winger,right,173.0,Germany,1996-12-15 00:00:00,18.0,Germany,RW
+54846,Fabian Holland,Defender,Left-Back,left,172.0,Germany,1990-07-11 00:00:00,24.0,Germany,LB
+7161,Jonas Hofmann,Midfield,Attacking Midfield,right,176.0,Germany,1992-07-14 00:00:00,23.0,Germany,RW
+170522,Yanni Regasel,Defender,Right-Back,right,176.0,Germany,1996-01-13 00:00:00,20.0,Germany,RB
+202228,Milos Veljkovic,Defender,Centre-Back,right,188.0,Serbia,1995-09-26 00:00:00,20.0,Serbia,CB
+170530,Sinan Kurt,Attack,Left Winger,left,173.0,Germany,1996-07-23 00:00:00,19.0,Germany,LW
+39728,Mats Hummels,Defender,Centre-Back,right,191.0,Germany,1988-12-16 00:00:00,27.0,Germany,CB
+44466,Sebastian Rode,Midfield,Central Midfield,right,179.0,Germany,1990-10-11 00:00:00,25.0,Germany,CM
+170986,Raphael Guerreiro,Defender,Left-Back,left,170.0,Portugal,1993-12-22 00:00:00,22.0,Portugal,LB
+82009,Kevin Volland,Midfield,Attacking Midfield,left,179.0,Germany,1992-07-30 00:00:00,23.0,Germany,CF
+34787,Julian Baumgartlinger,Midfield,Defensive Midfield,right,184.0,,1988-01-02 00:00:00,28.0,Austria,DM
+16498,Ramazan Ozcan,Goalkeeper,Goalkeeper,left,185.0,Austria,1984-06-28 00:00:00,32.0,Austria,GK
+85906,Danny da Costa,Defender,Centre-Back,right,187.0,Germany,1993-07-13 00:00:00,22.0,Germany,RB
+82097,Christoph Kramer,Midfield,Defensive Midfield,right,191.0,Germany,1991-02-19 00:00:00,25.0,Germany,DM
+185245,Jhon Cordoba,Attack,Centre-Forward,right,186.0,Colombia,1993-05-11 00:00:00,23.0,Colombia,CF
+168543,Levin Oztunali,Midfield,Central Midfield,right,184.0,Germany,1996-03-15 00:00:00,20.0,Germany,CM
+44713,Christian Clemens,Attack,Right Winger,right,180.0,Germany,1991-08-04 00:00:00,24.0,Germany,RW
+119277,Yannick Gerhardt,Midfield,Central Midfield,left,184.0,Germany,1994-03-13 00:00:00,22.0,Germany,CM
+29835,Jakub Blaszczykowski,Attack,Right Winger,right,176.0,Poland,1985-12-14 00:00:00,30.0,Poland,RW
+270541,Serhou Guirassy,Attack,Centre-Forward,right,187.0,Guinea,1996-03-12 00:00:00,20.0,France,CF
+55510,Marco Hoger,Midfield,Defensive Midfield,right,182.0,Germany,1989-09-16 00:00:00,26.0,Germany,DM
+226074,Alen Halilovic,Midfield,Attacking Midfield,left,169.0,Croatia,1996-06-18 00:00:00,20.0,Croatia,AM
+196095,Luca Waldschmidt,Attack,Centre-Forward,left,181.0,Germany,1996-05-19 00:00:00,20.0,Germany,SS
+82361,Christian Mathenia,Goalkeeper,Goalkeeper,right,189.0,Germany,1992-03-31 00:00:00,24.0,Germany,GK
+170463,Marcel Tisserand,Defender,Centre-Back,right,190.0,DR Congo,1993-01-10 00:00:00,23.0,DR Congo,CB
+119120,Robert Leipertz,Attack,Right Winger,left,183.0,Germany,1993-02-01 00:00:00,23.0,Germany,RW
+70285,Jonathan Schmid,Defender,Right-Back,right,179.0,France,1990-06-22 00:00:00,26.0,France,RB
+90024,Alfred Finnbogason,Attack,Centre-Forward,right,184.0,Iceland,1989-02-01 00:00:00,27.0,Iceland,CF
+196231,Marvin Friedrich,Defender,Centre-Back,right,193.0,Germany,1995-12-13 00:00:00,20.0,Germany,CB
+159471,Serge Gnabry,Attack,Second Striker,right,176.0,Germany,1995-07-14 00:00:00,21.0,Germany,RW
+179634,Robert Bauer,Defender,Centre-Back,right,183.0,,1995-04-09 00:00:00,21.0,Germany,DM
+5017,Niklas Moisander,Defender,Centre-Back,left,183.0,Finland,1985-09-29 00:00:00,30.0,Finland,CB
+82389,Fallou Diagne,Defender,Centre-Back,right,185.0,Senegal,1989-08-14 00:00:00,26.0,Senegal,CB
+77920,Immanuel Hohn,Defender,Centre-Back,right,183.0,Germany,1991-12-23 00:00:00,24.0,Germany,CB
+46580,Andrej Kramaric,Midfield,Attacking Midfield,right,177.0,Croatia,1991-06-19 00:00:00,25.0,Croatia,SS
+125858,Kerem Demirbay,Midfield,Central Midfield,left,183.0,Germany,1993-07-03 00:00:00,23.0,Germany,CM
+39743,Sandro Wagner,Attack,Centre-Forward,right,194.0,Germany,1987-11-29 00:00:00,28.0,Germany,CF
+52348,Benjamin Hubner,Defender,Centre-Back,left,193.0,Germany,1989-07-04 00:00:00,26.0,Germany,CB
+177779,Janik Haberer,Midfield,Central Midfield,right,187.0,Germany,1994-04-02 00:00:00,22.0,Germany,CM
+107574,Jonas Meffert,Midfield,Defensive Midfield,right,186.0,Germany,1994-09-04 00:00:00,21.0,Germany,DM
+74295,Aleksandar Ignjovski,Midfield,Defensive Midfield,right,175.0,Serbia,1991-01-27 00:00:00,25.0,Serbia,DM
+206542,Robin Quaison,Attack,Centre-Forward,right,183.0,Sweden,1993-10-09 00:00:00,23.0,Sweden,SS
+148955,Paul-Georges Ntep,Attack,Left Winger,right,180.0,Cameroon,1992-07-29 00:00:00,24.0,Cameroon,RW
+38267,Mergim Mavraj,Defender,Centre-Back,left,189.0,Albania,1986-06-09 00:00:00,30.0,Albania,CB
+190393,Corentin Tolisso,Midfield,Central Midfield,right,181.0,France,1994-08-03 00:00:00,22.0,France,CM
+243714,Kingsley Coman,Attack,Left Winger,right,181.0,France,1996-06-13 00:00:00,21.0,France,RW
+166601,Niklas Sule,Defender,Centre-Back,right,195.0,Germany,1995-09-03 00:00:00,21.0,Germany,CB
+264956,Jean-Kevin Augustin,Attack,Centre-Forward,right,179.0,France,1997-06-16 00:00:00,20.0,France,CF
+143891,Maximilian Philipp,Attack,Second Striker,right,183.0,Germany,1994-03-01 00:00:00,23.0,Germany,SS
+43512,Omer Toprak,Defender,Centre-Back,right,187.0,Türkiye,1989-07-21 00:00:00,27.0,Turkey,CB
+191422,Mahmoud Dahoud,Midfield,Central Midfield,right,178.0,Syria,1996-01-01 00:00:00,21.0,Germany,CM
+42234,Havard Nordtveit,Defender,Centre-Back,right,188.0,Norway,1990-06-21 00:00:00,27.0,Norway,CB
+231586,Jannes Horn,Defender,Left-Back,left,186.0,Germany,1997-02-06 00:00:00,20.0,Germany,LB
+178459,Davie Selke,Attack,Centre-Forward,right,195.0,Germany,1995-01-20 00:00:00,22.0,Germany,CF
+195246,Pascal Stenzel,Defender,Right-Back,right,183.0,Germany,1996-03-20 00:00:00,21.0,Germany,CB
+67869,Marco Terrazzino,Attack,Left Winger,right,177.0,Germany,1991-04-15 00:00:00,26.0,Germany,AM
+152963,Florian Niederlechner,Attack,Centre-Forward,right,187.0,Germany,1990-10-24 00:00:00,26.0,Germany,CF
+185077,Vincenzo Grifo,Attack,Left Winger,right,180.0,Italy,1993-04-07 00:00:00,24.0,Italy,LW
+51356,Raul Bobadilla,Attack,Centre-Forward,right,180.0,Paraguay,1987-06-18 00:00:00,30.0,Paraguay,CF
+245537,Nabil Bentaleb,Midfield,Defensive Midfield,left,189.0,Algeria,1994-11-24 00:00:00,22.0,Algeria,CM
+58949,Yevgen Konoplyanka,Midfield,Attacking Midfield,right,176.0,Ukraine,1989-09-29 00:00:00,27.0,Ukraine,LW
+372711,Amine Harit,Attack,Left Winger,right,180.0,Morocco,1997-06-18 00:00:00,20.0,Morocco,AM
+170927,Simon Falette,Defender,Centre-Back,left,185.0,Guinea,1992-02-19 00:00:00,25.0,Guinea,CB
+20081,Gelson Fernandes,Midfield,Defensive Midfield,right,180.0,Switzerland,1986-09-02 00:00:00,30.0,Switzerland,DM
+29993,Sven Bender,Midfield,Defensive Midfield,right,186.0,Germany,1989-04-27 00:00:00,28.0,Germany,DM
+120205,Michael Gregoritsch,Attack,Centre-Forward,left,193.0,Austria,1994-04-18 00:00:00,23.0,Austria,SS
+229005,Abdou Diallo,Defender,Centre-Back,left,187.0,Senegal,1996-05-04 00:00:00,21.0,Senegal,LB
+129513,Alexandru Maxim,Midfield,Attacking Midfield,right,177.0,Romania,1990-07-08 00:00:00,26.0,Romania,AM
+58874,Ignacio Camacho,Midfield,Defensive Midfield,right,182.0,Spain,1990-05-04 00:00:00,27.0,Spain,DM
+18021,Paul Verhaegh,Defender,Right-Back,right,178.0,Netherlands,1983-09-01 00:00:00,33.0,Netherlands,RB
+243606,Anastasios Donis,Attack,Left Winger,right,178.0,Greece,1996-08-29 00:00:00,20.0,Greece,CF
+21327,Ron-Robert Zieler,Goalkeeper,Goalkeeper,right,188.0,Germany,1989-02-12 00:00:00,28.0,Germany,GK
+77809,Julian Korb,Defender,Right-Back,right,177.0,Germany,1992-03-21 00:00:00,25.0,Germany,RB
+36284,Simon Terodde,Attack,Centre-Forward,right,192.0,Germany,1988-03-02 00:00:00,29.0,Germany,CF
+290551,Vincent Koziello,Midfield,Central Midfield,right,168.0,France,1995-10-28 00:00:00,22.0,France,CM
+39094,Sebastian Langkamp,Defender,Centre-Back,right,191.0,Germany,1988-01-15 00:00:00,30.0,Germany,CB
+66058,Admir Mehmedi,Attack,Second Striker,right,183.0,Switzerland,1991-03-16 00:00:00,26.0,Switzerland,SS
+156779,Erik Thommy,Midfield,Attacking Midfield,right,175.0,Germany,1994-08-20 00:00:00,23.0,Germany,LM
+57051,Sebastian Rudy,Midfield,Defensive Midfield,right,180.0,Germany,1990-02-28 00:00:00,28.0,Germany,DM
+261905,Suat Serdar,Midfield,Central Midfield,right,184.0,Germany,1997-04-11 00:00:00,21.0,Germany,CM
+126534,Salif Sane,Defender,Centre-Back,right,196.0,Senegal,1990-08-25 00:00:00,27.0,Senegal,CB
+447221,Hamza Mendyl,Defender,Left-Back,left,179.0,Morocco,1997-10-21 00:00:00,20.0,Morocco,LB
+193900,Marius Wolf,Defender,Right-Back,right,188.0,Germany,1995-05-27 00:00:00,23.0,Germany,RW
+119211,Mitchell Weiser,Defender,Right-Back,right,177.0,Germany,1994-04-21 00:00:00,24.0,Germany,RB
+348026,Nordi Mukiele,Defender,Right-Back,right,187.0,France,1997-11-01 00:00:00,20.0,France,RB
+251876,Pablo Maffeo,Defender,Right-Back,right,172.0,Argentina,1997-07-12 00:00:00,20.0,Spain,RB
+57995,Daniel Didavi,Midfield,Attacking Midfield,left,180.0,Germany,1990-02-21 00:00:00,28.0,Germany,AM
+167329,Alassane Plea,Attack,Centre-Forward,right,181.0,France,1993-03-10 00:00:00,25.0,France,CF
+182932,Davy Klaassen,Midfield,Central Midfield,right,179.0,Netherlands,1993-02-21 00:00:00,25.0,Netherlands,AM
+31159,Martin Harnik,Attack,Right Winger,right,185.0,Austria,1987-06-10 00:00:00,31.0,Austria,RW
+79377,Genki Haraguchi,Midfield,Attacking Midfield,right,178.0,Japan,1991-05-09 00:00:00,27.0,Japan,AM
+420002,Jean-Philippe Mateta,Attack,Centre-Forward,right,192.0,France,1997-06-28 00:00:00,21.0,France,CF
+225657,Philipp Lienhart,Defender,Centre-Back,right,189.0,Austria,1996-07-11 00:00:00,21.0,Austria,CB
+77108,Jerome Gondorf,Midfield,Central Midfield,right,176.0,Germany,1988-06-26 00:00:00,30.0,Germany,CM
+127076,Jerome Roussillon,Defender,Left-Back,left,175.0,Guadeloupe,1993-01-06 00:00:00,25.0,France,LB
+89591,Felix Klaus,Attack,Right Winger,right,179.0,Germany,1992-09-13 00:00:00,25.0,Germany,RW
+118196,Jean Zimmer,Defender,Right-Back,right,173.0,Germany,1993-12-06 00:00:00,24.0,Germany,RM
+216181,Almamy Toure,Defender,Centre-Back,right,183.0,,1996-04-28 00:00:00,22.0,France,RB
+281963,Lucas Hernandez,Defender,Left-Back,left,184.0,France,1996-02-14 00:00:00,23.0,France,CB
+344600,Michael Cuisance,Midfield,Central Midfield,left,181.0,France,1999-08-16 00:00:00,20.0,France,CM
+187492,Julian Brandt,Midfield,Attacking Midfield,right,185.0,Germany,1996-05-02 00:00:00,23.0,Germany,AM
+406040,Ademola Lookman,Attack,Left Winger,right,174.0,Nigeria,1997-10-20 00:00:00,21.0,England,LW
+344381,Christopher Nkunku,Attack,Centre-Forward,right,177.0,France,1997-11-14 00:00:00,21.0,France,AM
+395516,Moussa Diaby,Attack,Right Winger,left,170.0,France,1999-07-07 00:00:00,19.0,France,LW
+232454,Nadiem Amiri,Midfield,Central Midfield,right,180.0,Germany,1996-10-27 00:00:00,22.0,Germany,AM
+237662,Breel Embolo,Attack,Centre-Forward,right,184.0,Switzerland,1997-02-14 00:00:00,22.0,Switzerland,CF
+284732,Ramy Bensebaini,Defender,Centre-Back,left,187.0,Algeria,1995-04-16 00:00:00,24.0,Algeria,LB
+85789,Martin Hinteregger,Defender,Centre-Back,left,184.0,Austria,1992-09-07 00:00:00,26.0,Austria,CB
+45672,Kevin Trapp,Goalkeeper,Goalkeeper,right,189.0,Germany,1990-07-08 00:00:00,29.0,Germany,GK
+156990,Marco Friedl,Defender,Centre-Back,left,187.0,Austria,1998-03-16 00:00:00,21.0,Austria,CB
+303259,Dodi Lukebakio,Attack,Right Winger,left,184.0,Belgium,1997-09-24 00:00:00,21.0,Belgium,RW
+247555,Edimilson Fernandes,Midfield,Defensive Midfield,right,187.0,Switzerland,1996-04-15 00:00:00,23.0,Switzerland,CM
+136581,Aaron Martin,Defender,Centre-Back,right,190.0,England,1989-09-29 00:00:00,22.0,Spain,LB
+410185,Ronael Pierre-Gabriel,Defender,Right-Back,right,177.0,France,1998-06-13 00:00:00,21.0,France,RB
+296378,Luca Itter,Defender,Left-Back,left,183.0,Germany,1999-01-05 00:00:00,20.0,Germany,LB
+259350,Chang-hoon Kwon,Attack,Right Winger,left,173.0,"Korea, South",1994-06-30 00:00:00,25.0,"Korea, South",RW
+112930,Benito Raman,Attack,Centre-Forward,right,172.0,Belgium,1994-11-07 00:00:00,24.0,Belgium,CF
+422380,Bernard Tekpetey,Attack,Right Winger,right,172.0,Ghana,1997-09-03 00:00:00,21.0,Ghana,RW
+146714,Tomas Koubek,Goalkeeper,Goalkeeper,right,197.0,Czech Republic,1992-08-26 00:00:00,26.0,Czech Republic,GK
+314295,Reece Oxford,Defender,Centre-Back,right,190.0,England,1998-12-16 00:00:00,20.0,England,CB
+290587,Ellyes Skhiri,Midfield,Defensive Midfield,right,185.0,Tunisia,1995-05-10 00:00:00,24.0,Tunisia,DM
+40074,Stefan Ilsanker,Midfield,Defensive Midfield,right,189.0,Austria,1989-05-18 00:00:00,30.0,Austria,DM
+145866,Munas Dabbur,Attack,Centre-Forward,right,182.0,Israel,1992-05-14 00:00:00,27.0,Israel,CF
+293281,Jacob Bruun Larsen,Attack,Left Winger,right,183.0,Denmark,1998-09-19 00:00:00,21.0,Denmark,LW
+208167,Dawid Kownacki,Attack,Centre-Forward,right,186.0,Poland,1997-03-14 00:00:00,22.0,Poland,CF
+353948,Lucas Tousart,Midfield,Central Midfield,right,184.0,France,1997-04-29 00:00:00,22.0,France,DM
+159239,Dennis Srbeny,Attack,Centre-Forward,right,190.0,Germany,1994-05-05 00:00:00,25.0,Germany,CF
+190685,Bouna Sarr,Defender,Right-Back,right,178.0,Senegal,1992-01-31 00:00:00,28.0,Senegal,RB
+215864,Mijat Gacinovic,Midfield,Attacking Midfield,right,175.0,Serbia,1995-02-08 00:00:00,25.0,Serbia,AM
+327251,Ridle Baku,Defender,Right-Back,right,176.0,Germany,1998-04-08 00:00:00,22.0,Germany,RM
+285323,Baptiste Santamaria,Midfield,Defensive Midfield,right,183.0,France,1995-03-09 00:00:00,25.0,France,DM
+335457,Ermedin Demirovic,Attack,Centre-Forward,right,185.0,Bosnia-Herzegovina,1998-03-25 00:00:00,22.0,Bosnia-Herzegovina,CF
+68033,Steven Zuber,Attack,Left Winger,right,182.0,Switzerland,1991-08-17 00:00:00,28.0,Switzerland,LM
+198008,Andre Silva,Attack,Centre-Forward,right,186.0,Portugal,1995-11-06 00:00:00,24.0,Portugal,CF
+93763,Alexander Schwolow,Goalkeeper,Goalkeeper,right,190.0,Germany,1992-06-02 00:00:00,28.0,Germany,GK
+232418,Ondrej Duda,Midfield,Central Midfield,right,180.0,Slovakia,1994-12-05 00:00:00,25.0,Slovakia,AM
+147573,Sebastian Andersson,Attack,Centre-Forward,right,190.0,Sweden,1991-07-15 00:00:00,29.0,Sweden,CF
+278343,Felix Uduokhai,Defender,Centre-Back,left,193.0,Germany,1997-09-09 00:00:00,22.0,Germany,CB
+257814,Gregor Kobel,Goalkeeper,Goalkeeper,right,196.0,Switzerland,1997-12-06 00:00:00,22.0,Switzerland,GK
+315131,Timothy Fosu-Mensah,Defender,Right-Back,right,185.0,Netherlands,1998-01-02 00:00:00,23.0,Netherlands,RB
+538977,Georginio Rutter,Attack,Centre-Forward,left,182.0,France,2002-04-20 00:00:00,18.0,France,CF
+344695,Dayot Upamecano,Defender,Centre-Back,right,186.0,France,1998-10-27 00:00:00,22.0,France,CB
+106987,Marcel Sabitzer,Midfield,Central Midfield,right,178.0,Austria,1994-03-17 00:00:00,27.0,Austria,CM
+277179,Angelino,Defender,Left-Back,left,171.0,Spain,1997-01-04 00:00:00,24.0,Spain,LB
+202591,Benjamin Henrichs,Defender,Right-Back,right,185.0,Germany,1997-02-23 00:00:00,24.0,Germany,RB
+666234,Mohamed Simakan,Defender,Centre-Back,right,187.0,France,2000-05-03 00:00:00,21.0,France,CB
+338629,Sebastiaan Bornauw,Defender,Centre-Back,right,191.0,Belgium,1999-03-22 00:00:00,22.0,Belgium,CB
+314288,Lukas Nmecha,Attack,Centre-Forward,right,185.0,Germany,1998-12-14 00:00:00,22.0,Germany,CF
+40034,Jens Grahl,Goalkeeper,Goalkeeper,right,192.0,Germany,1988-09-22 00:00:00,32.0,Germany,GK
+361065,Mitchel Bakker,Midfield,Left Midfield,left,189.0,Netherlands,2000-06-20 00:00:00,21.0,Netherlands,LB
+159088,Robert Andrich,Midfield,Defensive Midfield,right,187.0,Germany,1994-09-22 00:00:00,26.0,Germany,CM
+295313,Taiwo Awoniyi,Attack,Centre-Forward,right,183.0,Nigeria,1997-08-12 00:00:00,23.0,Nigeria,CF
+107775,Frederik Ronnow,Goalkeeper,Goalkeeper,right,188.0,Denmark,1992-08-04 00:00:00,28.0,Denmark,GK
+321070,Hannes Wolf,Attack,Right Winger,left,179.0,Austria,1999-04-16 00:00:00,22.0,Austria,AM
+524285,Luca Netz,Defender,Left-Back,left,184.0,Germany,2003-05-15 00:00:00,18.0,Germany,LB
+284769,Florian Muller,Goalkeeper,Goalkeeper,left,190.0,Germany,1997-11-13 00:00:00,23.0,Germany,GK
+569366,Enzo Millot,Midfield,Attacking Midfield,left,175.0,France,2002-07-17 00:00:00,19.0,France,CM
+344069,Anton Stach,Midfield,Defensive Midfield,right,194.0,Germany,1998-11-15 00:00:00,22.0,Germany,DM
+279009,Marco Richter,Midfield,Attacking Midfield,right,176.0,Germany,1997-11-24 00:00:00,23.0,Germany,RW
+371142,Myziane Maolida,Attack,Left Winger,right,181.0,Comoros,1999-02-14 00:00:00,22.0,France,LW
+153555,Sebastian Griesbeck,Defender,Centre-Back,right,188.0,Germany,1990-10-03 00:00:00,30.0,Germany,DM
+20622,Arnold Mvuemba,Midfield,Defensive Midfield,right,172.0,DR Congo,1985-01-28 00:00:00,27.0,DR Congo,DM
+24661,Milan Bisevac,Defender,Centre-Back,right,185.0,Serbia,1983-08-31 00:00:00,28.0,Serbia,CB
+126659,Loris Nery,Defender,Right-Back,right,174.0,France,1991-02-05 00:00:00,21.0,France,RB
+60570,Yohan Mollo,Attack,Right Winger,right,175.0,France,1989-07-18 00:00:00,22.0,France,RW
+126530,Enzo Reale,Midfield,Central Midfield,right,175.0,France,1991-10-07 00:00:00,20.0,France,CM
+77834,Marvin Martin,Midfield,Attacking Midfield,right,170.0,France,1988-01-10 00:00:00,24.0,France,AM
+161869,Djibril Sidibe,Defender,Right-Back,right,183.0,France,1992-07-29 00:00:00,19.0,France,RB
+22386,Daniel Congre,Defender,Centre-Back,right,185.0,France,1985-04-05 00:00:00,27.0,France,CB
+52027,Thierry Doubai,Midfield,Defensive Midfield,right,179.0,Cote d'Ivoire,1988-07-01 00:00:00,24.0,Cote d'Ivoire,DM
+29241,Thiago Silva,Defender,Centre-Back,right,181.0,Brazil,1984-09-22 00:00:00,27.0,Brazil,CB
+50570,Ezequiel Lavezzi,Attack,Left Winger,right,173.0,Argentina,1985-05-03 00:00:00,27.0,Argentina,SS
+3455,Zlatan Ibrahimovic,Attack,Centre-Forward,right,195.0,Sweden,1981-10-03 00:00:00,30.0,Sweden,CF
+102558,Marco Verratti,Midfield,Central Midfield,right,165.0,Italy,1992-11-05 00:00:00,19.0,Italy,CM
+60583,Jeremy Pied,Defender,Right-Back,right,173.0,France,1989-02-23 00:00:00,23.0,France,RB
+137438,Sadio Diallo,Midfield,Central Midfield,right,182.0,Guinea,1990-12-28 00:00:00,21.0,Guinea,CM
+24459,Eden Ben Basat,Attack,Centre-Forward,right,184.0,Israel,1986-09-08 00:00:00,26.0,Israel,CF
+40014,Alaixys Romao,Midfield,Defensive Midfield,right,180.0,Togo,1984-01-18 00:00:00,29.0,Togo,DM
+48280,Edinson Cavani,Attack,Centre-Forward,right,184.0,Uruguay,1987-02-14 00:00:00,26.0,Uruguay,CF
+181767,Marquinhos,Defender,Centre-Back,right,183.0,Brazil,1994-05-14 00:00:00,19.0,Brazil,CB
+130756,Giannelli Imbula,Midfield,Defensive Midfield,left,186.0,DR Congo,1992-09-12 00:00:00,20.0,DR Congo,DM
+69101,Saber Khalifa,Attack,Centre-Forward,right,183.0,Tunisia,1986-10-14 00:00:00,26.0,Tunisia,CF
+6803,Henri Bedimo,Defender,Left-Back,left,180.0,Cameroon,1984-06-04 00:00:00,29.0,Cameroon,LB
+5457,Gael Danic,Attack,Left Winger,left,176.0,France,1981-11-19 00:00:00,31.0,France,attack
+154171,Benjamin Corgnet,Midfield,Attacking Midfield,right,179.0,France,1987-04-06 00:00:00,26.0,France,AM
+215652,Rafidine Abdullah,Midfield,Defensive Midfield,right,179.0,Comoros,1994-01-15 00:00:00,19.0,Comoros,DM
+126692,Yassine Jebbour,Defender,Right-Back,right,180.0,Morocco,1991-08-24 00:00:00,22.0,Morocco,RB
+18543,Victor Montano,Attack,Centre-Forward,right,180.0,Colombia,1984-05-01 00:00:00,29.0,Colombia,CF
+56795,Cheikh M'Bengue,Defender,Left-Back,left,183.0,Senegal,1988-07-23 00:00:00,25.0,Senegal,LB
+93678,Gaetan Charbonnier,Attack,Centre-Forward,right,188.0,France,1988-12-27 00:00:00,24.0,France,CF
+39152,Radamel Falcao,Attack,Centre-Forward,right,177.0,Colombia,1986-02-10 00:00:00,27.0,Colombia,CF
+5513,Jeremy Toulalan,Midfield,Defensive Midfield,right,183.0,France,1983-09-10 00:00:00,29.0,France,DM
+147846,Nicolas Isimat-Mirin,Defender,Centre-Back,right,187.0,France,1991-11-15 00:00:00,21.0,France,CB
+120091,Kassim Abdallah,Defender,Right-Back,right,185.0,Comoros,1987-04-09 00:00:00,26.0,Comoros,RB
+39717,Diego Contento,Defender,Left-Back,left,177.0,Germany,1990-05-01 00:00:00,24.0,Germany,LB
+189940,Florian Raspentino,Attack,Centre-Forward,right,179.0,France,1989-06-06 00:00:00,25.0,France,CF
+28335,Christophe Jallet,Defender,Right-Back,right,178.0,France,1983-10-31 00:00:00,30.0,France,RB
+98334,Romain Alessandrini,Attack,Right Winger,left,173.0,France,1989-04-03 00:00:00,25.0,France,RW
+98351,Kevin Berigaud,Attack,Centre-Forward,right,176.0,France,1988-05-09 00:00:00,26.0,France,CF
+43458,Clement Chantome,Midfield,Defensive Midfield,right,180.0,France,1987-09-11 00:00:00,27.0,France,DM
+278553,Dimitri Cavare,Defender,Centre-Back,right,184.0,Guadeloupe,1995-02-05 00:00:00,19.0,Guadeloupe,RB
+126710,Layvin Kurzawa,Defender,Left-Back,left,182.0,France,1992-09-04 00:00:00,22.0,France,LB
+61892,Rafael,Defender,Right-Back,right,172.0,Brazil,1990-07-09 00:00:00,25.0,Brazil,RB
+70209,Adama Traore,Defender,Left-Back,left,170.0,Cote d'Ivoire,1990-02-03 00:00:00,20.0,Mali,CM
+20463,Corentin Jean,Attack,Centre-Forward,right,170.0,France,1995-07-15 00:00:00,19.0,France,CF
+190333,Fares Bahlouli,Midfield,Attacking Midfield,right,182.0,France,1995-04-08 00:00:00,20.0,France,AM
+81460,Nolan Roux,Attack,Centre-Forward,right,182.0,France,1988-03-01 00:00:00,27.0,France,CF
+217115,Neal Maupay,Attack,Centre-Forward,right,171.0,France,1996-08-14 00:00:00,18.0,France,CF
+111482,Eric Bautheac,Attack,Right Winger,left,168.0,France,1987-08-24 00:00:00,27.0,France,RW
+157500,Lenny Nangis,Attack,Left Winger,right,172.0,Guadeloupe,1994-03-24 00:00:00,21.0,Guadeloupe,LW
+187847,Yassine Benzia,Midfield,Attacking Midfield,right,178.0,Algeria,1994-09-08 00:00:00,20.0,Algeria,AM
+160080,Yacouba Sylla,Midfield,Defensive Midfield,right,184.0,Mali,1990-11-29 00:00:00,24.0,Mali,DM
+118303,Mehdi Zeffane,Defender,Right-Back,right,176.0,Algeria,1992-05-19 00:00:00,23.0,Algeria,RB
+149551,Jonathan Delaplace,Midfield,Central Midfield,right,168.0,France,1986-03-20 00:00:00,29.0,France,CM
+178540,Chaker Alhadhur,Defender,Left-Back,right,172.0,Comoros,1991-12-04 00:00:00,23.0,Comoros,LB
+190780,Emiliano Sala,Attack,Centre-Forward,right,187.0,Argentina,1990-10-31 00:00:00,24.0,Argentina,CF
+12149,Lorik Cana,Midfield,Defensive Midfield,right,186.0,Albania,1983-07-27 00:00:00,32.0,Albania,DM
+59957,Benjamin Moukandjo,Attack,Centre-Forward,right,180.0,Cameroon,1988-11-12 00:00:00,26.0,Cameroon,CF
+206912,Jimmy Cabot,Midfield,Right Midfield,right,164.0,France,1994-04-18 00:00:00,21.0,France,RM
+134936,Jese,Attack,Left Winger,right,178.0,,1993-02-26 00:00:00,23.0,Spain,CF
+265569,Youssef Ait Bennasser,Midfield,Defensive Midfield,right,184.0,Morocco,1996-07-07 00:00:00,19.0,Morocco,CM
+272631,Arnaud Lusamba,Midfield,Central Midfield,right,180.0,DR Congo,1997-01-04 00:00:00,19.0,France,CM
+111058,Arnaud Souquet,Defender,Right-Back,right,179.0,France,1992-02-12 00:00:00,24.0,France,RB
+43256,Paul Baysse,Defender,Centre-Back,right,185.0,France,1988-05-18 00:00:00,28.0,France,CB
+76055,Ronny Rodelin,Attack,Right Winger,right,193.0,France,1989-11-18 00:00:00,26.0,France,RW
+170495,Ismael Diomande,Midfield,Defensive Midfield,right,183.0,Cote d'Ivoire,1992-08-28 00:00:00,23.0,Cote d'Ivoire,DM
+57449,Jamel Saihi,Midfield,Defensive Midfield,right,182.0,Tunisia,1987-01-27 00:00:00,29.0,Tunisia,DM
+16993,Jeremy Menez,Attack,Centre-Forward,right,182.0,France,1987-05-07 00:00:00,29.0,France,RW
+333802,Francois Kamano,Attack,Left Winger,right,175.0,Guinea,1996-05-02 00:00:00,20.0,Guinea,LW
+135490,Lindsay Rose,Defender,Centre-Back,right,184.0,Mauritius,1992-02-08 00:00:00,24.0,Mauritius,CB
+203517,Steven Moreira,Defender,Right-Back,right,178.0,Cape Verde,1994-08-13 00:00:00,22.0,France,RB
+201737,Christopher Jullien,Defender,Centre-Back,right,196.0,Guadeloupe,1993-03-22 00:00:00,23.0,France,CB
+36500,Ola Toivonen,Midfield,Attacking Midfield,right,189.0,Sweden,1986-07-03 00:00:00,30.0,Sweden,AM
+170460,Jessy Pi,Midfield,Defensive Midfield,right,179.0,France,1993-09-24 00:00:00,22.0,France,DM
+57358,Arnold Bouka Moutou,Defender,Left-Back,left,178.0,Congo,1988-11-28 00:00:00,27.0,Congo,LB
+167850,Memphis Depay,Attack,Centre-Forward,right,178.0,Netherlands,1994-02-13 00:00:00,22.0,Netherlands,CF
+55409,Younousse Sankhare,Midfield,Central Midfield,left,184.0,Senegal,1989-09-10 00:00:00,27.0,Senegal,CM
+81386,Gregory Sertic,Midfield,Defensive Midfield,right,183.0,France,1989-08-05 00:00:00,27.0,France,DM
+111026,Mathieu Peybernes,Defender,Centre-Back,right,187.0,France,1990-10-21 00:00:00,26.0,France,CB
+291110,Enzo Crivelli,Attack,Centre-Forward,right,183.0,,1995-02-06 00:00:00,22.0,France,CF
+187392,Thomas Toure,Attack,Left Winger,right,175.0,Cote d'Ivoire,1993-12-27 00:00:00,23.0,Cote d'Ivoire,LW
+264567,Baptiste Guillaume,Attack,Centre-Forward,right,189.0,Belgium,1995-06-16 00:00:00,22.0,Belgium,CF
+122116,Nicolas de Preville,Attack,Centre-Forward,right,182.0,France,1991-01-08 00:00:00,26.0,France,CF
+135492,Youssouf Sabaly,Defender,Right-Back,right,173.0,Senegal,1993-03-05 00:00:00,24.0,Senegal,RB
+290561,Alexandre Mendy,Attack,Centre-Forward,right,184.0,Guinea-Bissau,1994-03-20 00:00:00,23.0,Guinea-Bissau,CF
+354352,Frederic Guilbert,Defender,Right-Back,right,178.0,France,1994-12-24 00:00:00,22.0,France,RB
+171557,Baissama Sankoh,Midfield,Defensive Midfield,right,180.0,Guinea,1992-03-20 00:00:00,25.0,Guinea,DM
+182916,Wesley Said,Attack,Second Striker,right,171.0,France,1995-04-19 00:00:00,22.0,France,LW
+291140,Cedric Yambere,Defender,Centre-Back,right,191.0,Central African Republic,1990-11-06 00:00:00,26.0,Central African Republic,CB
+336828,Pape Cheikh,Midfield,Central Midfield,right,180.0,Senegal,1997-08-08 00:00:00,20.0,Senegal,CM
+60540,Valere Germain,Attack,Centre-Forward,right,181.0,France,1990-04-17 00:00:00,27.0,France,CF
+23951,Steve Mandanda,Goalkeeper,Goalkeeper,right,187.0,France,1985-03-28 00:00:00,32.0,France,GK
+238752,Keita Balde,Attack,Left Winger,both,178.0,Senegal,1995-03-08 00:00:00,22.0,Senegal,CF
+76293,Giovanni Sio,Attack,Centre-Forward,left,180.0,Cote d'Ivoire,1989-03-31 00:00:00,28.0,Cote d'Ivoire,CF
+139279,Nicolas Pallois,Defender,Centre-Back,left,189.0,France,1987-09-19 00:00:00,29.0,France,CB
+68290,Neymar,Midfield,Attacking Midfield,right,175.0,Brazil,1992-02-05 00:00:00,25.0,Brazil,LW
+126552,Lois Diony,Attack,Centre-Forward,right,183.0,France,1992-12-20 00:00:00,24.0,France,CF
+442891,Martin Terrier,Attack,Left Winger,right,184.0,France,1997-03-04 00:00:00,20.0,France,LW
+364133,Pietro Pellegri,Attack,Centre-Forward,right,189.0,Italy,2001-03-17 00:00:00,16.0,Italy,CF
+412095,Ihsan Sacko,Attack,Centre-Forward,right,183.0,France,1997-07-19 00:00:00,20.0,France,AM
+268555,Harrison Manzala,Attack,Right Winger,right,177.0,DR Congo,1994-03-06 00:00:00,24.0,DR Congo,RW
+126699,Vincent Pajot,Midfield,Defensive Midfield,right,180.0,France,1990-08-19 00:00:00,27.0,France,DM
+276255,Yacine Bammou,Attack,Centre-Forward,right,189.0,Morocco,1991-09-11 00:00:00,26.0,Morocco,CF
+392810,Casimir Ninga,Attack,Centre-Forward,right,186.0,Chad,1993-05-17 00:00:00,25.0,Chad,LW
+174344,Faycal Fajr,Midfield,Central Midfield,right,179.0,Morocco,1988-08-01 00:00:00,30.0,Morocco,CM
+60578,Prince Oniangue,Midfield,Defensive Midfield,right,188.0,Congo,1988-11-04 00:00:00,29.0,Congo,DM
+184491,Naim Sliti,Attack,Left Winger,right,173.0,Tunisia,1992-07-27 00:00:00,25.0,Tunisia,LW
+419999,Guessouma Fofana,Midfield,Defensive Midfield,right,184.0,Mauritania,1992-12-17 00:00:00,25.0,Mauritania,CM
+324690,Jonathan Ikone,Attack,Right Winger,left,175.0,France,1998-05-02 00:00:00,20.0,France,RW
+277114,Jason Denayer,Defender,Centre-Back,right,184.0,Belgium,1995-06-28 00:00:00,23.0,Belgium,CB
+68864,Kevin Strootman,Midfield,Central Midfield,left,186.0,Netherlands,1990-02-13 00:00:00,28.0,Netherlands,CM
+463620,Willem Geubbels,Attack,Centre-Forward,right,186.0,France,2001-08-16 00:00:00,16.0,France,LW
+178313,Jean-Eudes Aholou,Midfield,Defensive Midfield,left,186.0,Cote d'Ivoire,1994-03-20 00:00:00,24.0,Cote d'Ivoire,DM
+241889,Antonio Barreca,Defender,Left-Back,left,180.0,Italy,1995-03-18 00:00:00,23.0,Italy,LB
+181378,Gaetan Laborde,Attack,Centre-Forward,left,181.0,France,1994-05-03 00:00:00,24.0,France,CF
+270188,Lucas Evangelista,Midfield,Central Midfield,left,181.0,Brazil,1995-02-06 00:00:00,23.0,Brazil,CM
+164912,Loick Landre,Defender,Centre-Back,right,182.0,France,1992-05-05 00:00:00,26.0,Guadeloupe,CB
+342229,Kylian Mbappe,Attack,Centre-Forward,right,180.0,France,1998-12-20 00:00:00,19.0,France,CF
+228948,Thilo Kehrer,Defender,Centre-Back,both,186.0,Germany,1996-09-21 00:00:00,21.0,Germany,CB
+72479,Clement Grenier,Midfield,Central Midfield,right,186.0,,1991-01-07 00:00:00,27.0,France,CM
+353399,Romain Del Castillo,Attack,Right Winger,left,172.0,France,1996-03-29 00:00:00,22.0,France,RW
+427161,Lebo Mothiba,Attack,Centre-Forward,right,182.0,South Africa,1996-01-28 00:00:00,22.0,South Africa,CF
+127202,Matz Sels,Goalkeeper,Goalkeeper,right,188.0,Belgium,1992-02-26 00:00:00,26.0,Belgium,GK
+265504,Firmin Mubele,Attack,Centre-Forward,right,175.0,DR Congo,1994-04-17 00:00:00,24.0,DR Congo,CF
+190786,Baptiste Reynet,Goalkeeper,Goalkeeper,right,185.0,France,1990-10-28 00:00:00,27.0,France,GK
+236041,Alexis Blin,Midfield,Defensive Midfield,right,186.0,France,1996-09-16 00:00:00,22.0,France,DM
+290593,Sada Thioub,Attack,Right Winger,right,179.0,Senegal,1995-06-01 00:00:00,24.0,Senegal,RW
+344575,Antonin Bobichon,Midfield,Central Midfield,right,178.0,France,1995-09-14 00:00:00,23.0,France,CM
+76277,Laurent Koscielny,Defender,Centre-Back,right,186.0,France,1985-09-10 00:00:00,33.0,France,CB
+342226,Irvin Cardona,Attack,Right Winger,right,185.0,Malta,1997-08-08 00:00:00,22.0,France,CF
+258027,Renato Sanches,Midfield,Central Midfield,right,176.0,Portugal,1997-08-18 00:00:00,22.0,Portugal,CM
+370846,Timothy Weah,Midfield,Right Midfield,right,183.0,United States,2000-02-22 00:00:00,19.0,United States,CF
+84301,Benjamin Andre,Midfield,Defensive Midfield,right,180.0,France,1990-08-03 00:00:00,28.0,France,DM
+326300,Jeff Reine-Adelaide,Midfield,Attacking Midfield,right,184.0,France,1998-01-17 00:00:00,21.0,France,AM
+135617,Thiago Mendes,Midfield,Defensive Midfield,right,177.0,Brazil,1992-03-15 00:00:00,27.0,Brazil,DM
+274484,Youssouf Kone,Defender,Left-Back,left,174.0,Mali,1995-07-05 00:00:00,23.0,Mali,LB
+332889,Valentin Rongier,Midfield,Central Midfield,right,173.0,France,1994-12-07 00:00:00,24.0,France,CM
+293944,Habib Maiga,Midfield,Defensive Midfield,right,181.0,Cote d'Ivoire,1996-01-01 00:00:00,23.0,Cote d'Ivoire,DM
+257448,Gelson Martins,Attack,Right Winger,right,173.0,Portugal,1995-05-11 00:00:00,24.0,Portugal,RW
+249730,Guillermo Maripan,Defender,Centre-Back,right,193.0,Chile,1994-05-06 00:00:00,25.0,Chile,CB
+380415,Henry Onyekuru,Attack,Left Winger,right,175.0,Nigeria,1997-06-05 00:00:00,22.0,Nigeria,LW
+127181,Benjamin Lecomte,Goalkeeper,Goalkeeper,left,186.0,France,1991-04-26 00:00:00,28.0,France,GK
+536477,Arthur Zagre,Defender,Left-Back,left,168.0,Burkina Faso,2001-10-04 00:00:00,17.0,France,LB
+203746,Ruben Aguilar,Defender,Right-Back,right,172.0,France,1993-04-26 00:00:00,26.0,France,RB
+127156,Teji Savanier,Midfield,Attacking Midfield,right,172.0,France,1991-12-22 00:00:00,27.0,France,CM
+122797,Andy Delort,Attack,Centre-Forward,right,181.0,Algeria,1991-10-09 00:00:00,27.0,Algeria,CF
+118284,Jordan Ferri,Midfield,Central Midfield,right,173.0,France,1992-03-12 00:00:00,27.0,France,CM
+129893,Molla Wague,Defender,Centre-Back,right,191.0,Mali,1991-02-21 00:00:00,28.0,Mali,CB
+371141,Stanley Nsoki,Defender,Centre-Back,left,184.0,France,1999-04-09 00:00:00,20.0,France,CB
+74230,Pablo Sarabia,Midfield,Attacking Midfield,left,174.0,Spain,1992-05-11 00:00:00,27.0,Spain,RW
+202278,Flavien Tait,Midfield,Central Midfield,right,176.0,France,1993-02-02 00:00:00,26.0,France,CM
+236045,Denis Bouanga,Attack,Left Winger,right,180.0,Gabon,1994-11-11 00:00:00,24.0,Gabon,LW
+471582,Zaydou Youssouf,Midfield,Central Midfield,left,182.0,Comoros,1999-07-11 00:00:00,19.0,France,CM
+268176,Sergi Palencia,Defender,Right-Back,right,172.0,Spain,1996-03-23 00:00:00,23.0,Spain,RB
+125783,Sanjin Prcic,Midfield,Central Midfield,right,181.0,Bosnia-Herzegovina,1993-11-20 00:00:00,25.0,Bosnia-Herzegovina,CM
+399543,Remi Oudin,Midfield,Attacking Midfield,left,186.0,France,1996-11-18 00:00:00,23.0,France,RW
+413112,Aurelien Tchouameni,Midfield,Defensive Midfield,right,188.0,France,2000-01-27 00:00:00,20.0,France,DM
+569598,Youssouf Fofana,Midfield,Defensive Midfield,right,185.0,France,1999-01-10 00:00:00,21.0,France,CM
+207302,Sergio Rico,Goalkeeper,Goalkeeper,right,196.0,Spain,1993-09-01 00:00:00,27.0,Spain,GK
+33947,Rafinha,Defender,Right-Back,right,172.0,Brazil,1985-09-07 00:00:00,27.0,Brazil,AM
+361914,Nayef Aguerd,Defender,Centre-Back,left,190.0,Morocco,1996-03-30 00:00:00,24.0,Morocco,CB
+418659,Amine Gouiri,Attack,Centre-Forward,right,180.0,Algeria,2000-02-16 00:00:00,20.0,France,CF
+290017,Hassane Kamara,Defender,Left-Back,left,170.0,Cote d'Ivoire,1994-03-05 00:00:00,26.0,Cote d'Ivoire,LB
+495667,Lucas Da Cunha,Midfield,Central Midfield,left,174.0,France,2001-06-09 00:00:00,19.0,France,LW
+145115,Valon Berisha,Midfield,Central Midfield,right,176.0,Kosovo,1993-02-07 00:00:00,27.0,Kosovo,CM
+444523,Lucas Paqueta,Midfield,Attacking Midfield,left,183.0,Brazil,1997-08-27 00:00:00,23.0,Brazil,AM
+344888,Habib Diallo,Attack,Centre-Forward,right,186.0,Senegal,1995-06-18 00:00:00,25.0,Senegal,CF
+386047,Axel Disasi,Defender,Centre-Back,right,191.0,France,1998-03-11 00:00:00,22.0,France,CB
+420064,Caio Henrique,Defender,Left-Back,left,178.0,Brazil,1997-07-31 00:00:00,23.0,Brazil,LB
+318507,Paul Bernardoni,Goalkeeper,Goalkeeper,left,193.0,France,1997-04-18 00:00:00,23.0,France,GK
+296356,Souleyman Doumbia,Defender,Left-Back,left,178.0,Cote d'Ivoire,1996-09-24 00:00:00,23.0,Cote d'Ivoire,LB
+274862,Moses Simon,Attack,Left Winger,right,168.0,Nigeria,1995-07-12 00:00:00,24.0,Nigeria,LW
+229006,Franck Honorat,Attack,Right Winger,right,180.0,France,1996-08-11 00:00:00,23.0,France,RW
+170544,Christophe Herelle,Defender,Centre-Back,right,191.0,Martinique,1992-08-22 00:00:00,27.0,Martinique,CB
+255220,Romain Philippoteaux,Midfield,Right Midfield,,170.0,France,1988-03-02 00:00:00,32.0,France,LW
+342209,Kevin N'Doram,Midfield,Defensive Midfield,right,184.0,France,1996-01-22 00:00:00,24.0,France,DM
+68442,Vagner,Goalkeeper,Goalkeeper,right,186.0,Brazil,1986-06-06 00:00:00,24.0,Cape Verde,RW
+444725,Patrick Burner,Defender,Right-Back,right,170.0,Martinique,1996-04-11 00:00:00,24.0,Martinique,RB
+344599,Yassine Benrahou,Midfield,Attacking Midfield,left,172.0,Morocco,1999-01-24 00:00:00,21.0,Morocco,AM
+579930,Armand Lauriente,Attack,Left Winger,right,177.0,France,1998-12-04 00:00:00,21.0,France,RW
+182893,Seko Fofana,Midfield,Central Midfield,right,185.0,Cote d'Ivoire,1995-05-07 00:00:00,25.0,Cote d'Ivoire,CM
+531949,Ignatius Ganago,Attack,Centre-Forward,right,176.0,Cameroon,1999-02-16 00:00:00,21.0,Cameroon,CF
+578872,Jean Lucas,Midfield,Central Midfield,right,181.0,Brazil,1998-06-22 00:00:00,23.0,Brazil,CM
+375137,Ismail Jakobs,Defender,Left-Back,left,184.0,Senegal,1999-08-17 00:00:00,21.0,Germany,LM
+575998,Leonardo Balerdi,Defender,Centre-Back,right,188.0,Argentina,1999-01-26 00:00:00,22.0,Argentina,CB
+191891,Arkadiusz Milik,Attack,Centre-Forward,left,186.0,Poland,1994-02-28 00:00:00,27.0,Poland,CF
+730581,Loic Bade,Defender,Centre-Back,right,191.0,France,2000-04-11 00:00:00,21.0,France,CB
+263236,Kevin Danso,Defender,Centre-Back,right,190.0,Austria,1998-09-19 00:00:00,22.0,Austria,CB
+532775,Melvin Bard,Defender,Left-Back,left,173.0,France,2000-11-06 00:00:00,20.0,France,LB
+656441,Jean Onana,Midfield,Defensive Midfield,right,189.0,Cameroon,2000-01-08 00:00:00,21.0,Cameroon,DM
+378953,Gerzino Nyamsi,Defender,Centre-Back,right,195.0,Cameroon,1997-01-22 00:00:00,24.0,France,CB
+485960,Lilian Brassier,Defender,Centre-Back,left,186.0,France,1999-11-02 00:00:00,21.0,France,CB
+536507,Giulian Biancone,Defender,Centre-Back,right,187.0,France,2000-03-31 00:00:00,21.0,France,RB
+277635,Rominigue Kouame,Midfield,Central Midfield,left,177.0,Mali,1996-12-17 00:00:00,24.0,Mali,CM

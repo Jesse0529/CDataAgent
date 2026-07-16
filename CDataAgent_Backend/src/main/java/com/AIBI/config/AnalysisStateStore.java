@@ -47,12 +47,11 @@ public class AnalysisStateStore {
     public void init() {
         available = properties.isEnabled() && redissonClient != null;
         if (available) {
-            log.info("AnalysisStateStore: 已启用 (metaTTL={}d, dataTTL={}m, maxDataEntries={}, maxEntryBytes={})",
+            log.info("状态持久化已启用：metaTTL={}d、dataTTL={}m、dataCapacity={}KB",
                     properties.getMetaTtlDays(), properties.getDataTtlMinutes(),
-                    properties.getMaxDataEntries(), properties.getMaxDataEntryBytes());
+                    properties.getMaxDataTotalBytes() / 1024);
         } else {
-            log.info("AnalysisStateStore: 已禁用 (enabled={}, redisson={})",
-                    properties.isEnabled(), redissonClient != null);
+            log.info("状态持久化已禁用");
         }
     }
 
@@ -81,18 +80,15 @@ public class AnalysisStateStore {
             List<AnalysisState.StepRecord> steps = state.getSteps();
             meta.put("stepResults", steps.isEmpty() ? "[]" : JSON.toJSONString(steps));
 
+            Map<String, AnalysisState.QueryOutputRecord> queryOutputs = state.getQueryOutputs();
+            meta.put("queryOutputs", queryOutputs.isEmpty() ? "{}" : JSON.toJSONString(queryOutputs));
+
             // activeFileIds
             List<Long> activeIds = state.getActiveFileIds();
             meta.put("activeFileIds", activeIds.isEmpty() ? "[]" : JSON.toJSONString(activeIds));
 
-            // intent
-            JSONObject intent = new JSONObject();
-            intent.put("category", state.getIntentCategory());
-            intent.put("dimensions", state.getIntentDimensions());
-            intent.put("metrics", state.getIntentMetrics());
-            intent.put("clarity", state.getIntentClarity());
-            intent.put("summary", state.getIntentSummary());
-            meta.put("intent", intent.toJSONString());
+            // intent 已迁移至 RunContext（请求级，不跨轮持久化），不再保存到 Redis
+            meta.put("intent", "{}");
 
             meta.put("updatedAt", java.time.Instant.now().toString());
 
@@ -103,10 +99,10 @@ public class AnalysisStateStore {
             // ── 2. 保存 dataIndex（SQL 结果）─────────────
             saveDataIndex(conversationId, state);
 
-            log.debug("AnalysisStateStore: 已保存 conversationId={}, files={}, steps={}, dataEntries={}",
-                    conversationId, files.size(), steps.size(), state.getAvailableKeys().size());
+            log.debug("状态已保存：文件={}、步骤={}、查询索引={}、数据键数={}",
+                    files.size(), steps.size(), queryOutputs.size(), state.getAvailableKeys().size());
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 保存失败 (conversationId={}), 降级为纯内存模式", conversationId, e);
+            log.warn("状态保存失败，降级为纯内存模式", e);
         }
     }
 
@@ -141,6 +137,14 @@ public class AnalysisStateStore {
             }
             if (steps == null) steps = Collections.emptyList();
 
+            Map<String, AnalysisState.QueryOutputRecord> queryOutputs = Collections.emptyMap();
+            String queryOutputsJson = meta.get("queryOutputs");
+            if (queryOutputsJson != null && !queryOutputsJson.isEmpty() && !"{}".equals(queryOutputsJson)) {
+                queryOutputs = JSON.parseObject(queryOutputsJson,
+                        new com.alibaba.fastjson2.TypeReference<LinkedHashMap<String, AnalysisState.QueryOutputRecord>>() {});
+            }
+            if (queryOutputs == null) queryOutputs = Collections.emptyMap();
+
             List<Long> activeIds = Collections.emptyList();
             String activeIdsJson = meta.get("activeFileIds");
             if (activeIdsJson != null && !activeIdsJson.isEmpty() && !"[]".equals(activeIdsJson)) {
@@ -150,7 +154,8 @@ public class AnalysisStateStore {
 
             // ── 恢复 dataIndex ──────────────────────────
             RMap<String, String> data = redissonClient.getMap(DATA_KEY_PREFIX + conversationId);
-            Map<String, String> dataIndex = new LinkedHashMap<>(data.readAllMap());
+            Map<String, String> rawDataIndex = data.readAllMap();
+            Map<String, String> dataIndex = restoreDataIndexOrder(rawDataIndex, meta.get("dataIndexOrder"));
 
             // 标记被截断的条目
             String truncatedStr = meta.get("dataTruncated");
@@ -158,15 +163,15 @@ public class AnalysisStateStore {
                     ? JSON.parseArray(truncatedStr, String.class)
                     : Collections.emptyList();
             if (!truncated.isEmpty()) {
-                log.warn("AnalysisStateStore: 以下 key 因体积过大未持久化: {}", truncated);
+                log.warn("以下键因体积过大未持久化：{}", truncated);
             }
 
-            log.info("AnalysisStateStore: 已恢复 conversationId={}, files={}, steps={}, dataEntries={}",
-                    conversationId, files.size(), steps.size(), dataIndex.size());
+            log.info("状态已恢复：文件={}、步骤={}、查询索引={}、数据键数={}",
+                    files.size(), steps.size(), queryOutputs.size(), dataIndex.size());
 
-            return new StateSnapshot(files, steps, dataIndex, activeIds);
+            return new StateSnapshot(files, steps, dataIndex, queryOutputs, activeIds);
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 恢复失败 (conversationId={}), 从头开始", conversationId, e);
+            log.warn("状态恢复失败，从头开始", e);
             return null;
         }
     }
@@ -182,9 +187,9 @@ public class AnalysisStateStore {
         try {
             redissonClient.getMap(META_KEY_PREFIX + conversationId).delete();
             redissonClient.getMap(DATA_KEY_PREFIX + conversationId).delete();
-            log.info("AnalysisStateStore: 已删除 conversationId={}", conversationId);
+            log.info("状态数据已删除");
         } catch (Exception e) {
-            log.warn("AnalysisStateStore: 删除失败 (conversationId={})", conversationId, e);
+            log.warn("状态数据删除失败", e);
         }
     }
 
@@ -210,11 +215,11 @@ public class AnalysisStateStore {
      * 限制：
      * <ul>
      *   <li>单条超过 {@code maxDataEntryBytes} 的跳过（在 meta 中记录 key）</li>
-     *   <li>条目超过 {@code maxDataEntries} 时 FIFO 淘汰</li>
+     *   <li>总容量超过 {@code maxDataTotalBytes} 时淘汰最早结果</li>
      * </ul>
      */
     private void saveDataIndex(String conversationId, AnalysisState state) {
-        Map<String, String> dataMap = new HashMap<>();
+        Map<String, String> dataMap = new LinkedHashMap<>();
         List<String> truncatedKeys = new ArrayList<>();
 
         for (String key : state.getAvailableKeys()) {
@@ -224,38 +229,71 @@ public class AnalysisStateStore {
             int byteSize = value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
             if (byteSize > properties.getMaxDataEntryBytes()) {
                 truncatedKeys.add(key);
-                log.warn("AnalysisStateStore: 条目 {}/{} 超限 ({} > {}), 不持久化",
-                        conversationId, key, byteSize, properties.getMaxDataEntryBytes());
+                log.warn("条目超限不持久化：键={}、大小={}、上限={}", key, byteSize, properties.getMaxDataEntryBytes());
                 continue;
             }
             dataMap.put(key, value);
         }
 
-        // ── FIFO 淘汰 ───────────────────────────────────
-        int max = properties.getMaxDataEntries();
-        if (dataMap.size() > max) {
-            int excess = dataMap.size() - max;
-            Iterator<String> it = dataMap.keySet().iterator();
-            for (int i = 0; i < excess && it.hasNext(); i++) {
-                it.next();
-                it.remove();
-            }
-            log.warn("AnalysisStateStore: dataIndex 超限 FIFO 淘汰 {} 条", excess);
-        }
+        trimDataIndexToCapacity(dataMap, properties.getMaxDataTotalBytes());
 
         // ── 写入 Redis ─────────────────────────────────
+        RMap<String, String> data = redissonClient.getMap(DATA_KEY_PREFIX + conversationId);
+        data.clear();
         if (!dataMap.isEmpty()) {
-            RMap<String, String> data = redissonClient.getMap(DATA_KEY_PREFIX + conversationId);
             data.putAll(dataMap);
-            Duration dataTtl = Duration.ofMinutes(properties.getDataTtlMinutes());
-            data.expire(dataTtl);
         }
+        Duration dataTtl = Duration.ofMinutes(properties.getDataTtlMinutes());
+        data.expire(dataTtl);
 
         // ── 记录截断 key ─────────────────────────────
-        if (!truncatedKeys.isEmpty()) {
-            RMap<String, String> meta = redissonClient.getMap(META_KEY_PREFIX + conversationId);
-            meta.put("dataTruncated", JSON.toJSONString(truncatedKeys));
+        RMap<String, String> meta = redissonClient.getMap(META_KEY_PREFIX + conversationId);
+        meta.put("dataTruncated", JSON.toJSONString(truncatedKeys));
+        meta.put("dataIndexOrder", JSON.toJSONString(new ArrayList<>(dataMap.keySet())));
+    }
+
+    /** 按总字节数控制 Redis 占用；优先保留最新查询结果。 */
+    static void trimDataIndexToCapacity(Map<String, String> dataMap, int maxBytes) {
+        if (maxBytes <= 0 || dataMap.isEmpty()) return;
+        int totalBytes = dataMap.values().stream()
+                .mapToInt(value -> value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+                .sum();
+        if (totalBytes <= maxBytes) return;
+
+        int removed = 0;
+        Iterator<Map.Entry<String, String>> iterator = dataMap.entrySet().iterator();
+        while (totalBytes > maxBytes && iterator.hasNext()) {
+            Map.Entry<String, String> entry = iterator.next();
+            totalBytes -= entry.getValue().getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            iterator.remove();
+            removed++;
         }
+        log.warn("数据索引容量超限：淘汰{}条，保留={}KB，上限={}KB", removed,
+                totalBytes / 1024, maxBytes / 1024);
+    }
+
+    /** Redis Hash 不保证遍历顺序，单独保存键顺序以保证淘汰策略跨轮一致。 */
+    private static Map<String, String> restoreDataIndexOrder(Map<String, String> rawDataIndex,
+                                                              String orderJson) {
+        Map<String, String> ordered = new LinkedHashMap<>();
+        if (rawDataIndex == null || rawDataIndex.isEmpty()) return ordered;
+        List<String> order = Collections.emptyList();
+        if (orderJson != null && !orderJson.isBlank()) {
+            try {
+                List<String> parsed = JSON.parseArray(orderJson, String.class);
+                order = parsed != null ? parsed : Collections.emptyList();
+            } catch (Exception ignored) {
+                // 旧格式或损坏元数据不影响状态恢复，退化为 Redis 当前遍历顺序。
+            }
+        }
+        if (order != null) {
+            for (String key : order) {
+                String value = rawDataIndex.get(key);
+                if (value != null) ordered.put(key, value);
+            }
+        }
+        rawDataIndex.forEach(ordered::putIfAbsent);
+        return ordered;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -271,12 +309,14 @@ public class AnalysisStateStore {
             List<AnalysisState.LoadedFileRecord> files,
             List<AnalysisState.StepRecord> steps,
             Map<String, String> dataIndex,
+            Map<String, AnalysisState.QueryOutputRecord> queryOutputs,
             List<Long> activeFileIds
     ) {
         public boolean isEmpty() {
             return (files == null || files.isEmpty())
                     && (steps == null || steps.isEmpty())
                     && (dataIndex == null || dataIndex.isEmpty())
+                    && (queryOutputs == null || queryOutputs.isEmpty())
                     && (activeFileIds == null || activeFileIds.isEmpty());
         }
     }

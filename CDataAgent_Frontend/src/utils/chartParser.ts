@@ -63,7 +63,9 @@ export function extractChartOption(text: string): ChartParseResult | null {
     return result
   }
 
-  console.log(`[chartParser#${id}] no chart found. text length=${text.length}, preview="${text.slice(0, 120)}..."`)
+  console.log(
+    `[chartParser#${id}] no chart found. text length=${text.length}, preview="${text.slice(0, 120)}..."`,
+  )
   return null
 }
 

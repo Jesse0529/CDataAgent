@@ -66,6 +66,7 @@ buildNumber.properties
 *.rar
 
 # ---- 设计文档（本地保留，不提交到 GitHub） ----
+/docs/
 CDataAgent_Backend/docs/
 
 # ---- 本地开发配置 ----

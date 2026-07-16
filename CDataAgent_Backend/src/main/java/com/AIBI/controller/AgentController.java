@@ -3,11 +3,11 @@ package com.AIBI.controller;
 import com.AIBI.common.BaseResponse;
 import com.AIBI.common.ErrorCode;
 import com.AIBI.common.ResultUtils;
-import com.AIBI.exception.BusinessException;
-import com.AIBI.exception.ThrowUtils;
 import com.AIBI.config.DisconnectGraceManager;
 import com.AIBI.config.SseEventBuffer;
 import com.AIBI.config.SseEventBufferManager;
+import com.AIBI.exception.BusinessException;
+import com.AIBI.exception.ThrowUtils;
 import com.AIBI.model.vo.MessageVO;
 import com.AIBI.service.AgentService;
 import com.alibaba.fastjson2.JSON;
@@ -15,9 +15,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -29,11 +35,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Agent 对话接口（单对话模式）。
- */
+/** Agent SSE 接口。运行流以 runId 隔离，会话 ID 仅用于业务归属。 */
 @RestController
 @RequestMapping("/apis/agent")
 @Slf4j
@@ -41,266 +46,180 @@ public class AgentController {
 
     @Autowired
     private AgentService agentService;
-
     @Autowired
     private SseEventBufferManager bufferManager;
-
     @Autowired
     private DisconnectGraceManager graceManager;
-
     @Value("${agent.global-timeout-seconds:300}")
     private int agentTimeoutSeconds;
 
-    /**
-     * Agent 对话（流式 SSE）。
-     *
-     * @param fileIds 可选，本次消息绑定的数据文件 ID，逗号分隔。传此参数后 agent 仅查询指定文件。
-     */
-    @PostMapping(value = "/chat/stream")
+    @PostMapping("/chat/stream")
     public SseEmitter chatStream(
             @RequestParam("message") String message,
-            @RequestParam(value = "fileIds", required = false) String fileIds) {
+            @RequestParam(value = "fileIds", required = false) String fileIds,
+            @RequestParam(value = "renderProtocol", required = false) String protocolParam,
+            @RequestHeader(value = "X-Agent-Render-Protocol", required = false) String protocolHeader) {
         ThrowUtils.throwIf(StringUtils.isBlank(message), ErrorCode.PARAMS_ERROR, "消息不能为空");
 
-        List<Long> fileIdList = null;
-        if (StringUtils.isNotBlank(fileIds)) {
-            try {
-                fileIdList = new ArrayList<>();
-                for (String part : fileIds.split(",")) {
-                    String trimmed = part.trim();
-                    if (!trimmed.isEmpty()) {
-                        fileIdList.add(Long.parseLong(trimmed));
-                    }
-                }
-            } catch (NumberFormatException e) {
-                throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件 ID 格式错误");
-            }
-        }
+        String protocol = StringUtils.defaultIfBlank(protocolHeader, protocolParam);
+        String runId = UUID.randomUUID().toString();
+        String resumeToken = bufferManager.generateResumeToken(runId);
+        SseEmitter emitter = newEmitter();
+        SseEventBuffer buffer = bufferManager.getOrCreate(runId);
+        buffer.setRunId(runId);
+        Sinks.Many<Map<String, String>> sink = Sinks.many().replay().limit(512);
+        graceManager.register(runId, sink, buffer);
 
-        // 对齐前端超时(300s) + 30s 优雅余量
-        SseEmitter emitter = new SseEmitter((long) agentTimeoutSeconds * 1000 + 30_000L);
+        reactor.core.Disposable clientSubscription = forward(sink.asFlux(), emitter, runId);
+        AtomicLong sequence = new AtomicLong();
+        emit(sink, buffer, sequence, "meta", JSON.toJSONString(Map.of(
+                "runId", runId,
+                "renderProtocol", "render-document.v1".equals(protocol) ? "render-document.v1" : "legacy",
+                "resumeToken", resumeToken,
+                "replaySupported", true)));
 
-        Long cid = agentService.getOrCreateDefaultConversation();
-        String cidStr = cid.toString();
+        List<Long> ids = parseFileIds(fileIds);
+        Flux<Map<String, String>> events = agentService
+                .chatStream(message, ids, protocol, runId)
+                .publish()
+                .refCount(1);
+        Flux<Map<String, String>> heartbeat = Flux.interval(Duration.ofSeconds(15))
+                .map(ignored -> Map.of("type", "ping", "data", ""))
+                .takeUntilOther(events.ignoreElements());
+        Map<String, String> complete = Map.of("type", "complete", "data", JSON.toJSONString(Map.of(
+                "type", "complete", "runId", runId, "resumeToken", resumeToken)));
 
-        // 初始化事件缓冲区 + 热点 Sinks.Many + resumeToken
-        SseEventBuffer buffer = bufferManager.getOrCreate(cidStr);
-        Sinks.Many<Map<String, String>> sink = Sinks.many().multicast().onBackpressureBuffer();
-        graceManager.register(cidStr, sink, buffer);
-        String resumeToken = bufferManager.generateResumeToken(cidStr);
+        reactor.core.Disposable sourceSubscription = Flux.concat(Flux.merge(events, heartbeat), Mono.just(complete))
+                .map(event -> enrich(event, sequence, buffer))
+                .doFinally(ignored -> buffer.markStreamEnd())
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe(
+                        sink::tryEmitNext,
+                        error -> {
+                            sink.tryEmitNext(enrich(errorEvent(error), sequence, buffer));
+                            sink.tryEmitComplete();
+                        },
+                        sink::tryEmitComplete);
+        graceManager.setColdSubscription(runId, sourceSubscription);
 
-        // 冷事件流 + 心跳 + 序号
-        var eventFlux = agentService.chatStream(message, fileIdList);
-
-        // publish + connect: 将冷 Flux 转为热点，后续所有 subscriber 共享同一次执行
-        ConnectableFlux<Map<String, String>> hotFlux = eventFlux.publish();
-        reactor.core.Disposable hotConn = hotFlux.connect();
-
-        Flux<Map<String, String>> hbFlux = Flux.interval(Duration.ofSeconds(15))
-                .map(i -> Map.of("type", "ping", "data", ""))
-                .takeUntilOther(hotFlux.then(Mono.empty()));
-
-        AtomicLong seqCounter = new AtomicLong(0);
-
-        // 先用一个 status 事件把 resumeToken 发给前端（不等 complete 事件）
-        Map<String, String> tokenEvent = new LinkedHashMap<>();
-        tokenEvent.put("type", "status");
-        tokenEvent.put("data", "resumeToken:" + resumeToken);
-        sink.tryEmitNext(tokenEvent);
-
-        reactor.core.Disposable coldSub = Flux.merge(hotFlux, hbFlux)
-            .map(event -> {
-                long seq = seqCounter.getAndIncrement();
-                if (!"ping".equals(event.get("type"))) {
-                    buffer.append(seq, event.get("type"), event.get("data"));
-                }
-                Map<String, String> enriched = new LinkedHashMap<>(event);
-                enriched.put("seq", String.valueOf(seq));
-                return enriched;
-            })
-            .doFinally(signal -> {
-                buffer.markStreamEnd();
-                hotConn.dispose();
-            })
-            .subscribeOn(Schedulers.boundedElastic())
-            .subscribe(
-                enriched -> sink.tryEmitNext(enriched),
-                error -> {
-                    log.error("冷 Flux 异常, cid={}", cid, error);
-                    sink.tryEmitError(error);
-                },
-                () -> sink.tryEmitComplete()
-            );
-        graceManager.setColdSubscription(cidStr, coldSub);
-
-        // 首次订阅热点 → SseEmitter
-        reactor.core.Disposable disposable = sink.asFlux()
-            .subscribeOn(Schedulers.boundedElastic())
-            .subscribe(
-                event -> {
-                    try {
-                        emitter.send(SseEmitter.event()
-                                .name(event.get("type"))
-                                .data(event.get("data")));
-                    } catch (IOException e) {
-                        throw new RuntimeException("SSE 发送失败，客户端可能已断开", e);
-                    }
-                },
-                error -> {
-                    log.error("SSE 流式对话失败, cid={}", cid);
-                    try {
-                        Map<String, String> errResult = new LinkedHashMap<>();
-                        errResult.put("type", "error");
-                        errResult.put("message", error.getMessage());
-                        emitter.send(SseEmitter.event().name("complete").data(JSON.toJSONString(errResult)));
-                    } catch (Exception ignored) {}
-                    emitter.completeWithError(error);
-                },
-                () -> {
-                    try {
-                        Map<String, Object> result = new LinkedHashMap<>();
-                        result.put("type", "complete");
-                        result.put("chartOption", agentService.getLastChartOption());
-                        result.put("conversationId", cid);
-                        result.put("tokenUsage", agentService.getLastTokenUsage());
-                        result.put("resumeToken", resumeToken);
-                        emitter.send(SseEmitter.event().name("complete").data(JSON.toJSONString(result)));
-                    } catch (Exception e) {
-                        log.error("发送 complete 事件失败", e);
-                    }
-                    emitter.complete();
-                }
-            );
-
-        // 注册 SseEmitter 回调
-        emitter.onCompletion(() -> {
-            log.debug("SSE 连接正常关闭: cid={}", cid);
-            disposable.dispose();
-        });
-
+        emitter.onCompletion(clientSubscription::dispose);
         emitter.onTimeout(() -> {
-            log.warn("SSE 连接超时, 启动优雅窗格: cid={}", cidStr);
-            disposable.dispose();
-            graceManager.onDisconnect(cidStr);
+            clientSubscription.dispose();
+            graceManager.onDisconnect(runId);
         });
-
         return emitter;
     }
 
-    /**
-     * 重连 SSE 流 — 用于断线后的续播恢复。
-     * <p>
-     * 客户端断连后通过此端点重新订阅热点 Sinks.Many：
-     * 1. 验证 resumeToken 防止恶意重连
-     * 2. 从 SseEventBuffer 回放 resumeSeq 之后的事件
-     * 3. 接回实时热点事件流
-     * <p>
-     * 不获取 Redisson 锁（原流已持有），直接流入 GraceManager 管理的 Sinks.Many。
-     */
-    @PostMapping(value = "/chat/resume")
+    @PostMapping("/chat/resume")
     public SseEmitter resumeStream(
-            @RequestParam("conversationId") Long conversationId,
+            @RequestParam("runId") String runId,
             @RequestParam("resumeToken") String resumeToken,
-            @RequestParam(value = "resumeSeq", defaultValue = "-1") long resumeSeq) {
-        String cidStr = conversationId.toString();
-
-        // 1. 验证 resumeToken
-        if (!bufferManager.validateResumeToken(cidStr, resumeToken)) {
+            @RequestParam(value = "lastEventId", defaultValue = "-1") long lastEventId) {
+        if (!bufferManager.validateResumeToken(runId, resumeToken)) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "resumeToken 无效或已过期");
         }
-
-        // 2. 获取 GraceManager 中活跃的 Sinks.Many
-        Sinks.Many<Map<String, String>> sink = graceManager.getSink(cidStr);
+        Sinks.Many<Map<String, String>> sink = graceManager.getSink(runId);
         if (sink == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "该对话的流已结束或已过期");
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "该运行已结束或已过期");
         }
+        graceManager.onReconnect(runId);
 
-        // 3. 通过 GraceManager 确认重连
-        graceManager.onReconnect(cidStr);
-
-        // 4. 创建 SseEmitter
-        SseEmitter emitter = new SseEmitter((long) agentTimeoutSeconds * 1000 + 30_000L);
-
-        // 5. 先从 EventBuffer 回放历史事件（从 resumeSeq 开始）
-        SseEventBuffer buffer = bufferManager.getIfPresent(cidStr);
-        if (buffer != null && resumeSeq >= 0) {
-            var replayEvents = buffer.getFromSeq(resumeSeq);
-            for (var event : replayEvents) {
-                try {
-                    emitter.send(SseEmitter.event()
-                            .name(event.type())
-                            .data(event.data()));
-                } catch (IOException e) {
-                    log.warn("重连回放发送失败, cid={}, seq={}", cidStr, event.seq());
-                    emitter.completeWithError(e);
-                    return emitter;
-                }
-            }
-            log.info("回放了 {} 个历史事件，接回实时流: cid={}, fromSeq={}",
-                    replayEvents.size(), cidStr, resumeSeq);
-        }
-
-        // 6. 订阅热点 Sinks.Many → SseEmitter（接回实时流）
-        reactor.core.Disposable disposable = sink.asFlux()
-            .subscribeOn(Schedulers.boundedElastic())
-            .subscribe(
-                event -> {
-                    try {
-                        emitter.send(SseEmitter.event()
-                                .name(event.get("type"))
-                                .data(event.get("data")));
-                    } catch (IOException e) {
-                        throw new RuntimeException("SSE 重连发送失败", e);
-                    }
-                },
-                error -> {
-                    log.error("SSE 重连流异常, cid={}", cidStr);
-                    emitter.completeWithError(error);
-                },
-                () -> emitter.complete()
-            );
-
-        emitter.onCompletion(disposable::dispose);
+        SseEmitter emitter = newEmitter();
+        reactor.core.Disposable subscription = forward(
+                sink.asFlux().filter(event -> isAfter(event.get("seq"), lastEventId)), emitter, runId);
+        emitter.onCompletion(subscription::dispose);
         emitter.onTimeout(() -> {
-            disposable.dispose();
-            graceManager.onDisconnect(cidStr);
+            subscription.dispose();
+            graceManager.onDisconnect(runId);
         });
-
         return emitter;
     }
 
-    /** 获取默认对话 ID（前端据此查询历史消息） */
     @GetMapping("/conversation")
     public BaseResponse<Long> getDefaultConversation() {
         return ResultUtils.success(agentService.getOrCreateDefaultConversation());
     }
 
-    /** 获取对话的消息历史 */
     @GetMapping("/conversations/{conversationId}/messages")
     public BaseResponse<List<MessageVO>> getMessages(@PathVariable Long conversationId) {
         return ResultUtils.success(agentService.getConversationMessages(conversationId));
     }
 
-    /** 获取对话中含图表的消息列表（按创建时间倒序） */
     @GetMapping("/conversations/{conversationId}/chart-messages")
     public BaseResponse<List<MessageVO>> getChartMessages(@PathVariable Long conversationId) {
         return ResultUtils.success(agentService.getChartMessages(conversationId));
     }
 
-    /** 清空指定对话的所有消息。仅清除数据库中的消息记录，不影响 Agent 记忆。 */
     @DeleteMapping("/conversations/{conversationId}/messages")
     public BaseResponse<Void> deleteMessages(@PathVariable Long conversationId) {
         agentService.deleteMessages(conversationId);
         return ResultUtils.success(null);
     }
 
-    /**
-     * 重置指定对话 — 清除所有消息、Redis Agent 记忆、分析状态和服务缓存。
-     * 对话本身保留，绑定的数据文件不受影响。
-     */
     @PostMapping("/conversations/{conversationId}/reset")
     public BaseResponse<Void> resetConversation(@PathVariable Long conversationId) {
         agentService.resetConversation(conversationId);
         return ResultUtils.success(null);
+    }
+
+    private SseEmitter newEmitter() {
+        return new SseEmitter((long) agentTimeoutSeconds * 1000 + 30_000L);
+    }
+
+    private List<Long> parseFileIds(String fileIds) {
+        if (StringUtils.isBlank(fileIds)) return null;
+        try {
+            List<Long> result = new ArrayList<>();
+            for (String value : fileIds.split(",")) {
+                if (StringUtils.isNotBlank(value)) result.add(Long.parseLong(value.trim()));
+            }
+            return result;
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件 ID 格式错误");
+        }
+    }
+
+    private Map<String, String> enrich(Map<String, String> event, AtomicLong sequence, SseEventBuffer buffer) {
+        long id = sequence.getAndIncrement();
+        Map<String, String> enriched = new LinkedHashMap<>(event);
+        enriched.put("seq", String.valueOf(id));
+        if (!"ping".equals(event.get("type"))) buffer.append(id, event.get("type"), event.get("data"));
+        return enriched;
+    }
+
+    private void emit(Sinks.Many<Map<String, String>> sink, SseEventBuffer buffer,
+                      AtomicLong sequence, String type, String data) {
+        sink.tryEmitNext(enrich(Map.of("type", type, "data", data), sequence, buffer));
+    }
+
+    private Map<String, String> errorEvent(Throwable error) {
+        String message = StringUtils.defaultIfBlank(error.getMessage(), "流式处理失败");
+        return Map.of("type", "error", "data", JSON.toJSONString(Map.of("message", message)));
+    }
+
+    private boolean isAfter(String eventId, long lastEventId) {
+        if (eventId == null) return false;
+        try {
+            return Long.parseLong(eventId) > lastEventId;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private reactor.core.Disposable forward(Flux<Map<String, String>> events, SseEmitter emitter, String runId) {
+        return events.subscribeOn(Schedulers.boundedElastic()).subscribe(event -> {
+            try {
+                SseEmitter.SseEventBuilder builder = SseEmitter.event()
+                        .name(event.get("type"))
+                        .data(event.get("data"));
+                if (event.get("seq") != null) builder.id(event.get("seq"));
+                emitter.send(builder);
+            } catch (IOException e) {
+                throw new RuntimeException("SSE 发送失败", e);
+            }
+        }, error -> {
+            log.warn("SSE客户端发送失败: runId={}", runId, error);
+            emitter.completeWithError(error);
+        }, emitter::complete);
     }
 }

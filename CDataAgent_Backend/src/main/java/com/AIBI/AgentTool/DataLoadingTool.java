@@ -9,6 +9,8 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.AIBI.agent.model.AnalysisState;
+import com.AIBI.agent.run.RunContext;
+import com.AIBI.agent.run.RunContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -46,29 +48,25 @@ public class DataLoadingTool {
      * 三层架构 Layer 2 核心：通过 Tool Calling 强制 LLM 输出结构化意图参数，
      * 后续工具根据意图决定是否放行。
      */
-    @Tool(description = "【必选】每次回复用户前，必须先调用此工具声明对用户意图的判断。" +
-            "之后才能调用其他工具或回复。不调用此工具视为违规。")
+    @Tool(description = "每轮首调：声明意图。仅 category=analysis 时可调用数据工具。")
     public String declareIntent(
-            @ToolParam(description = "意图分类：analysis(数据分析，用户指定了维度或指标)/" +
-                    "chitchat(日常对话、问候、闲聊)/" +
-                    "vague(有分析倾向但维度和指标不明确，需追问)") String category,
-            @ToolParam(description = "分析维度（category=analysis时填写），如 [\"产品\",\"地区\",\"月份\"]。" +
-                    "category=chitchat或vague时传空数组") List<String> dimensions,
-            @ToolParam(description = "分析指标（category=analysis时填写），如 [\"销售额\",\"利润\",\"数量\"]。" +
-                    "category=chitchat或vague时传空数组") List<String> metrics,
-            @ToolParam(description = "清晰度：clear(维度和指标明确)/somewhat(有方向但不完整)/vague(模糊)") String clarity,
-            @ToolParam(description = "一句话总结用户想要什么") String summary,
-            @ToolParam(description = "用户指定的输出格式偏好，可多选：table(表格)/chart(图表)/text(纯文字)。" +
-                    "category=analysis且用户明确指定格式时填写，未指定或chitchat/vague时传空数组。") List<String> outputFormats) {
+            @ToolParam(description = "analysis/vague/chitchat") String category,
+            @ToolParam(description = "分析维度；非 analysis 传 []") List<String> dimensions,
+            @ToolParam(description = "分析指标；非 analysis 传 []") List<String> metrics,
+            @ToolParam(description = "clear/somewhat/vague") String clarity,
+            @ToolParam(description = "用户目标摘要") String summary,
+            @ToolParam(description = "table/chart/text；未指定传 []") List<String> outputFormats) {
 
         if (category == null) category = "vague";
         if (dimensions == null) dimensions = List.of();
         if (metrics == null) metrics = List.of();
         if (outputFormats == null) outputFormats = List.of();
 
-        analysisState.setIntent(category, dimensions, metrics, clarity, summary, outputFormats);
-        log.info("declareIntent: category={}, clarity={}, dims={}, metrics={}, summary={}, outputFormats={}",
-                category, clarity, dimensions, metrics, summary, outputFormats);
+        // 意图声明写入 RunContext（替代 AnalysisState.setIntent）
+        RunContext ctx = RunContextHolder.require();
+        ctx.setIntent(category, dimensions, metrics, clarity, summary, outputFormats);
+        log.info("意图声明：分类={}、清晰度={}、维度={}、指标={}",
+                category, clarity, dimensions, metrics);
 
         return "意图已记录：类别=" + category + "，清晰度=" + clarity
                 + (dimensions.isEmpty() ? "" : "，维度=" + dimensions)
@@ -80,17 +78,18 @@ public class DataLoadingTool {
      * 意图守卫 — 在 loadData 执行前检查 intent 是否为 analysis。
      */
     private String checkIntentGuard() {
-        String category = analysisState.getIntentCategory();
+        RunContext ctx = RunContextHolder.require();
+        String category = ctx.getIntentCategory();
         if (category == null) {
-            return ToolResultUtils.jsonTypedError("syntax",
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                     "请先调用 declareIntent 声明意图后再加载数据。");
         }
         if ("chitchat".equals(category)) {
-            return ToolResultUtils.jsonTypedError("syntax",
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                     "当前为日常对话模式，无需加载数据文件。请直接回复用户。");
         }
         if ("vague".equals(category)) {
-            return ToolResultUtils.jsonTypedError("syntax",
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                     "分析目标不明确，请先向用户确认想分析哪些维度和指标。");
         }
         return null; // 放行
@@ -102,17 +101,13 @@ public class DataLoadingTool {
      * 根据前端传入的 fileIds 加载对应文件。无 fileIds 时复用已有加载结果。
      * 每个文件有独立的 viewName，SQL 中通过 viewName 引用。
      */
-    @Tool(description = "加载数据文件到分析环境，返回所有已加载文件的表结构和 viewName。" +
-            "✅ 首次分析前必须调用一次 ❌ 无文件时说明未绑定数据，请提示用户上传文件。" +
-            "该方法只加载本轮消息指定的文件，不会看到历史消息中的文件。" +
-            "每个文件有独立的 viewName，SQL 中通过 viewName 引用。")
+    @Tool(description = "加载本轮数据文件，返回 viewName、列名和类型；需要样本时再调用 getSchema。")
     public String loadData() {
         // 意图守卫
         String guardResult = checkIntentGuard();
         if (guardResult != null) return guardResult;
 
-        String conversationId = analysisState.getCurrentThreadId();
-        if (conversationId == null) return ToolResultUtils.jsonTypedError("system", "分析状态未初始化");
+        String conversationId = RunContextHolder.require().getConversationId().toString();
 
         try {
             // 1. 优先检查本轮 active 文件 ID
@@ -132,12 +127,14 @@ public class DataLoadingTool {
                 }
                 // 3. 从未加载过 → 返回空
                 analysisState.setLoadedFiles(new ArrayList<>());
-                return ToolResultUtils.jsonTypedError("syntax", "未指定数据文件。上传文件后，请在输入区域将文件附加到消息中再发送。");
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "未指定数据文件。上传文件后，请在输入区域将文件附加到消息中再发送。");
             }
 
             if (files.isEmpty()) {
                 analysisState.setLoadedFiles(new ArrayList<>());
-                return ToolResultUtils.jsonTypedError("syntax", "指定的文件未找到或状态异常，请重新上传");
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "指定的文件未找到或状态异常，请重新上传");
             }
 
             List<AnalysisState.LoadedFileRecord> records = new ArrayList<>();
@@ -161,7 +158,6 @@ public class DataLoadingTool {
                     JSONObject cj = new JSONObject();
                     cj.put("name", col.name);
                     cj.put("type", col.type);
-                    cj.put("samples", col.samples != null ? col.samples : JSONArray.of());
                     colsJson.add(cj);
                 }
                 record.columns = cols;
@@ -182,16 +178,15 @@ public class DataLoadingTool {
             JSONObject result = new JSONObject();
             result.put("fileCount", files.size());
             result.put("files", fileInfos);
-            result.put("note", "以上是本次查询可用的文件。SQL 中通过 viewName 引用文件。");
+            result.put("note", "以上是本次查询可用的文件。需要查看某个文件的样本值时，再用 getSchema；SQL 中通过 viewName 引用文件。");
 
             List<String> names = files.stream()
                     .map(DataFile::getOriginalFilename)
                     .collect(Collectors.toList());
-            log.info("loadData: conversationId={}, {} 个文件已加载: {}",
-                    conversationId, files.size(), names);
+            log.info("数据加载：{}个文件已加载：{}", files.size(), names);
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("loadData 失败: conversationId={}", conversationId, e);
+            log.error("数据加载失败", e);
             analysisState.addStepResultFailed("loadData", "loadData", e.getMessage());
             return ToolResultUtils.jsonTypedError("system", "文件加载失败: " + e.getMessage() + "。请确认文件状态后重试或重新上传。");
         }
@@ -214,7 +209,6 @@ public class DataLoadingTool {
                     JSONObject cj = new JSONObject();
                     cj.put("name", col.name);
                     cj.put("type", col.type);
-                    cj.put("samples", col.samples != null ? col.samples : JSONArray.of());
                     colsJson.add(cj);
                 }
             }
@@ -233,30 +227,26 @@ public class DataLoadingTool {
      * <p>
      * 可通过 fileId 或 viewName 来定位文件。仅返回本轮 active 文件的 schema。
      */
-    @Tool(description = "获取已加载数据文件的列名、类型和采样值。" +
-            "✅ 编写 SQL 前用此工具确认列名 ❌ 不要用 runPython 来查看数据。" +
-            "fileRef 可以是 fileId 或 viewName（来自 loadData 的返回值）。" +
-            "仅可查询本轮已加载的文件。")
+    @Tool(description = "读取本轮已附加或已加载文件的列名、类型和样本；可在 loadData 前预览 schema，但执行 SQL 前必须先调用 loadData。")
     public String getSchema(
-            @ToolParam(description = "文件 ID 或 viewName（来自 loadData 返回值）") String fileRef) {
+            @ToolParam(description = "loadData 返回的 fileId 或 viewName") String fileRef) {
         try {
-            DataFile df;
-            try {
-                df = dataFileMapper.selectById(Long.valueOf(fileRef));
-            } catch (NumberFormatException e) {
-                QueryWrapper<DataFile> qw = new QueryWrapper<>();
-                qw.eq("viewName", fileRef);
-                df = dataFileMapper.selectOne(qw);
+            DataFile df = findFile(fileRef);
+
+            if (df == null) return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                    "文件不存在: " + fileRef);
+            if (!"READY".equals(df.getStatus())) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "文件尚未就绪: " + df.getOriginalFilename());
             }
 
-            if (df == null) return ToolResultUtils.jsonTypedError("syntax", "文件不存在: " + fileRef);
-
-            // 校验该文件是否在 active 范围内
             final String targetFileId = df.getId().toString();
             List<AnalysisState.LoadedFileRecord> loaded = analysisState.getLoadedFiles();
-            boolean isActive = loaded.stream().anyMatch(r -> r.fileId.equals(targetFileId));
-            if (!isActive) {
-                return ToolResultUtils.jsonTypedError("syntax", "文件 \"" + df.getOriginalFilename() + "\" 不在当前查询范围。请重新 attach 该文件后发送消息。");
+            boolean isLoaded = loaded.stream().anyMatch(r -> targetFileId.equals(r.fileId));
+            boolean isAttached = analysisState.getActiveFileIds().contains(df.getId());
+            if (!isLoaded && !isAttached) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "文件 \"" + df.getOriginalFilename() + "\" 不在当前查询范围。请重新 attach 该文件后发送消息。");
             }
 
             FileConversionService.SchemaInfo schema = fileConversionService.getSchema(
@@ -276,19 +266,33 @@ public class DataLoadingTool {
             result.put("viewName", df.getViewName());
             result.put("rowCount", schema.rowCount);
             result.put("columns", cols);
+            result.put("loaded", isLoaded);
+            if (!isLoaded) {
+                result.put("note", "这是本轮附加文件的 schema 预览；执行 SQL 前请先调用 loadData。");
+            }
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("getSchema 失败: fileRef={}", fileRef, e);
+            log.error("获取表结构失败：文件引用={}", fileRef, e);
             analysisState.addStepResultFailed(fileRef, "getSchema", e.getMessage());
-            return ToolResultUtils.jsonTypedError("syntax", "获取 schema 失败: " + e.getMessage() + "。请确认 viewName 或 fileId 是否正确。");
+            return ToolResultUtils.jsonTypedError("system", "获取 schema 失败: " + e.getMessage() + "。请确认文件状态后重试。");
+        }
+    }
+
+    private DataFile findFile(String fileRef) {
+        if (fileRef == null || fileRef.isBlank()) return null;
+        try {
+            return dataFileMapper.selectById(Long.valueOf(fileRef));
+        } catch (NumberFormatException ignored) {
+            QueryWrapper<DataFile> qw = new QueryWrapper<>();
+            qw.eq("viewName", fileRef);
+            return dataFileMapper.selectOne(qw);
         }
     }
 
     /**
      * 查看当前对话的分析进度。
      */
-    @Tool(description = "查看当前对话已有的数据文件、已执行的步骤、可用的数据产出物。" +
-            "✅ 不确定当前状态时调用 ❌ 不要重复调用（状态会自动注入到上下文）")
+    @Tool(description = "查看已加载文件、执行步骤和可用 outputKey；仅状态不确定时调用。")
     public String getAnalysisState() {
         try {
             return analysisState.toContextString();

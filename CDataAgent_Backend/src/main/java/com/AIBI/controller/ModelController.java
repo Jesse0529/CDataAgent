@@ -161,8 +161,7 @@ public class ModelController {
         // 清除缓存，下次请求即时生效
         modelManager.evictDefaultCache();
 
-        log.info("模型配置已保存: provider={}, model={}, hasBaseUrl={}",
-                provider, modelName, !baseUrl.isEmpty());
+        log.info("模型配置已保存: provider={}, model={}", provider, modelName);
 
         Map<String, String> result = new LinkedHashMap<>();
         result.put("provider", provider);

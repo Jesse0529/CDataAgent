@@ -22,15 +22,13 @@ const props = defineProps<{
   visible: boolean
 }>()
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+const emit = defineEmits<(e: 'close') => void>()
 
 // ---- 状态 ----
 const modalRef = ref<HTMLDivElement | null>(null)
 const preview = ref<FilePreviewVO | null>(null)
 const loading = ref(false)
-const loadingDir = ref<'prev' | 'next' | null>(null)   // 换页方向，用于行动画方向
+const loadingDir = ref<'prev' | 'next' | null>(null) // 换页方向，用于行动画方向
 const page = ref(1)
 const pageSize = 30
 
@@ -52,7 +50,7 @@ async function loadPreview(p: number) {
   loading.value = true
   try {
     const data = await apiGetChecked<FilePreviewVO>(
-      `/file/${props.fileId}/preview?page=${p}&size=${pageSize}`
+      `/file/${props.fileId}/preview?page=${p}&size=${pageSize}`,
     )
     preview.value = data
     page.value = data.page
@@ -73,7 +71,7 @@ function prevPage(): void {
 }
 
 function nextPage(): void {
-  if (preview.value && preview.value.hasMore && !loading.value) {
+  if (preview.value?.hasMore && !loading.value) {
     loadingDir.value = 'next'
     loadPreview(page.value + 1)
   }

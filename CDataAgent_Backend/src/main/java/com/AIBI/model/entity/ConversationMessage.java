@@ -57,6 +57,18 @@ public class ConversationMessage implements Serializable {
     private Integer tokenUsage;
 
     /**
+     * RenderDocument v1 JSON（新协议的权威展示文档）。
+     * 仅 assistant 消息可能有值；旧消息和旧协议消息为 null。
+     */
+    private String renderDocument;
+
+    /**
+     * 渲染协议版本（renderDocument 对应的版本号）。
+     * 当前为 1；旧消息为 null。
+     */
+    private Integer renderVersion;
+
+    /**
      * 创建时间
      */
     private Date createTime;

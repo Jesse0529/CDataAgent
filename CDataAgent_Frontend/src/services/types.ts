@@ -44,8 +44,28 @@ export interface ChatMessageVO {
   conclusion?: string
   /** SSE 断线重连中，显示重连指示器 */
   reconnecting?: boolean
-  /** 后端正在生成图表中，显示图表加载骨架 */
+  /** 后端正在生成或校验图表中，禁用统一图表入口。 */
   chartGenerating?: boolean
+  /** 本轮展示计划已明确包含图表，可在生成前稳定地预留图表入口。 */
+  chartExpected?: boolean
+  /** 图表生成终态；由服务端在流结束前明确推送。 */
+  chartResultState?: ChartResultEvent['state']
+  /** 已由持久化消息确认，允许打开图表预览。 */
+  chartPreviewAvailable?: boolean
+  /** RenderDocument v1 展示文档（新协议消息，旧消息为 null） */
+  renderDocument?: RenderDocument | null
+  /** 当前运行中已追加的受控内容；结束后保留，避免用持久化快照替换 UI。 */
+  liveBlocks?: RenderBlock[]
+  /** 当前运行的用户可见活动时间线，不持久化。 */
+  activities?: RunActivity[]
+  /** 渲染协议版本（当前为 1，旧消息为 null） */
+  renderVersion?: number | null
+  /** 当前运行的唯一标识，仅在流式 assistant 消息中存在 */
+  runId?: string
+  /** 已成功应用的最后一个 SSE 事件 ID，用于断线续播 */
+  lastEventId?: string | null
+  /** 服务端确认的过程状态，不参与最终文档持久化 */
+  progress?: { stage: string; label: string; state: 'running' | 'done' | 'failed' }
 }
 
 /** 后端持久化消息（对应后端 MessageVO） */
@@ -62,6 +82,10 @@ export interface MessageVO {
   tokenUsage?: number
   /** 分析结论（独立于推理过程的精简总结，仅 assistant 消息可能有值） */
   conclusion?: string
+  /** RenderDocument v1 JSON（新协议消息，旧消息为 null） */
+  renderDocument?: string | null
+  /** 渲染协议版本（当前为 1，旧消息为 null） */
+  renderVersion?: number | null
 }
 
 /** SSE event:complete 结构化事件 */
@@ -75,6 +99,123 @@ export interface StructuredEvent {
   message?: string
   /** 本轮 AI 回复消耗的 token 数 */
   tokenUsage?: number
+  /** 用于断线重连的后端会话令牌 */
+  resumeToken?: string
+  /** 本次运行的唯一标识（新协议） */
+  runId?: string
+  /** 文档协议版本（新协议：1） */
+  documentVersion?: number
+}
+
+// ─── RenderDocument v1 ────────────────────────────────
+
+export interface RenderDocument {
+  version: 1
+  runId: string
+  blocks: RenderBlock[]
+  degraded?: boolean
+  /** 仅 SSE 传输期存在：安全展示快照或本轮最终结果。 */
+  phase?: 'snapshot' | 'final'
+  /** 仅 SSE 传输期存在：同一 run 内单调递增，用于重放与乱序保护。 */
+  revision?: number
+}
+
+export type RenderBlock =
+  | SummaryBlock
+  | ParagraphBlock
+  | BulletListBlock
+  | DataTableBlock
+  | ChartBlock
+  | NoticeBlock
+
+export interface SummaryBlock {
+  id: string
+  type: 'summary'
+  title?: string
+  text: string
+}
+
+export interface ParagraphBlock {
+  id: string
+  type: 'paragraph'
+  text: string
+}
+
+export interface BulletListBlock {
+  id: string
+  type: 'bullets'
+  items: string[]
+}
+
+export interface DataTableBlock {
+  id: string
+  type: 'table'
+  title?: string
+  headers: string[]
+  rows: Array<Record<string, string | number | null>>
+  totalRows: number
+}
+
+export interface ChartBlock {
+  id: string
+  type: 'chart'
+  chartIndex: number
+  title?: string
+}
+
+export interface NoticeBlock {
+  id: string
+  type: 'notice'
+  level: 'info' | 'warning'
+  text: string
+}
+
+/** SSE meta 事件数据 */
+export interface MetaEvent {
+  runId: string
+  renderProtocol: string
+  resumeToken?: string
+  replaySupported: boolean
+}
+
+/** 服务端进度事件。展示文本必须是服务端受控纯文本。 */
+export interface ProgressEvent {
+  stage: string
+  label: string
+  state: 'running' | 'done' | 'failed'
+}
+
+/** SSE 运行活动：服务端已脱敏，不携带工具参数、SQL 或内部路径。 */
+export interface RunActivity {
+  id: string
+  stage: string
+  /** 服务端定义的稳定工具标识，用于前端聚合，不展示给用户。 */
+  toolKey?: string
+  label: string
+  state: 'running' | 'succeeded' | 'failed'
+  /** 同一工具、同一结果的累计次数，仅在前端运行态保留。 */
+  count?: number
+  /** 聚合行包含的原始活动 ID，仅用于后续状态更新。 */
+  sourceIds?: string[]
+}
+
+/** SSE 阶段产物，只允许追加已校验的 RenderBlock。 */
+export interface ArtifactEvent {
+  version: 1
+  runId: string
+  blocks: RenderBlock[]
+  degraded?: boolean
+  /** 服务端展示计划已明确包含图表，不代表图表已通过校验。 */
+  chartExpected?: boolean
+}
+
+/** SSE 图表终态；仅包含已通过后端校验的图表配置。 */
+export interface ChartResultEvent {
+  runId: string
+  plannedChartCount: number
+  validatedChartCount: number
+  state: 'ready' | 'unavailable' | 'not_requested'
+  chartOption?: string | null
 }
 
 /** 文件数据预览（对应后端 FilePreviewVO） */

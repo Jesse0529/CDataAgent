@@ -44,14 +44,14 @@ public class LogInterceptor {
         Object[] args = point.getArgs();
         String reqParam = maskSensitive("[" + StringUtils.join(args, ", ") + "]");
         // 输出请求日志
-        log.debug("request start，id: {}, path: {}, ip: {}, params: {}", requestId, url,
-                httpServletRequest.getRemoteHost(), reqParam);
+        log.debug("请求开始，id: {}, path: {}, ip: {}", requestId, url,
+                httpServletRequest.getRemoteHost());
         // 执行原方法
         Object result = point.proceed();
         // 输出响应日志
         stopWatch.stop();
         long totalTimeMillis = stopWatch.getTotalTimeMillis();
-        log.debug("request end, id: {}, cost: {}ms", requestId, totalTimeMillis);
+        log.debug("请求结束，id: {}, 耗时: {}ms", requestId, totalTimeMillis);
         return result;
     }
 

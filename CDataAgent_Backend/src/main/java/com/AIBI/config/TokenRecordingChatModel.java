@@ -63,7 +63,7 @@ public class TokenRecordingChatModel implements ChatModel {
         try {
             ledger.recordRoundModelCall(cid, promptTokens, completionTokens);
         } catch (Exception e) {
-            log.warn("TokenRecordingChatModel 记录失败: cid={}", cid, e);
+            log.warn("Token记录失败", e);
         }
     }
 }

@@ -36,7 +36,7 @@ public class ToolCacheManager {
         RMapCache<String, String> cache = redissonClient.getMapCache(CACHE_MAP);
         String value = cache.get(key);
         if (value != null) {
-            log.debug("ToolCache HIT: key={}", key);
+            log.debug("缓存命中: key={}", key);
         }
         return value;
     }
@@ -52,7 +52,7 @@ public class ToolCacheManager {
         if (key == null || value == null) return;
         RMapCache<String, String> cache = redissonClient.getMapCache(CACHE_MAP);
         cache.put(key, value, ttlSeconds, TimeUnit.SECONDS);
-        log.debug("ToolCache PUT: key={}, ttl={}s", key, ttlSeconds);
+        log.debug("缓存写入: key={}, ttl={}s", key, ttlSeconds);
     }
 
     /**
@@ -89,7 +89,7 @@ public class ToolCacheManager {
                 .filter(k -> k.startsWith(prefix))
                 .forEach(k -> {
                     cache.remove(k);
-                    log.debug("ToolCache EVICT: key={}", k);
+                    log.debug("缓存淘汰: key={}", k);
                 });
     }
 }

@@ -42,6 +42,7 @@ desktop.ini
 
 # ---- 运行产物 ----
 *.log
+/logs/
 hs_err_pid*
 
 # ---- 临时/运行目录 ----
@@ -50,6 +51,7 @@ workspace/
 sessions_mount_dir/
 .uploads/
 /uploads/
+/data/
 
 # ---- 存档/压缩包 ----
 *.zip
@@ -69,4 +71,3 @@ release.properties
 # ---- JVM 崩溃日志 ----
 hs_err_pid*
 replay_pid*
-

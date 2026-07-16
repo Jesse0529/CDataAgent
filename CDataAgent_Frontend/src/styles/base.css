@@ -21,7 +21,9 @@ body {
   line-height: 1.5;
   overflow-x: hidden;
   /* 主题切换平滑过渡 */
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 /* 环境光网格背景 — 浅色暖光 + 低透明度十字网格 */

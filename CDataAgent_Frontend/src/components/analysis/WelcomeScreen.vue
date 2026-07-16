@@ -8,23 +8,12 @@ defineProps<{
 
 <template>
   <div class="welcome">
-    <div class="welcome__icon">
-      <LogoIcon :size="56" />
+    <div class="welcome__mark" aria-hidden="true">
+      <LogoIcon :size="100" />
     </div>
-    <h2 class="welcome__title">
-      <span class="eye-c">
-        C<span class="pupil" />
-      </span>
-      <span class="eye-d">
-        D<span class="pupil" />
-      </span>
-      ata Agent
-    </h2>
+    <h1 class="welcome__title">CData <span>Agent</span></h1>
     <p v-if="!hasFiles" class="welcome__sub">
-      上传 excel 文件，开始对话~
-    </p>
-    <p v-else class="welcome__sub">
-      数据已就绪，输入你的分析需求开始对话
+      上传 Excel 或 CSV，然后用自然语言探索你的数据。
     </p>
   </div>
 </template>
@@ -35,75 +24,56 @@ defineProps<{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 60px 20px;
+  gap: 10px;
+  min-height: 100%;
+  padding: 72px 20px 112px;
   text-align: center;
 }
 
-.welcome__icon {
-  width: 80px;
-  height: 80px;
+.welcome__mark {
+  width: 140px;
+  height: 90px;
   display: grid;
   place-items: center;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 10px 20px rgba(188, 105, 74, 0.14));
 }
 
 .welcome__title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
   color: var(--fg);
+  font-size: clamp(30px, 3vw, 38px);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
   margin: 0;
-  display: flex;
-  gap: 0;
 }
 
-/* ===== C / D 眼位容器 ===== */
-.eye-c,
-.eye-d {
-  position: relative;
-  display: inline-block;
-}
-
-/* ===== 眼珠 ===== */
-.pupil {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: look-around 5s ease-in-out infinite;
-}
-
-.eye-c .pupil {
-  /* C 的开口在右侧，眼珠偏右 */
-  top: 43%;
-  left: 58%;
-}
-
-.eye-d .pupil {
-  /* D 的空腔在 stem 与 curve 之间，眼珠居中偏右 */
-  top: 43%;
-  left: 44%;
-}
-
-/* ===== 眼球动画 ===== */
-@keyframes look-around {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(2px, 0); }
-  50%      { transform: translate(0, 0); }
-  75%      { transform: translate(-2px, 0); }
-}
-
-@keyframes blink {
-  0%, 44%, 56%, 100% { opacity: 1; }
-  46%, 54%            { opacity: 0.08; }
+.welcome__title span {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .welcome__sub {
-  font-size: 16px;
+  max-width: 360px;
   color: var(--muted);
-  margin: 0;
-  max-width: 320px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 2px 0 0;
+}
+
+@media (max-width: 640px) {
+  .welcome {
+    padding-top: 56px;
+  }
+
+  .welcome__mark {
+    width: 110px;
+    height: 72px;
+  }
+
+  .welcome__sub {
+    max-width: 300px;
+    font-size: 14px;
+  }
 }
 </style>

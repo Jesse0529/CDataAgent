@@ -47,14 +47,30 @@ public class DuckDbQueryService {
      * @return JSON 数组字符串，失败时返回 {"error":"type","message":"..."}
      */
     public String executeQuery(String conversationId, List<DuckDbConfig.FileRef> files, String sql) {
+        return executeQueryInternal(conversationId, files, sql, duckDbConfig.getMaxResultRows(), false).dataJson();
+    }
+
+    /**
+     * Agent 查询专用入口。结果会保存到 AnalysisState，故采用独立且更小的返回行数上限。
+     */
+    public AgentQueryResult executeAgentQuery(String conversationId, List<DuckDbConfig.FileRef> files,
+                                              String sql, int agentMaxRows) {
+        int effectiveMaxRows = Math.max(1, Math.min(agentMaxRows, duckDbConfig.getMaxResultRows()));
+        QueryExecution execution = executeQueryInternal(conversationId, files, sql, effectiveMaxRows, true);
+        return new AgentQueryResult(execution.dataJson(), execution.rowCount(),
+                execution.truncated(), effectiveMaxRows);
+    }
+
+    private QueryExecution executeQueryInternal(String conversationId, List<DuckDbConfig.FileRef> files,
+                                                String sql, int maxRows, boolean detectTruncation) {
         if (files == null || files.isEmpty()) {
-            return ToolResultUtils.jsonTypedError("syntax", "没有可用的数据文件");
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "没有可用的数据文件"));
         }
 
         // 安全校验
         String validationError = validateSql(sql);
         if (validationError != null) {
-            return ToolResultUtils.jsonTypedError("syntax", validationError);
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", validationError));
         }
 
         Connection conn = connectionManager.getOrCreate(conversationId);
@@ -63,12 +79,13 @@ public class DuckDbQueryService {
         try (Statement stmt = conn.createStatement()) {
 
             stmt.setQueryTimeout(duckDbConfig.getQueryTimeoutSeconds());
-            int maxRows = duckDbConfig.getMaxResultRows();
-
+            if (detectTruncation) {
+                stmt.setMaxRows(maxRows + 1);
+            }
             // 自动追加 LIMIT
             String finalSql = sql.trim();
             String upperSql = finalSql.toUpperCase();
-            if (upperSql.startsWith("SELECT") && !upperSql.contains("LIMIT")) {
+            if (!detectTruncation && upperSql.startsWith("SELECT") && !upperSql.contains("LIMIT")) {
                 finalSql = finalSql.replaceAll(";\\s*$", "");
                 finalSql += " LIMIT " + maxRows;
             }
@@ -83,7 +100,12 @@ public class DuckDbQueryService {
 
                 JSONArray result = new JSONArray();
                 int rowCount = 0;
-                while (rs.next() && rowCount < maxRows) {
+                boolean truncated = false;
+                while (rs.next()) {
+                    if (rowCount >= maxRows) {
+                        truncated = true;
+                        break;
+                    }
                     JSONObject row = new JSONObject();
                     for (int i = 1; i <= colCount; i++) {
                         String colName = meta.getColumnLabel(i);
@@ -94,19 +116,19 @@ public class DuckDbQueryService {
                     rowCount++;
                 }
 
-                log.debug("DuckDB 查询结果: {} 行, {} 列", rowCount, colCount);
-                return result.toJSONString();
+                log.debug("DuckDB 查询结果: {} 行, {} 列, 截断={}", rowCount, colCount, truncated);
+                return new QueryExecution(result.toJSONString(), rowCount, truncated);
             }
         } catch (java.sql.SQLTimeoutException e) {
             log.warn("DuckDB 查询超时: {}", sql, e);
-            return ToolResultUtils.jsonTypedError("timeout", "查询超时（超过" + duckDbConfig.getQueryTimeoutSeconds() + "秒），" +
-                    "建议：① 减少数据量 ② 添加 WHERE 筛选 ③ 分步查询");
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("timeout", "查询超时（超过" + duckDbConfig.getQueryTimeoutSeconds() + "秒），" +
+                    "建议：① 减少数据量 ② 添加 WHERE 筛选 ③ 分步查询"));
         } catch (java.sql.SQLSyntaxErrorException e) {
             log.warn("DuckDB 查询语法错误: {}", sql, e);
             String msg = e.getMessage();
             String hint = buildSyntaxHint(msg);
-            return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                    (msg != null ? ": " + msg : "") + "。" + hint);
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                    (msg != null ? ": " + msg : "") + "。" + hint));
         } catch (java.sql.SQLException e) {
             log.error("DuckDB 查询异常: {}", sql, e);
             String msg = e.getMessage();
@@ -114,26 +136,39 @@ public class DuckDbQueryService {
             if (msg.contains("Parser Error") || msg.contains("syntax error")
                     || msg.contains("Binder Error")) {
                 String hint = buildSyntaxHint(msg);
-                return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。" + hint);
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                        ": " + msg + "。" + hint));
             }
             // 函数不存在（Catalog Error: Scalar Function ... does not exist!）
             if (msg.contains("Catalog Error") && msg.contains("Scalar Function")) {
                 String hint = buildSyntaxHint(msg);
-                return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。" + hint);
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
+                        ": " + msg + "。" + hint));
             }
             if (msg.contains("not found") || msg.contains("does not exist")
                     || msg.contains("Table") || msg.contains("Column")) {
                 String hint = buildColumnHint(msg);
-                return ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
-                        ": " + msg + "。" + hint);
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
+                        ": " + msg + "。" + hint));
             }
-            return ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
-                    (msg != null ? ": " + msg : "") + "，请重试");
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
+                    (msg != null ? ": " + msg : "") + "，请重试"));
         } catch (Exception e) {
             log.error("DuckDB 连接/系统异常: {}", sql, e);
-            return ToolResultUtils.jsonTypedError("system", "数据引擎异常: " + e.getMessage() + "，请重试");
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常: " + e.getMessage() + "，请重试"));
+        }
+    }
+
+    /** Agent 查询结果，截断状态仅在 Agent 专用入口中提供。 */
+    public record AgentQueryResult(String dataJson, int rowCount, boolean truncated, int rowLimit) {
+        public boolean hasError() {
+            return dataJson != null && dataJson.contains("\"error\"");
+        }
+    }
+
+    private record QueryExecution(String dataJson, int rowCount, boolean truncated) {
+        private static QueryExecution error(String dataJson) {
+            return new QueryExecution(dataJson, 0, false);
         }
     }
 
@@ -355,15 +390,10 @@ public class DuckDbQueryService {
             return "仅允许 SELECT/DESCRIBE/SHOW/EXPLAIN/WITH 查询";
         }
 
-        // Step 2: 检测多语句注入（分号，排除字符串字面量和末尾尾随分号）
-        String semicolonCheck = removeStringLiterals(sql);
-        int lastSemi = semicolonCheck.lastIndexOf(';');
-        if (lastSemi >= 0) {
-            // 检查分号后是否有非空内容（允许尾随分号和分号后的行注释）
-            String afterLastSemi = semicolonCheck.substring(lastSemi + 1).trim();
-            if (!afterLastSemi.isEmpty() && !afterLastSemi.startsWith("--")) {
-                return "不允许执行多条 SQL 语句";
-            }
+        // Step 2: 仅允许单条 SQL 和可选尾部分号。不能只检查最后一个分号，
+        // 否则 "SELECT ...; DROP ...;" 会被末尾分号绕过。
+        if (containsExtraStatement(sql)) {
+            return "不允许执行多条 SQL 语句";
         }
 
         // Step 3: 检查危险函数/模式
@@ -403,23 +433,98 @@ public class DuckDbQueryService {
         return s;
     }
 
-    /**
-     * 将 SQL 中的字符串字面量替换为占位符，防止字符串内容干扰结构分析。
-     */
-    private static String removeStringLiterals(String sql) {
-        StringBuilder sb = new StringBuilder(sql.length());
+    /** 检查分号后是否还有有效 SQL，忽略字符串和注释中的分号。 */
+    private static boolean containsExtraStatement(String sql) {
         boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
         for (int i = 0; i < sql.length(); i++) {
             char c = sql.charAt(i);
-            if (c == '\'' && (i == 0 || sql.charAt(i - 1) != '\\')) {
-                inSingleQuote = !inSingleQuote;
-                sb.append(inSingleQuote ? '\'' : '\''); // 保留引号边界
-            } else if (!inSingleQuote) {
-                sb.append(c);
+            char next = i + 1 < sql.length() ? sql.charAt(i + 1) : '\0';
+            if (inLineComment) {
+                if (c == '\n' || c == '\r') inLineComment = false;
+                continue;
             }
-            // 字符串内部全部替换为空格长度保持索引对齐（不依赖索引，直接忽略）
+            if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (inSingleQuote) {
+                if (c == '\'' && next == '\'') {
+                    i++;
+                } else if (c == '\'') {
+                    inSingleQuote = false;
+                }
+                continue;
+            }
+            if (inDoubleQuote) {
+                if (c == '"' && next == '"') {
+                    i++;
+                } else if (c == '"') {
+                    inDoubleQuote = false;
+                }
+                continue;
+            }
+            if (c == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+            if (c == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+            if (c == '\'') {
+                inSingleQuote = true;
+                continue;
+            }
+            if (c == '"') {
+                inDoubleQuote = true;
+                continue;
+            }
+            if (c == ';') {
+                return hasMeaningfulSql(sql, i + 1);
+            }
         }
-        return sb.toString();
+        return false;
+    }
+
+    private static boolean hasMeaningfulSql(String sql, int start) {
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+        for (int i = start; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+            char next = i + 1 < sql.length() ? sql.charAt(i + 1) : '\0';
+            if (inLineComment) {
+                if (c == '\n' || c == '\r') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (Character.isWhitespace(c)) continue;
+            if (c == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+            if (c == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     /**

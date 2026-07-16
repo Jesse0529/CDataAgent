@@ -46,6 +46,9 @@ public class AgentConfig {
     @Value("${agent.synthesizer.timeout-seconds:30}")
     private int synthesizerTimeout;
 
+    @Value("${sandbox.enabled:false}")
+    private boolean sandboxEnabled;
+
     // ─── 拦截器 ────────────────────────────────────────────────
 
     private ToolRetryInterceptor duckdbRetry() {
@@ -84,18 +87,18 @@ public class AgentConfig {
                 .redisson(redissonClient)
                 .stateSerializer(new SpringAIStateSerializer())
                 .build();
-        log.info("RedisSaver: 初始化，TTL=3天");
+        log.info("RedisSaver已初始化，TTL=3天");
         return new TtlRedisSaver(inner, redissonClient, Duration.ofDays(3));
     }
 
     @Bean
     public SummarizationHook summarizationHook(ChatModel chatModel,
                                                ExactTokenCounter exactTokenCounter) {
-        log.info("SummarizationHook: 初始化，阈值 600k tokens，使用精确 TokenCounter");
+        log.info("摘要钩子已初始化，阈值128k tokens");
         return SummarizationHook.builder()
                 .model(chatModel)
                 .tokenCounter(exactTokenCounter)
-                .maxTokensBeforeSummary(600_000)
+                .maxTokensBeforeSummary(128_000)
                 .messagesToKeep(6)
                 .keepFirstUserMessage(true)
                 .build();
@@ -104,7 +107,7 @@ public class AgentConfig {
     // ─── Executor Agent — 自主执行分析或对话 ──────────────────────
 
     /**
-     * Executor: 持有 5 个数据工具，严格按计划逐步执行。
+     * Executor: 持有数据工具，严格按计划逐步执行。
      * 使用独立的 System Prompt（agent-executor.txt）。
      * 沙箱通过 {@code ObjectProvider} 可选注入。
      */
@@ -114,21 +117,28 @@ public class AgentConfig {
                                     DuckDbQueryTool duckDbQueryTool,
                                     PythonRunnerTool pythonRunnerTool,
                                     PreferenceTool preferenceTool,
+                                    PresentationSubmissionTool presentationSubmissionTool,
                                     BaseCheckpointSaver redisSaver,
                                     SummarizationHook summarizationHook) {
-        ReactAgent agent = ReactAgent.builder()
+        var builder = ReactAgent.builder()
                 .name("Executor")
                 .description("数据分析助手——自主决策，与用户对话并执行数据分析")
                 .model(chatModel)
                 .systemPrompt(promptConfig.getExecutorPrompt())
                 .saver(redisSaver)
                 .hooks(summarizationHook)
-                .methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool, preferenceTool)
-                .toolExecutionTimeout(Duration.ofSeconds(executorTimeout))
-                .interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler())
-                .build();
+                .toolExecutionTimeout(Duration.ofSeconds(executorTimeout));
+        if (sandboxEnabled) {
+            builder.interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler());
+            builder.methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool,
+                    preferenceTool, presentationSubmissionTool);
+        } else {
+            builder.interceptors(duckdbRetry(), toolErrorHandler());
+            builder.methodTools(dataLoadingTool, duckDbQueryTool, preferenceTool, presentationSubmissionTool);
+        }
+        ReactAgent agent = builder.build();
 
-        log.info("ExecutorAgent: 就绪（5 个数据工具）");
+        log.info("执行器Agent就绪（Python工具启用={}）", sandboxEnabled);
         return agent;
     }
 
@@ -141,22 +151,18 @@ public class AgentConfig {
     @Bean
     public ReactAgent synthesizerAgent(ChatModel chatModel,
                                        ChartOutputTool chartOutputTool,
-                                       PreferenceTool preferenceTool,
-                                       BaseCheckpointSaver redisSaver,
-                                       SummarizationHook summarizationHook) {
+                                       PreferenceTool preferenceTool) {
         ReactAgent agent = ReactAgent.builder()
                 .name("Synthesizer")
                 .description("数据分析报告专家——生成图表配置和分析结论")
                 .model(chatModel)
                 .systemPrompt(promptConfig.getSynthesizerPrompt())
-                .saver(redisSaver)
-                .hooks(summarizationHook)
                 .methodTools(chartOutputTool, preferenceTool)
                 .toolExecutionTimeout(Duration.ofSeconds(synthesizerTimeout))
                 .interceptors(toolErrorHandler())
                 .build();
 
-        log.info("SynthesizerAgent: 就绪（2 个输出工具）");
+        log.info("合成器Agent就绪（2个工具）");
         return agent;
     }
 }

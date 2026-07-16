@@ -16,6 +16,7 @@ import java.util.List;
  * 错误类型编码：
  * <dl>
  *   <dt>syntax</dt><dd>输入错误（列名/SQL/参数），修正后可重试</dd>
+ *   <dt>precondition</dt><dd>缺少前置状态或引用，需先完成对应步骤</dd>
  *   <dt>timeout</dt><dd>执行超时，需简化查询</dd>
  *   <dt>system</dt><dd>引擎/系统异常，可重试</dd>
  * </dl>
@@ -27,6 +28,7 @@ public final class ToolResultUtils {
     public static final String ERROR_SYNTAX = "syntax";
     public static final String ERROR_TIMEOUT = "timeout";
     public static final String ERROR_SYSTEM = "system";
+    public static final String ERROR_PRECONDITION = "precondition";
 
     /**
      * 返回带类型的错误响应。

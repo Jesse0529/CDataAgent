@@ -8,6 +8,12 @@
 import type { ChatMessageVO } from '@/services/types'
 
 const STORAGE_KEY = 'aibi:chat'
+const MAX_MESSAGES = 100
+const MAX_STORAGE_BYTES = 1_500_000
+
+function getStorageBytes(value: string): number {
+  return new TextEncoder().encode(value).byteLength
+}
 
 export function useChatPersistence() {
   function loadMessages(): ChatMessageVO[] {
@@ -23,12 +29,27 @@ export function useChatPersistence() {
 
   function saveMessages(messages: ChatMessageVO[]): void {
     try {
-      const toSave = messages.filter((m) => m.status !== 'loading')
+      const toSave = messages.filter((m) => m.status !== 'loading').slice(-MAX_MESSAGES)
       if (toSave.length === 0) {
         localStorage.removeItem(STORAGE_KEY)
         return
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+
+      while (toSave.length > 1) {
+        const serialized = JSON.stringify(toSave)
+        if (getStorageBytes(serialized) <= MAX_STORAGE_BYTES) {
+          localStorage.setItem(STORAGE_KEY, serialized)
+          return
+        }
+        toSave.shift()
+      }
+
+      const serialized = JSON.stringify(toSave)
+      if (getStorageBytes(serialized) <= MAX_STORAGE_BYTES) {
+        localStorage.setItem(STORAGE_KEY, serialized)
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
     } catch {
       // localStorage 满或不可用，静默忽略
     }
