@@ -6,6 +6,9 @@ const message = useMessage()
 
 const props = defineProps<{
   hasFiles: boolean
+  fileCount: number
+  selectedFileCount: number
+  fileContextExpanded: boolean
   loading: boolean
   uploading: boolean
 }>()
@@ -14,6 +17,7 @@ const emit = defineEmits<{
   (e: 'send', text: string): void
   (e: 'stop'): void
   (e: 'upload', files: File[]): void
+  (e: 'toggle-file-context'): void
   (e: 'clear-conversation'): void
   (e: 'reset-conversation'): void
 }>()
@@ -34,20 +38,14 @@ function handleSend() {
   nextTick(() => {
     if (textareaRef.value) {
       textareaRef.value.style.height = ''
+      textareaRef.value.focus()
     }
   })
 }
 
-watch(
-  () => props.loading,
-  (loading) => {
-    if (!loading) {
-      nextTick(() => {
-        textareaRef.value?.focus()
-      })
-    }
-  },
-)
+function focusTextarea() {
+  textareaRef.value?.focus()
+}
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -132,6 +130,7 @@ function handleFileChange(event: Event) {
   if (fileInputRef.value) {
     fileInputRef.value.value = ''
   }
+  nextTick(focusTextarea)
 }
 
 function autoResize() {
@@ -145,6 +144,8 @@ function autoResize() {
 watch(text, () => {
   nextTick(autoResize)
 })
+
+defineExpose({ focusTextarea })
 </script>
 
 <template>
@@ -214,6 +215,29 @@ watch(text, () => {
         </div>
       </div>
 
+      <button
+        v-if="hasFiles"
+        class="chat-input__file-toggle"
+        :class="{
+          'chat-input__file-toggle--selected': selectedFileCount > 0,
+          'chat-input__file-toggle--expanded': fileContextExpanded,
+        }"
+        type="button"
+        :aria-expanded="fileContextExpanded"
+        aria-controls="file-context-list"
+        :title="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        :aria-label="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        @click="emit('toggle-file-context')"
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 5a2 2 0 012-2h4l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+        </svg>
+        <span>{{ selectedFileCount }}/{{ fileCount }}</span>
+        <svg class="chat-input__file-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+
       <input
         ref="fileInputRef"
         type="file"
@@ -228,27 +252,36 @@ watch(text, () => {
         v-model="text"
         class="chat-input__textarea"
         :placeholder="hasFiles ? '输入你的分析需求...' : '输入你的问题，或上传文件开始数据分析...'"
-        :disabled="loading"
         rows="1"
         @keydown="handleKeydown"
         @input="autoResize"
       />
-      <button
-        class="chat-input__send"
-        :disabled="!loading && !text.trim()"
-        :aria-label="loading ? '停止生成' : '发送'"
-        @click="loading ? emit('stop') : handleSend()"
-      >
-        <svg v-if="!loading" width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <div class="chat-input__actions">
+        <button
+          v-if="loading"
+          class="chat-input__stop"
+          type="button"
+          aria-label="停止生成"
+          title="停止生成"
+          @click="emit('stop')"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+        <button
+          class="chat-input__send"
+          type="button"
+          :disabled="!text.trim() || loading"
+          :aria-label="loading ? '当前回复结束后可发送' : '发送'"
+          :title="loading ? '可继续输入，当前回复结束后再发送' : '发送'"
+          @click="handleSend"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
-        </svg>
-      </button>
-    </div>
-    <div class="chat-input__hint">
-      Shift + Enter 换行
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -256,17 +289,22 @@ watch(text, () => {
 <style scoped>
 .chat-input {
   flex-shrink: 0;
-  padding: 0 0 8px;
+  padding: 0 0 12px;
+  margin-top: 12px;
 }
 
 .chat-input__inner {
   background: var(--surface);
   border-radius: 20px;
   border: 1px solid var(--border-soft);
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "textarea textarea textarea textarea"
+    "attach files . actions";
+  align-items: center;
   gap: 6px;
-  padding: 5px 6px 5px 10px;
+  padding: 8px;
   transition: border-color 0.28s var(--ease-out-expo);
 }
 
@@ -306,7 +344,49 @@ watch(text, () => {
 
 /* ===== 附件按钮包装（菜单定位锚点） ===== */
 .chat-input__attach-wrap {
+  grid-area: attach;
   position: relative;
+}
+
+.chat-input__file-toggle {
+  grid-area: files;
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo),
+    background 0.2s var(--ease-out-expo);
+}
+
+.chat-input__file-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow-soft);
+}
+
+.chat-input__file-toggle--selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chat-input__file-toggle--expanded {
+  background: var(--accent-glow-soft);
+}
+
+.chat-input__file-chevron {
+  transition: transform 0.24s var(--ease-out-expo);
+}
+
+.chat-input__file-toggle--expanded .chat-input__file-chevron {
+  transform: rotate(180deg);
 }
 
 /* ===== 弹出菜单 ===== */
@@ -384,7 +464,8 @@ watch(text, () => {
 }
 
 .chat-input__textarea {
-  flex: 1;
+  grid-area: textarea;
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
@@ -394,21 +475,24 @@ watch(text, () => {
   font-size: 15px;
   font-family: inherit;
   line-height: 24px;
-  min-height: 36px;
+  min-height: 32px;
   max-height: 84px;
-  padding: 6px 0;
+  padding: 4px 6px;
 }
 
 .chat-input__textarea::placeholder {
   color: var(--muted);
 }
 
-.chat-input__textarea:disabled {
-  cursor: not-allowed;
+.chat-input__actions {
+  grid-area: actions;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
 }
 
 .chat-input__send {
-  flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -436,10 +520,24 @@ watch(text, () => {
   cursor: not-allowed;
 }
 
-.chat-input__hint {
-  font-size: 12px;
-  color: var(--dim-text);
-  margin-top: 4px;
-  padding-right: 4px;
+.chat-input__stop {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo),
+    background 0.2s var(--ease-out-expo);
 }
+
+.chat-input__stop:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow-soft);
+  color: var(--accent);
+}
+
 </style>

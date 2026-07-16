@@ -299,7 +299,7 @@ function formatTokens(n: number): string {
   <div v-else-if="message.status === 'loading'" :id="'msg-' + message.id" class="msg-row msg-row--ai">
     <div class="msg-row__inner">
       <div class="msg-avatar">
-        <LogoIcon :size="28" />
+        <LogoIcon :size="36" />
       </div>
       <div class="msg-bubble msg-bubble--loading">
         <span class="loading-dot" />
@@ -314,7 +314,7 @@ function formatTokens(n: number): string {
   <div v-else :id="'msg-' + message.id" class="msg-row msg-row--ai">
     <div class="msg-row__inner">
       <div class="msg-avatar">
-        <LogoIcon :size="28" />
+        <LogoIcon :size="36" />
       </div>
 
       <!-- 无真实内容时的状态指示器（图表流程改用统一入口） -->
@@ -509,8 +509,8 @@ function formatTokens(n: number): string {
 
 /* ===== AI 头像 / Logo ===== */
 .msg-avatar {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   flex-shrink: 0;

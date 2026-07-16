@@ -15,10 +15,7 @@ const props = defineProps<{
   collapsed: boolean
 }>()
 
-const emit = defineEmits<{
-  (e: 'toggle'): void
-  (e: 'locate-message', msgId: string): void
-}>()
+const emit = defineEmits<(e: 'locate-message', msgId: string) => void>()
 
 // ---- 页签状态 ----
 const activeTab = ref<'config' | 'history'>('config')
@@ -252,21 +249,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="config-panel" :class="{ 'config-panel--hidden': collapsed }">
+  <aside id="workspace-sidebar" class="config-panel" :class="{ 'config-panel--hidden': collapsed }">
     <div class="config-panel__inner">
     <!-- ===== 品牌区 ===== -->
     <div class="panel-brand">
-      <LogoIcon :size="36" />
+      <LogoIcon :size="48" />
       <span class="panel-brand__name">CData Agent</span>
-      <button
-        class="panel-brand__toggle"
-        @click="emit('toggle')"
-        aria-label="折叠面板"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </button>
     </div>
 
     <!-- ===== 页签导航 ===== -->
@@ -431,7 +419,7 @@ onMounted(() => {
       </div>
     </div>
     </div>
-  </div>
+  </aside>
 
   <!-- 图表预览弹窗 -->
   <ChartPreviewModal
@@ -448,7 +436,7 @@ onMounted(() => {
 /* ===== 面板容器 ===== */
 .config-panel {
   flex-shrink: 0;
-  width: 300px;
+  width: var(--workspace-sidebar-width, 300px);
   background: var(--surface);
   border-right: 1px solid var(--border-soft);
   display: flex;
@@ -465,8 +453,8 @@ onMounted(() => {
 }
 
 .config-panel__inner {
-  width: 300px;
-  min-width: 300px;
+  width: var(--workspace-sidebar-width, 300px);
+  min-width: var(--workspace-sidebar-width, 300px);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -476,36 +464,17 @@ onMounted(() => {
 .panel-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 24px 16px 18px;
+  gap: 14px;
+  padding: 22px 18px 18px;
   flex-shrink: 0;
 }
 
 .panel-brand__name {
-  flex: 1;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1;
   color: var(--fg);
-}
-
-.panel-brand__toggle {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid var(--border-soft);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: all 0.28s var(--ease-out-expo);
-}
-
-.panel-brand__toggle:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-glow-soft);
 }
 
 /* ===== 页签导航 ===== */
