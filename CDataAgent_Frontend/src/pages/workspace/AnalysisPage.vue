@@ -3,6 +3,7 @@ import { useDialog, useMessage } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import ChatInput from '@/components/analysis/ChatInput.vue'
 import ChatMessage from '@/components/analysis/ChatMessage.vue'
+import FileContextBar from '@/components/analysis/FileContextBar.vue'
 import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
 import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
 import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
@@ -27,6 +28,9 @@ const dialog = useDialog()
 const activeConversationId = ref<string | null>(null)
 const messages = ref<ChatMessageVO[]>([])
 const configCollapsed = ref(false)
+const fileContextExpanded = ref(true)
+const SIDEBAR_STORAGE_KEY = 'cdata-agent.workspace.sidebar-collapsed'
+const FILE_CONTEXT_STORAGE_KEY = 'cdata-agent.workspace.file-context-collapsed'
 
 function parseRenderDocument(value: string | null | undefined) {
   if (!value) return null
@@ -37,28 +41,17 @@ function parseRenderDocument(value: string | null | undefined) {
   }
 }
 
-const {
-  files,
-  fetchingFiles,
-  uploading,
-  selectedFileIds,
-  toggleFile,
-  fetchFiles,
-  uploadFiles,
-  deleteFile,
-} = useFiles(activeConversationId)
+const { files, uploading, selectedFileIds, toggleFile, fetchFiles, uploadFiles, deleteFile } =
+  useFiles(activeConversationId)
 const {
   chatting,
   flushPending: flushAgentStream,
   start: startAgentStream,
   stop: stopAgentStream,
 } = useAgentStream()
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+const selectedFileCount = computed(
+  () => files.value.filter((file) => selectedFileIds.value.has(file.id)).length,
+)
 
 // ---- 文件预览 ----
 const previewFileId = ref<string | null>(null)
@@ -153,6 +146,7 @@ async function handleUpload(incoming: File[]) {
   try {
     const { addedCount, skippedCount } = await uploadFiles(incoming)
     if (addedCount > 0) {
+      fileContextExpanded.value = true
       message.success(
         skippedCount > 0
           ? `上传了 ${addedCount} 个文件（${skippedCount} 个重复已跳过）`
@@ -397,6 +391,12 @@ watch(messages, () => {
 const { loadMessages: loadLocalMessages, clearMessages } = useChatPersistence()
 
 onMounted(async () => {
+  try {
+    configCollapsed.value = window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
+    fileContextExpanded.value = window.localStorage.getItem(FILE_CONTEXT_STORAGE_KEY) !== 'true'
+  } catch {
+    // 本地存储不可用时保留默认展开状态。
+  }
   window.addEventListener('beforeunload', handleBeforeUnload)
   chatAreaRef.value?.addEventListener('scroll', updateAutoScrollState, { passive: true })
 
@@ -431,6 +431,22 @@ onMounted(async () => {
   }
 })
 
+watch(configCollapsed, (value) => {
+  try {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(value))
+  } catch {
+    // 偏好保存失败不影响工作区。
+  }
+})
+
+watch(fileContextExpanded, (value) => {
+  try {
+    window.localStorage.setItem(FILE_CONTEXT_STORAGE_KEY, String(!value))
+  } catch {
+    // 偏好保存失败不影响工作区。
+  }
+})
+
 onBeforeUnmount(() => {
   handleStop()
   flushAgentStream()
@@ -442,29 +458,25 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="analysis-page">
-    <!-- 展开按钮（折叠时显示在左上角） -->
+    <!-- 侧栏开关始终使用同一控件，随面板边界平滑移动 -->
     <button
-      v-if="configCollapsed"
-      class="config-expand-btn"
-      @click="configCollapsed = false"
-      title="侧边栏"
-      aria-label="展开侧边栏"
+      class="workspace-sidebar-toggle"
+      :class="{ 'workspace-sidebar-toggle--collapsed': configCollapsed }"
+      type="button"
+      :aria-expanded="!configCollapsed"
+      aria-controls="workspace-sidebar"
+      @click="configCollapsed = !configCollapsed"
+      :title="configCollapsed ? '展开侧边栏' : '收起侧边栏'"
+      :aria-label="configCollapsed ? '展开侧边栏' : '收起侧边栏'"
     >
-      <svg width="28" height="18" viewBox="0 0 28 18" fill="none">
-        <rect x="0.5" y="0.5" width="27" height="17" rx="3" stroke="currentColor" stroke-width="1" />
-        <line x1="6.5" y1="0.5" x2="6.5" y2="17.5" stroke="#BC694A" stroke-width="1" opacity="0.7" />
-        <rect x="1.5" y="2" width="4" height="2.5" rx="0.8" fill="currentColor" opacity="0.12" />
-        <rect x="8.5" y="2.5" width="12" height="1.5" rx="0.8" fill="currentColor" opacity="0.1" />
-        <rect x="8.5" y="6" width="18" height="1.5" rx="0.8" fill="currentColor" opacity="0.07" />
-        <rect x="8.5" y="9.5" width="14" height="1.5" rx="0.8" fill="currentColor" opacity="0.07" />
-        <rect x="8.5" y="13" width="16" height="1.5" rx="0.8" fill="currentColor" opacity="0.07" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
 
     <!-- 左侧模型配置面板 -->
     <ModelConfigPanel
       :collapsed="configCollapsed"
-      @toggle="configCollapsed = !configCollapsed"
       @locate-message="handleLocateMessage"
     />
 
@@ -473,79 +485,45 @@ onBeforeUnmount(() => {
       <div class="analysis-page__chat-inner">
         <!-- 对话区域 -->
         <div ref="chatAreaRef" class="analysis-page__messages">
-          <WelcomeScreen v-if="!hasMessages" :has-files="files.length > 0" />
-          <template v-else>
-            <ChatMessage
-              v-for="msg in messages"
-              :key="`${msg.id}-${msg.status}`"
-              :message="msg"
-            />
-          </template>
-          <div ref="scrollAnchorRef" />
-        </div>
-
-        <!-- 文件区域（带框网格布局） -->
-        <div v-if="files.length > 0" class="file-box">
-          <div class="file-box__grid">
-            <div
-              v-for="file in files.slice(0, 8)"
-              :key="file.id"
-              class="file-item"
-              :class="{ 'file-item--on': selectedFileIds.has(file.id) }"
-              @click="toggleFile(file.id)"
-            >
-              <span class="file-item__check">
-                <svg v-if="selectedFileIds.has(file.id)" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" fill="var(--accent)" stroke="none" />
-                  <path d="M16 8l-6.5 7.5L6 12" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
-                </svg>
-              </span>
-              <span class="file-item__name">{{ file.originalFilename }}</span>
-              <button
-                class="file-item__preview"
-                title="预览数据"
-                @click.stop="handlePreviewFile(file)"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
-                </svg>
-              </button>
-              <button
-                class="file-item__delete"
-                :aria-label="`删除 ${file.originalFilename}`"
-                @click.stop="handleDeleteFile(file.id)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-                </svg>
-              </button>
-              <div class="file-item__tooltip">
-                <div class="file-item__tooltip-name">{{ file.originalFilename }}</div>
-                <div class="file-item__tooltip-row">
-                  <span>{{ formatSize(file.fileSize) }}</span>
-                  <span>{{ file.rowCount.toLocaleString() }} 行</span>
-                  <span :class="file.status === 'READY' ? 'status-ready' : 'status-processing'">{{ file.status }}</span>
-                </div>
-              </div>
-            </div>
+          <div class="analysis-page__messages-content">
+            <WelcomeScreen v-if="!hasMessages" :has-files="files.length > 0" />
+            <template v-else>
+              <ChatMessage
+                v-for="msg in messages"
+                :key="`${msg.id}-${msg.status}`"
+                :message="msg"
+              />
+            </template>
+            <div ref="scrollAnchorRef" />
           </div>
         </div>
 
-        <!-- 输入区 -->
-        <ChatInput
-          :has-files="files.length > 0"
-          :loading="chatting"
-          :uploading="uploading"
-          @send="handleSend"
-          @stop="handleStop"
-          @upload="handleUpload"
-          @clear-conversation="handleClearMessages"
-          @reset-conversation="handleResetConversation"
-        />
+        <div class="analysis-page__composer">
+          <FileContextBar
+            :files="files"
+            :selected-file-ids="selectedFileIds"
+            :expanded="fileContextExpanded"
+            @toggle-file="toggleFile"
+            @preview-file="handlePreviewFile"
+            @delete-file="handleDeleteFile"
+          />
+
+          <!-- 输入区 -->
+          <ChatInput
+            :has-files="files.length > 0"
+            :file-count="files.length"
+            :selected-file-count="selectedFileCount"
+            :file-context-expanded="fileContextExpanded"
+            :loading="chatting"
+            :uploading="uploading"
+            @send="handleSend"
+            @stop="handleStop"
+            @upload="handleUpload"
+            @toggle-file-context="fileContextExpanded = !fileContextExpanded"
+            @clear-conversation="handleClearMessages"
+            @reset-conversation="handleResetConversation"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -561,48 +539,66 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .analysis-page {
+  --workspace-sidebar-width: 300px;
   display: flex;
   height: 100vh;
   position: relative;
 }
 
-/* ===== 折叠时的展开按钮（左上角） ===== */
-.config-expand-btn {
+/* ===== 侧栏控制 ===== */
+.workspace-sidebar-toggle {
   position: absolute;
   top: 12px;
-  left: 12px;
-  z-index: 10;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  left: calc(var(--workspace-sidebar-width) - 44px);
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   border: 1px solid var(--border-soft);
   background: var(--surface);
   color: var(--muted);
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: all 0.28s var(--ease-out-expo), transform 0.28s var(--spring);
+  box-shadow: var(--shadow-card);
+  transition: left 0.35s var(--ease-out-expo), border-color 0.2s var(--ease-out-expo),
+    color 0.2s var(--ease-out-expo), background 0.2s var(--ease-out-expo);
 }
 
-.config-expand-btn:hover {
+.workspace-sidebar-toggle--collapsed {
+  left: 12px;
+}
+
+.workspace-sidebar-toggle svg {
+  transition: transform 0.24s var(--ease-out-expo);
+}
+
+.workspace-sidebar-toggle--collapsed svg {
+  transform: rotate(180deg);
+}
+
+.workspace-sidebar-toggle:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface-raised);
-  transform: scale(1.06);
+  background: var(--accent-glow-soft);
+}
+
+.workspace-sidebar-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .analysis-page__chat-col {
   flex: 1;
-  display: flex;
-  justify-content: center;
   min-width: 0;
-  padding: 0 8px 0 clamp(12px, 2.5vw, 40px);
+  padding: 0 0 0 clamp(12px, 2.5vw, 40px);
   transition: padding 0.35s var(--ease-out-expo);
 }
 
 .analysis-page__chat-inner {
   width: 100%;
-  max-width: min(clamp(720px, 75%, 1300px), 100%);
+  height: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
 }
@@ -610,9 +606,26 @@ onBeforeUnmount(() => {
 .analysis-page__messages {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0 16px 0;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.analysis-page__messages-content,
+.analysis-page__composer {
+  width: 100%;
+  max-width: min(clamp(720px, 75%, 1300px), 100%);
+  margin: 0 auto;
+}
+
+.analysis-page__messages-content {
+  padding: 8px 16px 16px;
+}
+
+.analysis-page__composer {
+  --composer-gutter: 16px;
+  position: relative;
+  flex-shrink: 0;
+  padding: 0 var(--composer-gutter);
 }
 
 .analysis-page__messages::-webkit-scrollbar {
@@ -634,241 +647,24 @@ onBeforeUnmount(() => {
 }
 
 
-/* ===== 文件区域（带框网格） ===== */
-.file-box {
-  flex-shrink: 0;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  padding: 12px;
-  margin-bottom: 8px;
-  position: relative;
-  animation: file-box-enter 0.28s var(--ease-out-expo);
-}
-
-@keyframes file-box-enter {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 内边框 — 双边框效果 */
-.file-box::before {
-  content: '';
-  position: absolute;
-  inset: 5px;
-  border-radius: 15px;
-  border: 1px solid var(--border-inner);
-  pointer-events: none;
-}
-
-.file-box__grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 640px) {
-  .file-box__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* ===== 单个文件气泡 ===== */
-.file-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-inner);
-  font-size: 13px;
-  color: var(--fg);
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  min-width: 0;
-  transition: border-color 0.28s var(--ease-out-expo),
-              background 0.28s var(--ease-out-expo);
-}
-
-.file-item:hover {
-  border-color: var(--accent);
-}
-
-.file-item--on {
-  border-color: var(--accent);
-  background: var(--accent-glow-soft);
-}
-
-/* 选中态复选框 */
-.file-item__check {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  color: var(--muted);
-}
-
-.file-item--on .file-item__check {
-  color: var(--accent);
-}
-
-/* 文件名 */
-.file-item__name {
-  flex: 1;
-  min-width: 40px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.3;
-  font-size: 14px;
-  color: var(--fg);
-}
-
-/* 预览按钮 — 淡入淡出，不改变布局 */
-.file-item__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-out-expo);
-}
-
-.file-item:hover .file-item__preview {
-  opacity: 1;
-}
-
-.file-item__preview:hover {
-  color: var(--accent);
-  background: var(--accent-glow-soft);
-}
-
-/* 删除按钮 — 淡入淡出，不改变布局 */
-.file-item__delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-out-expo);
-}
-
-.file-item:hover .file-item__delete {
-  opacity: 1;
-}
-
-.file-item__delete:hover {
-  color: #e05555;
-  background: rgba(224, 85, 85, 0.12);
-}
-
-/* ===== hover 信息气泡 ===== */
-.file-item__tooltip {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 6px);
-  width: 100%;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 8px 10px;
-  z-index: 10;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s var(--ease-out-expo);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
-
-.file-item:hover .file-item__tooltip {
-  opacity: 1;
-}
-
-.file-item__tooltip-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-item__tooltip-row {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.file-item__tooltip-row .status-ready {
-  color: #4caf50;
-}
-
-.file-item__tooltip-row .status-processing {
-  color: var(--accent);
-}
-
-/* 当文件少于一整行时，让卡片不用撑满 */
-.file-box__grid:only-child {
-  justify-content: flex-start;
-}
-
 /* ===== 响应式断点 ===== */
 
 @media (max-width: 1024px) {
   .analysis-page__chat-col {
-    padding: 0 clamp(6px, 2vw, 16px);
-  }
-
-  /* 文件网格在小屏减列 */
-  .file-box__grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    padding: 0 0 0 clamp(6px, 2vw, 16px);
   }
 }
 
 @media (max-width: 768px) {
   .analysis-page__chat-col {
-    padding: 0 6px;
+    padding: 0;
   }
 
-  .file-box__grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 6px;
-  }
-
-  .file-item {
-    padding: 6px 8px 6px 6px;
-    font-size: 12px;
-  }
-
-  .analysis-page__messages {
-    padding: 4px 0 12px;
+  .analysis-page__messages-content,
+  .analysis-page__composer {
+    --composer-gutter: 8px;
+    padding-right: 8px;
+    padding-left: 8px;
   }
 }
 </style>
