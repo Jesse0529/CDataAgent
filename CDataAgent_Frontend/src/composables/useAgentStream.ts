@@ -16,12 +16,57 @@ import { parseChartOptions } from '@/utils/messageParser'
 const MAX_RETRIES = 3
 const STATUS_TEXTS = new Set(['正在分析数据…', '正在生成图表…'])
 
+function activitySourceIds(activity: RunActivity): string[] {
+  return activity.sourceIds?.length ? activity.sourceIds : [activity.id]
+}
+
+function activityToolKey(activity: RunActivity): string {
+  // 旧服务端事件缺少 toolKey 时不做跨事件合并，避免误把不同工具归为一行。
+  return activity.toolKey || `legacy:${activity.id}`
+}
+
+function mergeActivity(activities: RunActivity[], incoming: RunActivity): RunActivity[] {
+  const next = activities.map((activity) => ({
+    ...activity,
+    sourceIds: [...activitySourceIds(activity)],
+  }))
+  const sourceIndex = next.findIndex((activity) =>
+    activitySourceIds(activity).includes(incoming.id),
+  )
+
+  if (sourceIndex >= 0) {
+    const source = next[sourceIndex]
+    const sourceIds = activitySourceIds(source).filter((id) => id !== incoming.id)
+    if (sourceIds.length === 0) next.splice(sourceIndex, 1)
+    else {
+      next[sourceIndex] = { ...source, count: sourceIds.length, sourceIds }
+    }
+  }
+
+  const toolKey = activityToolKey(incoming)
+  const targetIndex = next.findIndex(
+    (activity) => activityToolKey(activity) === toolKey && activity.state === incoming.state,
+  )
+  if (targetIndex < 0) {
+    return [...next, { ...incoming, toolKey, count: 1, sourceIds: [incoming.id] }]
+  }
+
+  const target = next[targetIndex]
+  const sourceIds = [...new Set([...activitySourceIds(target), incoming.id])]
+  next[targetIndex] = {
+    ...target,
+    label: incoming.label,
+    count: sourceIds.length,
+    sourceIds,
+  }
+  return next
+}
+
 export interface StartAgentStreamOptions {
   conversationId: string
   text: string
   fileIds: string[]
   message: ChatMessageVO
-  onScrollToBottom: (instant?: boolean) => void
   onPersist: () => void
 }
 
@@ -39,13 +84,19 @@ export function useAgentStream() {
   }
 
   async function start(options: StartAgentStreamOptions): Promise<void> {
-    const { conversationId, text, fileIds, message, onScrollToBottom, onPersist } = options
+    const { conversationId, text, fileIds, message, onPersist } = options
     let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1`
     if (fileIds.length > 0) streamUrl += `&fileIds=${fileIds.join(',')}`
 
     let finalAnalysis = ''
     let pendingContent = ''
     let rafToken: number | null = null
+    let activityFlushTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingActivities: RunActivity[] = []
+    let artifactFlushTimer: ReturnType<typeof setTimeout> | null = null
+    const pendingArtifactBlocks: RenderDocument['blocks'] = []
+    const queuedArtifactIds = new Set((message.liveBlocks ?? []).map((block) => block.id))
+    let resolveArtifactDrain: (() => void) | null = null
     let resumeToken: string | undefined
     let retryCount = 0
     let retryTimer: ReturnType<typeof setTimeout> | null = null
@@ -67,7 +118,67 @@ export function useAgentStream() {
       message.content = previous + pendingContent
       message.reconnecting = false
       pendingContent = ''
-      onScrollToBottom(true)
+    }
+
+    function flushActivities(): void {
+      activityFlushTimer = null
+      if (pendingActivities.length === 0) return
+
+      let activities = message.activities ?? []
+      let chartGenerating = message.chartGenerating ?? false
+      for (const activity of pendingActivities) {
+        activities = mergeActivity(activities, activity)
+        if (activity.stage === 'chart' || activity.stage === 'validate') {
+          chartGenerating = activity.state === 'running'
+        }
+      }
+      pendingActivities = []
+      message.activities = activities
+      message.chartGenerating = chartGenerating
+    }
+
+    function queueActivity(activity: RunActivity): void {
+      pendingActivities.push(activity)
+      if (activityFlushTimer === null) {
+        activityFlushTimer = setTimeout(flushActivities, 32)
+      }
+    }
+
+    function flushArtifactBlock(): void {
+      artifactFlushTimer = null
+      const block = pendingArtifactBlocks.shift()
+      if (!block) {
+        resolveArtifactDrain?.()
+        resolveArtifactDrain = null
+        return
+      }
+
+      message.liveBlocks = [...(message.liveBlocks ?? []), block]
+      if (pendingArtifactBlocks.length > 0) {
+        artifactFlushTimer = setTimeout(flushArtifactBlock, 96)
+      } else {
+        resolveArtifactDrain?.()
+        resolveArtifactDrain = null
+      }
+    }
+
+    function queueArtifactBlocks(blocks: RenderDocument['blocks']): void {
+      for (const block of blocks) {
+        if (queuedArtifactIds.has(block.id)) continue
+        queuedArtifactIds.add(block.id)
+        pendingArtifactBlocks.push(block)
+      }
+      if (pendingArtifactBlocks.length > 0 && artifactFlushTimer === null) {
+        flushArtifactBlock()
+      }
+    }
+
+    function waitForArtifactDrain(): Promise<void> {
+      if (pendingArtifactBlocks.length === 0 && artifactFlushTimer === null)
+        return Promise.resolve()
+      return new Promise((resolve) => {
+        resolveArtifactDrain = resolve
+      })
     }
 
     function flushAll(): void {
@@ -76,6 +187,11 @@ export function useAgentStream() {
         rafToken = null
       }
       flushBuffer()
+      if (activityFlushTimer !== null) {
+        clearTimeout(activityFlushTimer)
+        activityFlushTimer = null
+      }
+      flushActivities()
     }
 
     function waitForRetry(delay: number): Promise<boolean> {
@@ -137,7 +253,6 @@ export function useAgentStream() {
         },
         (tableData: TableEventData) => {
           message.tables = [...(message.tables || []), tableData]
-          onScrollToBottom(true)
         },
         (meta: MetaEvent, eventId: string | null) => {
           currentRunId = meta.runId
@@ -157,7 +272,6 @@ export function useAgentStream() {
           message.renderVersion = 1
           message.lastEventId = eventId
           if (eventId) lastEventId = eventId
-          onScrollToBottom(true)
         },
         (progress: ProgressEvent, eventId: string | null) => {
           if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
@@ -171,37 +285,22 @@ export function useAgentStream() {
           if (progress.stage !== 'analysis' && !pendingContent && !message.renderDocument) {
             message.content = progress.label
           }
-          onScrollToBottom(true)
         },
         (activity: RunActivity, eventId: string | null) => {
           if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
           if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
-          const activities = message.activities ? [...message.activities] : []
-          const index = activities.findIndex((item) => item.id === activity.id)
-          if (index >= 0) activities[index] = activity
-          else activities.push(activity)
-          message.activities = activities
           message.lastEventId = eventId
           if (eventId) lastEventId = eventId
-          if (activity.stage === 'chart' || activity.stage === 'validate') {
-            message.chartGenerating = activity.state === 'running'
-          }
-          onScrollToBottom(true)
+          queueActivity(activity)
         },
         (artifact: ArtifactEvent, eventId: string | null) => {
           if (currentRunId && artifact.runId !== currentRunId) return
           if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
           if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
-          const existing = message.liveBlocks ? [...message.liveBlocks] : []
-          const existingIds = new Set(existing.map((block) => block.id))
           if (artifact.chartExpected === true) message.chartExpected = true
-          message.liveBlocks = [
-            ...existing,
-            ...artifact.blocks.filter((block) => !existingIds.has(block.id)),
-          ]
+          queueArtifactBlocks(artifact.blocks)
           message.lastEventId = eventId
           if (eventId) lastEventId = eventId
-          onScrollToBottom(true)
         },
         (result: ChartResultEvent, eventId: string | null) => {
           if (currentRunId && result.runId !== currentRunId) return
@@ -215,7 +314,6 @@ export function useAgentStream() {
           if (chartOptions) message.chartOption = chartOptions
           message.lastEventId = eventId
           if (eventId) lastEventId = eventId
-          onScrollToBottom(true)
         },
       )
     }
@@ -250,6 +348,7 @@ export function useAgentStream() {
     try {
       await streamWithReconnect()
       flushAll()
+      await waitForArtifactDrain()
       if (message.status === 'streaming') {
         message.content = finalAnalysis || message.content
         message.status = 'done'
@@ -260,7 +359,6 @@ export function useAgentStream() {
           : true
         message.reconnecting = false
         onPersist()
-        onScrollToBottom()
       }
     } catch (error) {
       const errorText = error instanceof Error ? error.message : '分析请求失败'
@@ -271,7 +369,6 @@ export function useAgentStream() {
       message.chartPreviewAvailable = false
       message.reconnecting = false
       onPersist()
-      onScrollToBottom()
     } finally {
       cancelActiveStream()
       chatting.value = false

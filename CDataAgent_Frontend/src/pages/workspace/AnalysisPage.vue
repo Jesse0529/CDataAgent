@@ -293,7 +293,6 @@ async function handleSend(text: string) {
     text,
     fileIds: [...selectedFileIds.value],
     message: activeStreamMessage,
-    onScrollToBottom: scrollToBottom,
     onPersist: syncMessagesAfterStream,
   })
 }
@@ -490,7 +489,7 @@ onBeforeUnmount(() => {
             <template v-else>
               <ChatMessage
                 v-for="msg in messages"
-                :key="`${msg.id}-${msg.status}`"
+                :key="msg.id"
                 :message="msg"
               />
             </template>
@@ -606,6 +605,7 @@ onBeforeUnmount(() => {
 .analysis-page__messages {
   flex: 1;
   overflow-y: auto;
+  overflow-anchor: none;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }

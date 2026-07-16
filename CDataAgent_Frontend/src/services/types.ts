@@ -189,8 +189,14 @@ export interface ProgressEvent {
 export interface RunActivity {
   id: string
   stage: string
+  /** 服务端定义的稳定工具标识，用于前端聚合，不展示给用户。 */
+  toolKey?: string
   label: string
   state: 'running' | 'succeeded' | 'failed'
+  /** 同一工具、同一结果的累计次数，仅在前端运行态保留。 */
+  count?: number
+  /** 聚合行包含的原始活动 ID，仅用于后续状态更新。 */
+  sourceIds?: string[]
 }
 
 /** SSE 阶段产物，只允许追加已校验的 RenderBlock。 */

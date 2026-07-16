@@ -89,6 +89,18 @@ const chartFlowVisible = computed(
 
 const showChartModal = ref(false)
 const copySuccess = ref(false)
+const attachmentsExpanded = ref(false)
+const ATTACHMENT_PREVIEW_LIMIT = 2
+
+const userAttachments = computed(() => props.message.fileAttachments ?? [])
+const visibleAttachments = computed(() =>
+  attachmentsExpanded.value
+    ? userAttachments.value
+    : userAttachments.value.slice(0, ATTACHMENT_PREVIEW_LIMIT),
+)
+const hiddenAttachmentCount = computed(() =>
+  Math.max(0, userAttachments.value.length - ATTACHMENT_PREVIEW_LIMIT),
+)
 
 /** 消息的结论文本（独立于推理过程） */
 const conclusion = computed((): string | null => {
@@ -274,12 +286,17 @@ function formatTokens(n: number): string {
 <template>
   <!-- 用户消息 — 右侧 -->
   <div v-if="message.role === 'user'" :id="'msg-' + message.id" class="msg-row msg-row--user">
-    <div class="msg-bubble msg-bubble--user">
-      <div v-if="message.fileAttachments && message.fileAttachments.length > 0" class="msg-attachments">
+    <div class="user-message">
+      <div
+        v-if="userAttachments.length > 0"
+        class="msg-attachments"
+        :class="{ 'msg-attachments--expanded': attachmentsExpanded }"
+      >
         <div
-          v-for="att in message.fileAttachments"
+          v-for="att in visibleAttachments"
           :key="att.id"
           class="msg-attach-chip"
+          :title="att.name"
         >
           <span class="msg-attach-chip__icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -290,8 +307,19 @@ function formatTokens(n: number): string {
           </span>
           <span class="msg-attach-chip__name">{{ att.name }}</span>
         </div>
+        <button
+          v-if="hiddenAttachmentCount > 0 || attachmentsExpanded"
+          class="msg-attachments__toggle"
+          type="button"
+          :aria-expanded="attachmentsExpanded"
+          @click="attachmentsExpanded = !attachmentsExpanded"
+        >
+          {{ attachmentsExpanded ? '收起' : `+${hiddenAttachmentCount}` }}
+        </button>
       </div>
+      <div class="msg-bubble msg-bubble--user">
       <div class="msg-text">{{ message.content }}</div>
+      </div>
     </div>
   </div>
 
@@ -337,7 +365,11 @@ function formatTokens(n: number): string {
           'msg-bubble--streaming': message.status === 'streaming',
         }"
       >
-        <RunActivityTimeline v-if="analysisActivities.length" :activities="analysisActivities" />
+        <RunActivityTimeline
+          v-if="analysisActivities.length"
+          :activities="analysisActivities"
+          :streaming="message.status === 'streaming'"
+        />
         <!-- 结论区（独立于推理过程，仅完成态显示） -->
         <div v-if="message.status === 'done' && conclusion" class="msg-conclusion">
           <div class="msg-conclusion__header">
@@ -362,7 +394,7 @@ function formatTokens(n: number): string {
 
         <!-- v1 协议：RenderDocument 区块渲染 -->
         <template v-if="hasPresentationBlocks">
-          <TransitionGroup name="render-block" tag="div" class="render-document">
+          <TransitionGroup appear name="render-block" tag="div" class="render-document">
             <component
               v-for="(block, index) in presentationBlocks.filter((item) => item.type !== 'chart')"
               :key="block.id"
@@ -421,9 +453,10 @@ function formatTokens(n: number): string {
         <Transition name="chart-flow">
           <section v-if="chartTriggerVisible" class="chart-flow">
             <RunActivityTimeline
-              v-if="chartFlowVisible"
-              :activities="chartActivities"
-              :pending-label="chartPreparationVisible ? '正在准备图表' : undefined"
+                v-if="chartFlowVisible"
+                :activities="chartActivities"
+                :pending-label="chartPreparationVisible ? '准备调用图表工具' : undefined"
+                :streaming="message.status === 'streaming'"
             />
 
             <div
@@ -493,6 +526,14 @@ function formatTokens(n: number): string {
   align-items: flex-end;
 }
 
+.user-message {
+  display: flex;
+  width: min(85%, 620px);
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .msg-row--ai {
   align-items: flex-start;
 }
@@ -534,6 +575,7 @@ function formatTokens(n: number): string {
 }
 
 .msg-bubble--user {
+  max-width: 100%;
   background: var(--accent);
   color: #fff;
   border-radius: 20px;
@@ -907,21 +949,35 @@ function formatTokens(n: number): string {
   transform: translateY(8px);
 }
 
-/* ===== 用户消息附件 chips ===== */
+/* ===== 用户消息附件带 ===== */
 .msg-attachments {
   display: flex;
+  max-width: 100%;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+}
+
+.msg-attachments--expanded {
+  max-height: 116px;
+  overflow-y: auto;
+  padding: 2px 3px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .msg-attach-chip {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  max-width: min(260px, 100%);
+  padding: 5px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(36, 31, 27, 0.06);
+  color: var(--accent);
   font-size: 13px;
   white-space: nowrap;
   user-select: none;
@@ -931,15 +987,33 @@ function formatTokens(n: number): string {
 
 .msg-attach-chip__icon {
   flex-shrink: 0;
-  font-size: 13px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
 }
 
 .msg-attach-chip__name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--muted);
+}
+
+.msg-attachments__toggle {
+  min-width: 38px;
+  padding: 5px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.msg-attachments__toggle:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow-soft);
 }
 
 .chart-trigger:hover .chart-trigger__arrow {
