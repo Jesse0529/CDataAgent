@@ -29,6 +29,7 @@ const attachWrapRef = ref<HTMLDivElement | null>(null)
 const showMenu = ref(false)
 /** true → 显示对话管理子菜单，false → 显示主菜单 */
 const manageSubmenu = ref(false)
+const MAX_UPLOAD_FILE_SIZE = 100 * 1024 * 1024
 
 function handleSend() {
   const trimmed = text.value.trim()
@@ -57,25 +58,25 @@ function handleKeydown(e: KeyboardEvent) {
 function toggleMenu() {
   if (props.uploading) return
   showMenu.value = !showMenu.value
-  if (!showMenu.value) {
-    manageSubmenu.value = false // 关闭菜单时重置子菜单状态
-  }
+  if (!showMenu.value) manageSubmenu.value = false
+}
+
+function closeMenu() {
+  showMenu.value = false
+  manageSubmenu.value = false
 }
 
 function handleMenuUpload() {
-  showMenu.value = false
-  manageSubmenu.value = false
+  closeMenu()
   fileInputRef.value?.click()
 }
 
-function handleManageClick(e: MouseEvent) {
-  e.stopPropagation()
+function openManageSubmenu() {
   if (props.loading) return
   manageSubmenu.value = true
 }
 
-function handleBackClick(e: MouseEvent) {
-  e.stopPropagation()
+function closeManageSubmenu() {
   manageSubmenu.value = false
 }
 
@@ -83,7 +84,7 @@ function handleClickOutside(e: MouseEvent) {
   if (!showMenu.value) return
   const el = attachWrapRef.value
   if (el && !el.contains(e.target as Node)) {
-    showMenu.value = false
+    closeMenu()
   }
 }
 
@@ -116,8 +117,8 @@ function handleFileChange(event: Event) {
       continue
     }
 
-    if (file.size > 60 * 1024 * 1024) {
-      message.warning(`「${file.name}」超过 60MB 上限，已跳过`)
+    if (file.size > MAX_UPLOAD_FILE_SIZE) {
+      message.warning(`「${file.name}」超过 100MB 上限，已跳过`)
       continue
     }
 
@@ -175,9 +176,9 @@ defineExpose({ focusTextarea })
         </button>
 
         <!-- 弹出菜单 -->
-        <div v-if="showMenu" class="chat-input__menu">
+        <div v-if="showMenu" class="chat-input__menu" @mouseleave="closeManageSubmenu">
           <!-- 主菜单（v-show 避免 DOM 重建导致点击检测时序问题） -->
-          <div v-show="!manageSubmenu">
+          <div>
             <button class="chat-input__menu-item" @click="handleMenuUpload">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
@@ -187,7 +188,13 @@ defineExpose({ focusTextarea })
               <span>上传 Excel 文件</span>
             </button>
             <div class="chat-input__menu-divider" />
-            <button class="chat-input__menu-item" :disabled="loading" @click="handleManageClick">
+            <button
+              class="chat-input__menu-item"
+              :disabled="loading"
+              @mouseenter="openManageSubmenu"
+              @focus="openManageSubmenu"
+              @click="openManageSubmenu"
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -198,19 +205,12 @@ defineExpose({ focusTextarea })
               </svg>
             </button>
           </div>
-          <!-- 管理子菜单（v-show 避免 DOM 重建） -->
-          <div v-show="manageSubmenu">
-            <button class="chat-input__menu-item" @click="handleBackClick">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>返回</span>
-            </button>
-            <div class="chat-input__menu-divider" />
+          <!-- 管理子菜单 -->
+          <div v-show="manageSubmenu" class="chat-input__submenu">
             <button
               class="chat-input__menu-item"
               :disabled="loading"
-              @click="showMenu = false; manageSubmenu = false; emit('clear-conversation')"
+              @click="closeMenu(); emit('clear-conversation')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -221,7 +221,7 @@ defineExpose({ focusTextarea })
             <button
               class="chat-input__menu-item"
               :disabled="loading"
-              @click="showMenu = false; manageSubmenu = false; emit('reset-conversation')"
+              @click="closeMenu(); emit('reset-conversation')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -412,11 +412,11 @@ defineExpose({ focusTextarea })
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  min-width: 200px;
+  min-width: 176px;
   background: var(--surface-raised);
   border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 4px;
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.45),
     0 12px 48px rgba(0, 0, 0, 0.3);
@@ -439,20 +439,48 @@ defineExpose({ focusTextarea })
 .chat-input__menu-divider {
   height: 1px;
   background: var(--border-inner);
-  margin: 4px 8px;
+  margin: 3px 6px;
+}
+
+.chat-input__submenu {
+  position: absolute;
+  right: auto;
+  bottom: 0;
+  left: calc(100% + 6px);
+  min-width: 158px;
+  padding: 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+  animation: submenu-enter 0.16s var(--ease-out-expo);
+}
+
+.chat-input__submenu::before {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  bottom: 0;
+  width: 6px;
+  content: '';
+}
+
+@keyframes submenu-enter {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .chat-input__menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: var(--fg);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   line-height: 1.4;

@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * <p>
  * 转换流程：
  * <ol>
- *   <li>校验上传文件（xlsx/xls/csv，≤10MB）</li>
+ *   <li>校验上传文件（xlsx/xls/csv，≤100MB）</li>
  *   <li>CSV：直接通过 DuckDB read_csv_auto → COPY TO Parquet</li>
  *   <li>XLSX/XLS：EasyExcel 流式读取 → 临时 CSV → DuckDB read_csv_auto → COPY TO Parquet</li>
  *   <li>加载 Parquet schema，采样列值</li>
@@ -65,7 +65,7 @@ public class FileConversionService {
     @Value("${data.file.storage-dir:/data/cdata-files}")
     private String storageDir;
 
-    @Value("${data.file.max-file-size:10MB}")
+    @Value("${data.file.max-file-size:100MB}")
     private DataSize maxFileSize;
 
     /** 允许的文件扩展名 */

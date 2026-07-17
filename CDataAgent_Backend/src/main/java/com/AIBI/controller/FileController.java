@@ -144,6 +144,37 @@ public class FileController {
         }
     }
 
+    /** 删除指定对话的全部数据文件 */
+    @DeleteMapping("/conversations/{conversationId}")
+    public BaseResponse<Integer> deleteConversationFiles(@PathVariable Long conversationId) {
+        if (conversationId == null || conversationId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "conversationId 不能为空");
+        }
+
+        RLock runLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
+        boolean lockAcquired = false;
+        try {
+            lockAcquired = runLock.tryLock(0, TimeUnit.SECONDS);
+            if (!lockAcquired) {
+                throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, "任务运行中，暂不能删除文件");
+            }
+
+            List<DataFile> files = dataFileMapper.selectList(
+                    new QueryWrapper<DataFile>().eq("conversationId", conversationId));
+            if (files.isEmpty()) return ResultUtils.success(0);
+
+            fileConversionService.deleteConversationFiles(conversationId);
+            analysisState.resetByConversation(conversationId.toString());
+            log.info("已删除对话文件：conversationId={}，count={}", conversationId, files.size());
+            return ResultUtils.success(files.size());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");
+        } finally {
+            unlockQuietly(runLock, lockAcquired);
+        }
+    }
+
     /**
      * 预览文件数据 — 分页查询 Parquet 文件的实际数据行。
      *

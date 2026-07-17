@@ -41,8 +41,17 @@ function parseRenderDocument(value: string | null | undefined) {
   }
 }
 
-const { files, uploading, selectedFileIds, toggleFile, fetchFiles, uploadFiles, deleteFile } =
-  useFiles(activeConversationId)
+const {
+  files,
+  uploading,
+  deletingAll: deletingAllFiles,
+  selectedFileIds,
+  toggleFile,
+  fetchFiles,
+  uploadFiles,
+  deleteFile,
+  deleteAllFiles,
+} = useFiles(activeConversationId)
 const {
   chatting,
   flushPending: flushAgentStream,
@@ -182,6 +191,32 @@ async function handleDeleteFile(fileId: string) {
         message.success('文件已删除')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '删除失败'
+        message.error(msg)
+      }
+    },
+  })
+}
+
+function handleDeleteAllFiles() {
+  if (chatting.value) {
+    message.warning('任务运行中，暂不能删除文件')
+    return
+  }
+  if (files.value.length === 0 || deletingAllFiles.value) return
+
+  const count = files.value.length
+  dialog.warning({
+    title: '清空数据文件',
+    content: `将永久删除当前对话中的 ${count} 个数据文件，且无法恢复，是否继续？`,
+    positiveText: '确认清空',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const deletedCount = await deleteAllFiles()
+        fileContextExpanded.value = false
+        message.success(`已删除 ${deletedCount} 个数据文件`)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '清空文件失败'
         message.error(msg)
       }
     },
@@ -510,9 +545,11 @@ onBeforeUnmount(() => {
             :files="files"
             :selected-file-ids="selectedFileIds"
             :expanded="fileContextExpanded"
+            :deleting-all="deletingAllFiles"
             @toggle-file="toggleFile"
             @preview-file="handlePreviewFile"
             @delete-file="handleDeleteFile"
+            @delete-all-files="handleDeleteAllFiles"
           />
 
           <!-- 输入区 -->

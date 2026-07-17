@@ -5,12 +5,14 @@ const props = defineProps<{
   files: DataFileVO[]
   selectedFileIds: ReadonlySet<string>
   expanded: boolean
+  deletingAll?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'toggle-file', fileId: string): void
   (e: 'preview-file', file: DataFileVO): void
   (e: 'delete-file', fileId: string): void
+  (e: 'delete-all-files'): void
 }>()
 
 function formatSize(bytes: number): string {
@@ -24,6 +26,21 @@ function formatSize(bytes: number): string {
   <Transition appear name="file-context-panel">
     <section v-if="files.length > 0" v-show="expanded" class="file-context">
       <div id="file-context-list" class="file-context__body">
+        <div class="file-context__toolbar">
+          <button
+            class="file-context__delete-all"
+            type="button"
+            :disabled="deletingAll"
+            :aria-label="deletingAll ? '正在删除文件' : '清空全部文件'"
+            :title="deletingAll ? '正在删除文件' : '清空全部文件'"
+            @click="emit('delete-all-files')"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>{{ deletingAll ? '删除中…' : '清空文件' }}</span>
+          </button>
+        </div>
         <div class="file-context__grid">
           <article
             v-for="file in files"
@@ -93,9 +110,47 @@ function formatSize(bytes: number): string {
 .file-context__body {
   max-height: 270px;
   overflow: auto;
-  padding: 10px 12px;
+  padding: 10px 12px 44px;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.file-context__toolbar {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  z-index: 1;
+}
+
+.file-context__delete-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #b65b5b;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.file-context__delete-all:hover:not(:disabled) {
+  background: rgb(201 79 79 / 9%);
+  color: #c94f4f;
+}
+
+.file-context__delete-all:focus-visible {
+  outline: 2px solid #c94f4f;
+  outline-offset: 2px;
+}
+
+.file-context__delete-all:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .file-context__grid {
