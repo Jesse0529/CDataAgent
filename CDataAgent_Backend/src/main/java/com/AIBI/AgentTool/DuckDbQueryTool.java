@@ -6,6 +6,7 @@ import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.config.DuckDbConfig;
 import com.AIBI.service.DuckDbQueryService;
 import com.AIBI.utils.ToolResultUtils;
+import com.AIBI.utils.OutputKeyPolicy;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -91,6 +92,10 @@ public class DuckDbQueryTool {
         // 意图守卫
         String guardResult = checkIntentGuard();
         if (guardResult != null) return guardResult;
+        if (!OutputKeyPolicy.isValid(outputKey)) {
+            return ToolResultUtils.jsonTypedError("syntax",
+                    "outputKey 仅支持字母开头的字母、数字和下划线，长度不超过64");
+        }
 
         try {
             List<AnalysisState.LoadedFileRecord> files = analysisState.getLoadedFiles();

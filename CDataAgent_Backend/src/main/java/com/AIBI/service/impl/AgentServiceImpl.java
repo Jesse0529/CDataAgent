@@ -15,6 +15,7 @@ import com.AIBI.config.ExactTokenCounter;
 import com.AIBI.config.ModelManager;
 import com.AIBI.config.TtlRedisSaver;
 import com.AIBI.config.DuckDbConnectionManager;
+import com.AIBI.utils.OutputKeyPolicy;
 import com.AIBI.manager.RedisLimiterManager;
 import com.AIBI.manager.TokenLedger;
 import com.AIBI.mapper.DataFileMapper;
@@ -92,9 +93,6 @@ public class AgentServiceImpl implements AgentService {
 
     @Autowired
     private DataFileMapper dataFileMapper;
-
-    @Autowired
-    private com.AIBI.manager.UserPreferenceManager userPreferenceManager;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -339,7 +337,7 @@ public class AgentServiceImpl implements AgentService {
                 exactTokenCounter.setCurrentConversationId(cid);
                 tokenLedger.initRound(cid);
 
-                return executePipeline(cid, effectiveMessage, userMessage, lock, globalLock, fileAttachments, runContext);
+                return executePipeline(cid, effectiveMessage, lock, globalLock, fileAttachments, runContext);
             } catch (RuntimeException e) {
                 runContext.clear();
                 RunContextHolder.clear(runContext);
@@ -358,7 +356,7 @@ public class AgentServiceImpl implements AgentService {
     }
 
     private Flux<Map<String, String>> executePipeline(Long cid, String effectiveMessage,
-                                                        String originalMessage, RLock lock, RLock globalLock,
+                                                        RLock lock, RLock globalLock,
                                                         String fileAttachments, RunContext runContext) {
         RunnableConfig config = RunnableConfig.builder().threadId("executor:" + cid).build();
         Duration totalTimeout = Duration.ofSeconds(agentTimeoutSeconds);
@@ -450,15 +448,8 @@ public class AgentServiceImpl implements AgentService {
                         needsChart = plan != null && plan.hasCharts();
                         if (needsChart) {
                             log.debug("图表生成触发 runId={} 图表数={}", runContext.getRunId(), plan.getChartOutputKeys().size());
-                            // 用 plan 的摘要和图表 key 构造 Synthesizer 提示词
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("用户请求: ").append(originalMessage).append("\n\n");
-                            if (plan.getSummary() != null && !plan.getSummary().isBlank()) {
-                                sb.append("分析摘要: ").append(plan.getSummary()).append("\n\n");
-                            }
-                            sb.append("图表输出键: ").append(String.join(", ", plan.getChartOutputKeys()));
-                            sb.append("\n\n请基于以上信息生成图表配置。");
-                            synthPrompt = sb.toString();
+                            synthPrompt = buildSynthesizerPrompt(plan.getChartOutputKeys());
+                            needsChart = synthPrompt != null;
                             // 重置图表就绪信号（确保信号来自本轮 Synthesizer）
                             if (ctx != null) ctx.resetChartReadyFuture();
                         } else {
@@ -469,9 +460,8 @@ public class AgentServiceImpl implements AgentService {
                         needsChart = response.contains("##NEEDS_CHART##");
                         if (needsChart) {
                             log.debug("图表生成触发（旧协议）");
-                            String cleanText = response.replace("##NEEDS_CHART##", "").trim();
-                            synthPrompt = "用户请求: " + originalMessage + "\n\n分析结果:\n" + cleanText +
-                                    "\n\n请基于以上分析结果生成图表配置。";
+                            synthPrompt = buildSynthesizerPrompt(new ArrayList<>(analysisState.getAvailableKeys()));
+                            needsChart = synthPrompt != null;
                         } else {
                             synthPrompt = null;
                         }
@@ -707,8 +697,6 @@ public class AgentServiceImpl implements AgentService {
     // ======================== 上下文注入 ========================
 
     private String injectContext(String userMessage, Long conversationId, List<Long> fileIds) {
-        StringBuilder prefix = new StringBuilder();
-
         if (injectAnalysisState) {
             // 仅当本轮没有新文件附件时，才从 Redis 恢复上一轮的分析状态
             // 如果有新文件（fileIds 非空），说明用户在切换/重新选择文件，
@@ -723,66 +711,24 @@ public class AgentServiceImpl implements AgentService {
                 log.debug("本轮绑定新文件({}个)，跳过状态恢复",
                         fileIds.size());
             }
-
         }
-
-        // 仅当本轮有指定文件时，才主动注入文件上下文
-        if (fileIds != null && !fileIds.isEmpty()) {
-            String fileInfo = buildFileContext(conversationId, fileIds);
-            if (fileInfo != null) {
-                prefix.append("【⚠️ 当前查询仅可使用以下文件，请勿参考历史对话中的文件信息】\n");
-                prefix.append(fileInfo).append("\n");
-            }
-        }
-        // 无 fileIds 时不注入文件上下文，agent 依赖已有 loadedFiles（由 loadData 管理）
-
-        String prefInfo = buildPreferenceContext();
-        if (prefInfo != null) {
-            prefix.append(prefInfo).append("\n");
-        }
-
-        if (prefix.length() > 0) {
-            return prefix + "---\n用户消息: " + userMessage;
-        }
+        // 文件范围、查询结果和偏好均由服务端状态及工具读取，不能与用户消息拼接。
+        // 文件名、偏好值和上传数据都可能包含不可信文本，拼接会让模型误判其指令权。
         return userMessage;
     }
 
     /**
-     * 根据指定的 fileIds 查询文件信息。
-     * 只返回前端明确选择的文件，避免多文件时 agent 选错表。
+     * 图表 Agent 只接收服务端已验证的结果引用，避免再次拼接用户原话和分析文本。
      */
-    private String buildFileContext(Long conversationId, List<Long> fileIds) {
-        if (conversationId == null || fileIds == null || fileIds.isEmpty()) return null;
-        try {
-            QueryWrapper<DataFile> qw = new QueryWrapper<>();
-            qw.in("id", fileIds).eq("status", "READY");
-            List<DataFile> files = dataFileMapper.selectList(qw);
-            if (files.isEmpty()) return null;
-
-            StringBuilder sb = new StringBuilder("[本消息绑定 ").append(files.size()).append(" 个数据文件]\n");
-            for (DataFile f : files) {
-                sb.append("  fileId=").append(f.getId())
-                        .append(" | ").append(f.getOriginalFilename())
-                        .append(" | viewName=").append(f.getViewName())
-                        .append(" | ").append(f.getRowCount()).append("行\n");
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            log.warn("文件上下文查询失败", e);
-            return null;
-        }
-    }
-
-    private String buildPreferenceContext() {
-        try {
-            java.util.Map<String, String> prefs = userPreferenceManager.getAllPreferences();
-            if (prefs.isEmpty()) return null;
-            return "[用户偏好] " + prefs.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(Collectors.joining(", "));
-        } catch (Exception e) {
-            return null;
-        }
+    private static String buildSynthesizerPrompt(List<String> outputKeys) {
+        if (outputKeys == null) return null;
+        List<String> safeKeys = outputKeys.stream()
+                .filter(OutputKeyPolicy::isValid)
+                .distinct()
+                .toList();
+        if (safeKeys.isEmpty()) return null;
+        return "可用于生成图表的已验证数据引用：" + String.join(", ", safeKeys)
+                + "。请逐个调用 describeData 确认字段后，生成并校验合适的图表。";
     }
 
     // ======================== 对话管理 ========================

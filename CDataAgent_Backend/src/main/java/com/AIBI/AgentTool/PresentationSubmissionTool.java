@@ -6,6 +6,7 @@ import com.AIBI.agent.model.PresentationPlan;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.utils.ToolResultUtils;
+import com.AIBI.utils.OutputKeyPolicy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -125,6 +126,9 @@ public class PresentationSubmissionTool {
     private String validateOutputKeys(List<String> tableOutputKeys, List<String> chartOutputKeys) {
         Set<String> available = analysisState.getAvailableKeys();
         for (String outputKey : distinctKeys(tableOutputKeys)) {
+            if (!OutputKeyPolicy.isValid(outputKey)) {
+                return ToolResultUtils.jsonTypedError("syntax", "结果引用格式无效: " + outputKey);
+            }
             if (!available.contains(outputKey)) {
                 return missingReference(outputKey, available);
             }
@@ -136,6 +140,9 @@ public class PresentationSubmissionTool {
             if (truncatedError != null) return truncatedError;
         }
         for (String outputKey : distinctKeys(chartOutputKeys)) {
+            if (!OutputKeyPolicy.isValid(outputKey)) {
+                return ToolResultUtils.jsonTypedError("syntax", "结果引用格式无效: " + outputKey);
+            }
             if (!available.contains(outputKey)) {
                 return missingReference(outputKey, available);
             }
