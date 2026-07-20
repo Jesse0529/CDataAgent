@@ -350,7 +350,9 @@ export function useAgentStream() {
       flushAll()
       await waitForArtifactDrain()
       if (message.status === 'streaming') {
-        message.content = finalAnalysis || message.content
+        const hasStreamedContent =
+          message.content.trim().length > 0 && !STATUS_TEXTS.has(message.content)
+        if (!hasStreamedContent && finalAnalysis) message.content = finalAnalysis
         message.status = 'done'
         message.timestamp = Date.now()
         message.chartGenerating = false

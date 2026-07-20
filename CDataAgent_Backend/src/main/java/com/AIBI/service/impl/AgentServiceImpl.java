@@ -373,7 +373,7 @@ public class AgentServiceImpl implements AgentService {
                         String text = ((org.springframework.ai.chat.messages.AssistantMessage) m).getText();
                         return text != null ? text : "";
                     })
-                    .filter(StringUtils::isNotBlank);
+                    .filter(text -> !text.isEmpty());
         } catch (com.alibaba.cloud.ai.graph.exception.GraphRunnerException e) {
             executorFlux = Flux.just("【系统】执行器启动失败: " + e.getMessage());
         }
@@ -399,6 +399,7 @@ public class AgentServiceImpl implements AgentService {
                 .flatMap(token -> {
                     // 分析型请求只交付受控产物；普通对话保留实时 Markdown token。
                     if (isV1 && runContext.isAnalysisIntent()) return Flux.empty();
+                    if (isV1) return Flux.just(Map.of("type", "message", "data", token));
                     String clean = token
                             .replaceAll("#+NEEDS_CHART#*", "")
                             .replace("【【【【【", "")
