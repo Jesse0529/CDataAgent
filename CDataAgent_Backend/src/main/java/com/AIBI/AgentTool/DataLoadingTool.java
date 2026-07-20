@@ -75,27 +75,6 @@ public class DataLoadingTool {
     }
 
     /**
-     * 意图守卫 — 在 loadData 执行前检查 intent 是否为 analysis。
-     */
-    private String checkIntentGuard() {
-        RunContext ctx = RunContextHolder.require();
-        String category = ctx.getIntentCategory();
-        if (category == null) {
-            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
-                    "请先调用 declareIntent 声明意图后再加载数据。");
-        }
-        if ("chitchat".equals(category)) {
-            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
-                    "当前为日常对话模式，无需加载数据文件。请直接回复用户。");
-        }
-        if ("vague".equals(category)) {
-            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
-                    "分析目标不明确，请先向用户确认想分析哪些维度和指标。");
-        }
-        return null; // 放行
-    }
-
-    /**
      * 加载本轮消息绑定的数据文件到分析环境。
      * <p>
      * 根据前端传入的 fileIds 加载对应文件。无 fileIds 时复用已有加载结果。
@@ -103,10 +82,6 @@ public class DataLoadingTool {
      */
     @Tool(description = "加载本轮数据文件，返回 viewName、列名和类型；需要样本时再调用 getSchema。")
     public String loadData() {
-        // 意图守卫
-        String guardResult = checkIntentGuard();
-        if (guardResult != null) return guardResult;
-
         String conversationId = RunContextHolder.require().getConversationId().toString();
 
         try {

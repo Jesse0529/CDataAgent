@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ToolPreconditionTest {
 
@@ -29,11 +30,13 @@ class ToolPreconditionTest {
     }
 
     @Test
-    void loadDataRequiresDeclaredIntent() throws Exception {
+    void loadDataWithoutIntentChecksAttachmentPrecondition() throws Exception {
         DataLoadingTool tool = new DataLoadingTool();
         injectAnalysisState(tool);
 
-        assertPrecondition(tool.loadData());
+        String result = tool.loadData();
+        assertPrecondition(result);
+        assertTrue(JSON.parseObject(result).getString("message").contains("附加到消息"));
     }
 
     @Test
