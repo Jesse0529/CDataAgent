@@ -139,9 +139,11 @@ const hasMessages = computed(() => messages.value.length > 0)
 
 // ---- 滚动 ----
 const chatAreaRef = ref<HTMLDivElement | null>(null)
-const scrollAnchorRef = ref<HTMLDivElement | null>(null)
+const messagesContentRef = ref<HTMLDivElement | null>(null)
 const autoScrollEnabled = ref(true)
 const AUTO_SCROLL_THRESHOLD = 48
+let followScrollFrame: number | null = null
+let messagesResizeObserver: ResizeObserver | null = null
 
 function updateAutoScrollState(): void {
   const el = chatAreaRef.value
@@ -152,8 +154,25 @@ function updateAutoScrollState(): void {
 
 function scrollToBottom(instant = false, force = false) {
   if (!force && !autoScrollEnabled.value) return
+  if (force) autoScrollEnabled.value = true
   nextTick(() => {
-    scrollAnchorRef.value?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
+    const el = chatAreaRef.value
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: instant ? 'auto' : 'smooth' })
+  })
+}
+
+/**
+ * 流式输出按帧跟随，避免每个 token 叠加一次 smooth 动画导致抖动。
+ * 用户主动上滑后 autoScrollEnabled 会关闭，不再抢占阅读位置。
+ */
+function scheduleStreamFollow(): void {
+  if (followScrollFrame !== null || !autoScrollEnabled.value) return
+  followScrollFrame = requestAnimationFrame(() => {
+    followScrollFrame = null
+    const el = chatAreaRef.value
+    if (!el || !autoScrollEnabled.value) return
+    el.scrollTop = el.scrollHeight
   })
 }
 
@@ -441,6 +460,10 @@ onMounted(async () => {
   }
   window.addEventListener('beforeunload', handleBeforeUnload)
   chatAreaRef.value?.addEventListener('scroll', updateAutoScrollState, { passive: true })
+  if (messagesContentRef.value) {
+    messagesResizeObserver = new ResizeObserver(scheduleStreamFollow)
+    messagesResizeObserver.observe(messagesContentRef.value)
+  }
 
   // 1. 获取默认对话 ID
   try {
@@ -493,6 +516,8 @@ onBeforeUnmount(() => {
   handleStop()
   flushAgentStream()
   if (saveTimer) clearTimeout(saveTimer)
+  if (followScrollFrame !== null) cancelAnimationFrame(followScrollFrame)
+  messagesResizeObserver?.disconnect()
   chatAreaRef.value?.removeEventListener('scroll', updateAutoScrollState)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
@@ -527,7 +552,7 @@ onBeforeUnmount(() => {
       <div class="analysis-page__chat-inner">
         <!-- 对话区域 -->
         <div ref="chatAreaRef" class="analysis-page__messages">
-          <div class="analysis-page__messages-content">
+          <div ref="messagesContentRef" class="analysis-page__messages-content">
             <WelcomeScreen v-if="!hasMessages" :has-files="files.length > 0" />
             <template v-else>
               <ChatMessage
@@ -536,7 +561,6 @@ onBeforeUnmount(() => {
                 :message="msg"
               />
             </template>
-            <div ref="scrollAnchorRef" />
           </div>
         </div>
 
