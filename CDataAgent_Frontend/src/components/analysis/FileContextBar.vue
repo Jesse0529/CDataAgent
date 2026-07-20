@@ -26,7 +26,7 @@ function formatSize(bytes: number): string {
   <Transition appear name="file-context-panel">
     <section v-if="files.length > 0" v-show="expanded" class="file-context">
       <div id="file-context-list" class="file-context__body">
-        <div class="file-context__toolbar">
+        <div class="file-context__grid">
           <button
             class="file-context__delete-all"
             type="button"
@@ -38,10 +38,7 @@ function formatSize(bytes: number): string {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span>{{ deletingAll ? '删除中…' : '清空文件' }}</span>
           </button>
-        </div>
-        <div class="file-context__grid">
           <article
             v-for="file in files"
             :key="file.id"
@@ -107,29 +104,37 @@ function formatSize(bytes: number): string {
   will-change: clip-path, opacity, transform;
 }
 
+.file-context::after {
+  position: absolute;
+  right: 12px;
+  bottom: 42px;
+  left: 12px;
+  z-index: 1;
+  border-top: 1px solid var(--border-soft);
+  content: '';
+  pointer-events: none;
+}
+
 .file-context__body {
   max-height: 270px;
   overflow: auto;
-  padding: 10px 12px 44px;
+  padding: 10px 12px 48px;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-.file-context__toolbar {
+.file-context__delete-all {
   position: absolute;
   right: 12px;
   bottom: 8px;
-  z-index: 1;
-}
-
-.file-context__delete-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 26px;
-  padding: 4px 7px;
-  border: 0;
-  border-radius: 7px;
+  z-index: 2;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
   background: transparent;
   color: #b65b5b;
   font: inherit;
@@ -155,7 +160,7 @@ function formatSize(bytes: number): string {
 
 .file-context__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -220,7 +225,6 @@ function formatSize(bytes: number): string {
 @media (max-width: 640px) {
   .file-context { max-height: 224px; }
   .file-context__body { max-height: 224px; }
-  .file-context__grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
