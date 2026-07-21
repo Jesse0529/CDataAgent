@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import FileContextBar from '@/components/analysis/FileContextBar.vue'
+import type { DataFileVO } from '@/services/types'
 
 const message = useMessage()
 
@@ -9,6 +11,9 @@ const props = defineProps<{
   fileCount: number
   selectedFileCount: number
   fileContextExpanded: boolean
+  files: DataFileVO[]
+  selectedFileIds: ReadonlySet<string>
+  deletingAll?: boolean
   loading: boolean
   uploading: boolean
 }>()
@@ -18,6 +23,10 @@ const emit = defineEmits<{
   (e: 'stop'): void
   (e: 'upload', files: File[]): void
   (e: 'toggle-file-context'): void
+  (e: 'toggle-file', fileId: string): void
+  (e: 'preview-file', file: DataFileVO): void
+  (e: 'delete-file', fileId: string): void
+  (e: 'delete-all-files'): void
   (e: 'clear-conversation'): void
   (e: 'reset-conversation'): void
 }>()
@@ -78,6 +87,10 @@ function openManageSubmenu() {
 
 function closeManageSubmenu() {
   manageSubmenu.value = false
+}
+
+function handleDeleteAllFiles(): void {
+  emit('delete-all-files')
 }
 
 function handleClickOutside(e: MouseEvent) {
@@ -162,6 +175,19 @@ defineExpose({ focusTextarea })
 <template>
   <div class="chat-input">
     <div class="chat-input__inner">
+      <div v-if="hasFiles" class="chat-input__file-panel">
+        <FileContextBar
+          :files="files"
+          :selected-file-ids="selectedFileIds"
+          :expanded="fileContextExpanded"
+          :deleting-all="deletingAll"
+          @toggle-file="emit('toggle-file', $event)"
+          @preview-file="emit('preview-file', $event)"
+          @delete-file="emit('delete-file', $event)"
+          @delete-all-files="handleDeleteAllFiles"
+        />
+      </div>
+
       <div ref="attachWrapRef" class="chat-input__attach-wrap">
         <button
           class="chat-input__attach"
@@ -243,16 +269,14 @@ defineExpose({ focusTextarea })
         type="button"
         :aria-expanded="fileContextExpanded"
         aria-controls="file-context-list"
-        :title="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
-        :aria-label="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        :title="fileContextExpanded ? '隐藏数据文件' : `展示数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        :aria-label="fileContextExpanded ? '隐藏数据文件' : `展示数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
         @click="emit('toggle-file-context')"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 5a2 2 0 012-2h4l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-        </svg>
-        <span>{{ selectedFileCount }}/{{ fileCount }}</span>
-        <svg class="chat-input__file-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path v-if="fileContextExpanded" d="M3 3l18 18M10.6 6.1A10.5 10.5 0 0112 6c6.5 0 10 6 10 6a18.2 18.2 0 01-3.3 3.8M6.4 6.4C3.9 8.1 2 12 2 12s3.5 6 10 6c1.4 0 2.7-.3 3.8-.8M9.9 9.9a3 3 0 004.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <path v-else d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          <circle v-if="!fileContextExpanded" cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
         </svg>
       </button>
 
@@ -318,10 +342,12 @@ defineExpose({ focusTextarea })
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   grid-template-areas:
+    "files-panel files-panel files-panel files-panel"
     "textarea textarea textarea textarea"
     "attach files . actions";
   align-items: center;
-  gap: 6px;
+  column-gap: 6px;
+  row-gap: 0;
   padding: 8px;
   transition: border-color 0.28s var(--ease-out-expo);
 }
@@ -334,13 +360,18 @@ defineExpose({ focusTextarea })
   display: none;
 }
 
+.chat-input__file-panel {
+  grid-area: files-panel;
+  min-width: 0;
+}
+
 .chat-input__attach {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border-soft);
-  background: var(--surface-raised);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--muted);
   display: grid;
   place-items: center;
@@ -351,8 +382,8 @@ defineExpose({ focusTextarea })
 .chat-input__attach:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-glow-soft);
-  transform: scale(1.08);
+  background: transparent;
+  transform: none;
 }
 
 .chat-input__attach:disabled {
@@ -368,14 +399,15 @@ defineExpose({ focusTextarea })
 
 .chat-input__file-toggle {
   grid-area: files;
-  display: inline-flex;
+  display: inline-grid;
   height: 36px;
+  width: 36px;
   align-items: center;
-  gap: 4px;
-  padding: 0 9px;
-  border: 1px solid var(--border-soft);
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: 18px;
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   font: inherit;
   font-size: 12px;
@@ -387,24 +419,15 @@ defineExpose({ focusTextarea })
 .chat-input__file-toggle:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-glow-soft);
+  background: transparent;
 }
 
 .chat-input__file-toggle--selected {
-  border-color: var(--accent);
   color: var(--accent);
 }
 
 .chat-input__file-toggle--expanded {
-  background: var(--accent-glow-soft);
-}
-
-.chat-input__file-chevron {
-  transition: transform 0.24s var(--ease-out-expo);
-}
-
-.chat-input__file-toggle--expanded .chat-input__file-chevron {
-  transform: rotate(180deg);
+  background: transparent;
 }
 
 /* ===== 弹出菜单 ===== */
@@ -521,9 +544,9 @@ defineExpose({ focusTextarea })
   font-size: 15px;
   font-family: inherit;
   line-height: 24px;
-  min-height: 32px;
-  max-height: 84px;
-  padding: 4px 6px;
+  min-height: 46px;
+  max-height: 96px;
+  padding: 8px 6px;
 }
 
 .chat-input__textarea::placeholder {
@@ -542,9 +565,9 @@ defineExpose({ focusTextarea })
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: none;
-  background: var(--accent);
-  color: #fff;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -552,16 +575,17 @@ defineExpose({ focusTextarea })
 }
 
 .chat-input__send:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 4px 20px var(--accent-glow);
+  border-color: var(--accent);
+  transform: none;
+  box-shadow: none;
 }
 
 .chat-input__send:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: none;
 }
 
 .chat-input__send:disabled {
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   cursor: not-allowed;
 }
@@ -571,9 +595,9 @@ defineExpose({ focusTextarea })
   width: 32px;
   height: 32px;
   place-items: center;
-  border: 1px solid var(--border-soft);
+  border: 1px solid transparent;
   border-radius: 50%;
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   transition: border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo),
@@ -582,7 +606,7 @@ defineExpose({ focusTextarea })
 
 .chat-input__stop:hover {
   border-color: var(--accent);
-  background: var(--accent-glow-soft);
+  background: transparent;
   color: var(--accent);
 }
 

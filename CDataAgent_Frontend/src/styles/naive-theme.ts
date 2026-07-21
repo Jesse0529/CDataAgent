@@ -25,6 +25,10 @@ export const tasteSoftThemeOverrides: GlobalThemeOverrides = {
     primaryColorHover: '#D4895E',
     primaryColorPressed: '#A05038',
     primaryColorSuppl: '#D4895E',
+    warningColor: '#BC694A',
+    warningColorHover: '#D4895E',
+    warningColorPressed: '#A05038',
+    warningColorSuppl: '#D4895E',
 
     // 边框
     borderColor: 'rgba(0,0,0,0.08)',
@@ -55,6 +59,9 @@ export const tasteSoftThemeOverrides: GlobalThemeOverrides = {
   Button: {
     borderRadiusMedium: '999px',
     borderRadiusLarge: '999px',
+  },
+  Dialog: {
+    iconColorWarning: '#BC694A',
   },
   Input: {
     borderRadius: '20px',

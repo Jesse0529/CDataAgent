@@ -3,7 +3,6 @@ import { useDialog, useMessage } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import ChatInput from '@/components/analysis/ChatInput.vue'
 import ChatMessage from '@/components/analysis/ChatMessage.vue'
-import FileContextBar from '@/components/analysis/FileContextBar.vue'
 import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
 import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
 import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
@@ -226,7 +225,7 @@ function handleDeleteAllFiles() {
   const count = files.value.length
   dialog.warning({
     title: '清空数据文件',
-    content: `将永久删除当前对话中的 ${count} 个数据文件，且无法恢复，是否继续？`,
+    content: `删除 ${count} 个文件，是否继续？`,
     positiveText: '确认清空',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -565,29 +564,24 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="analysis-page__composer">
-          <FileContextBar
-            :files="files"
-            :selected-file-ids="selectedFileIds"
-            :expanded="fileContextExpanded"
-            :deleting-all="deletingAllFiles"
-            @toggle-file="toggleFile"
-            @preview-file="handlePreviewFile"
-            @delete-file="handleDeleteFile"
-            @delete-all-files="handleDeleteAllFiles"
-          />
-
-          <!-- 输入区 -->
           <ChatInput
             :has-files="files.length > 0"
             :file-count="files.length"
             :selected-file-count="selectedFileCount"
             :file-context-expanded="fileContextExpanded"
+            :files="files"
+            :selected-file-ids="selectedFileIds"
+            :deleting-all="deletingAllFiles"
             :loading="chatting"
             :uploading="uploading"
             @send="handleSend"
             @stop="handleStop"
             @upload="handleUpload"
             @toggle-file-context="fileContextExpanded = !fileContextExpanded"
+            @toggle-file="toggleFile"
+            @preview-file="handlePreviewFile"
+            @delete-file="handleDeleteFile"
+            @delete-all-files="handleDeleteAllFiles"
             @clear-conversation="handleClearMessages"
             @reset-conversation="handleResetConversation"
           />
