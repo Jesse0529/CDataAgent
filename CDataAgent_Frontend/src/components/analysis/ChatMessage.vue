@@ -246,7 +246,9 @@ const contentSegments = computed((): ContentSegment[] => {
     .replace(/\r?\n?##END##/gi, '')
     .trim()
 
-  const segments = parseContentSegments(clean)
+  const segments = parseContentSegments(clean, {
+    streaming: props.message.status === 'streaming',
+  })
 
   // 流式状态：将光标插入最后一个文本段的末段 <p> 内，紧跟最后一个文字
   // 图表生成阶段不显示光标，改用「正在生成图表…」骨架提示
@@ -580,7 +582,7 @@ function formatTokens(n: number): string {
   max-width: 100%;
   background: var(--accent);
   color: #fff;
-  border-radius: 20px;
+  border-radius: 12px;
 }
 
 .msg-bubble--ai {

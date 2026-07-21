@@ -3,7 +3,6 @@ import { useDialog, useMessage } from 'naive-ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import ChatInput from '@/components/analysis/ChatInput.vue'
 import ChatMessage from '@/components/analysis/ChatMessage.vue'
-import FileContextBar from '@/components/analysis/FileContextBar.vue'
 import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
 import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
 import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
@@ -41,8 +40,17 @@ function parseRenderDocument(value: string | null | undefined) {
   }
 }
 
-const { files, uploading, selectedFileIds, toggleFile, fetchFiles, uploadFiles, deleteFile } =
-  useFiles(activeConversationId)
+const {
+  files,
+  uploading,
+  deletingAll: deletingAllFiles,
+  selectedFileIds,
+  toggleFile,
+  fetchFiles,
+  uploadFiles,
+  deleteFile,
+  deleteAllFiles,
+} = useFiles(activeConversationId)
 const {
   chatting,
   flushPending: flushAgentStream,
@@ -130,9 +138,11 @@ const hasMessages = computed(() => messages.value.length > 0)
 
 // ---- 滚动 ----
 const chatAreaRef = ref<HTMLDivElement | null>(null)
-const scrollAnchorRef = ref<HTMLDivElement | null>(null)
+const messagesContentRef = ref<HTMLDivElement | null>(null)
 const autoScrollEnabled = ref(true)
 const AUTO_SCROLL_THRESHOLD = 48
+let followScrollFrame: number | null = null
+let messagesResizeObserver: ResizeObserver | null = null
 
 function updateAutoScrollState(): void {
   const el = chatAreaRef.value
@@ -143,8 +153,25 @@ function updateAutoScrollState(): void {
 
 function scrollToBottom(instant = false, force = false) {
   if (!force && !autoScrollEnabled.value) return
+  if (force) autoScrollEnabled.value = true
   nextTick(() => {
-    scrollAnchorRef.value?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
+    const el = chatAreaRef.value
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: instant ? 'auto' : 'smooth' })
+  })
+}
+
+/**
+ * 流式输出按帧跟随，避免每个 token 叠加一次 smooth 动画导致抖动。
+ * 用户主动上滑后 autoScrollEnabled 会关闭，不再抢占阅读位置。
+ */
+function scheduleStreamFollow(): void {
+  if (followScrollFrame !== null || !autoScrollEnabled.value) return
+  followScrollFrame = requestAnimationFrame(() => {
+    followScrollFrame = null
+    const el = chatAreaRef.value
+    if (!el || !autoScrollEnabled.value) return
+    el.scrollTop = el.scrollHeight
   })
 }
 
@@ -182,6 +209,32 @@ async function handleDeleteFile(fileId: string) {
         message.success('文件已删除')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '删除失败'
+        message.error(msg)
+      }
+    },
+  })
+}
+
+function handleDeleteAllFiles() {
+  if (chatting.value) {
+    message.warning('任务运行中，暂不能删除文件')
+    return
+  }
+  if (files.value.length === 0 || deletingAllFiles.value) return
+
+  const count = files.value.length
+  dialog.warning({
+    title: '清空数据文件',
+    content: `删除 ${count} 个文件，是否继续？`,
+    positiveText: '确认清空',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const deletedCount = await deleteAllFiles()
+        fileContextExpanded.value = false
+        message.success(`已删除 ${deletedCount} 个数据文件`)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '清空文件失败'
         message.error(msg)
       }
     },
@@ -406,6 +459,10 @@ onMounted(async () => {
   }
   window.addEventListener('beforeunload', handleBeforeUnload)
   chatAreaRef.value?.addEventListener('scroll', updateAutoScrollState, { passive: true })
+  if (messagesContentRef.value) {
+    messagesResizeObserver = new ResizeObserver(scheduleStreamFollow)
+    messagesResizeObserver.observe(messagesContentRef.value)
+  }
 
   // 1. 获取默认对话 ID
   try {
@@ -458,6 +515,8 @@ onBeforeUnmount(() => {
   handleStop()
   flushAgentStream()
   if (saveTimer) clearTimeout(saveTimer)
+  if (followScrollFrame !== null) cancelAnimationFrame(followScrollFrame)
+  messagesResizeObserver?.disconnect()
   chatAreaRef.value?.removeEventListener('scroll', updateAutoScrollState)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
@@ -492,7 +551,7 @@ onBeforeUnmount(() => {
       <div class="analysis-page__chat-inner">
         <!-- 对话区域 -->
         <div ref="chatAreaRef" class="analysis-page__messages">
-          <div class="analysis-page__messages-content">
+          <div ref="messagesContentRef" class="analysis-page__messages-content">
             <WelcomeScreen v-if="!hasMessages" :has-files="files.length > 0" />
             <template v-else>
               <ChatMessage
@@ -501,32 +560,28 @@ onBeforeUnmount(() => {
                 :message="msg"
               />
             </template>
-            <div ref="scrollAnchorRef" />
           </div>
         </div>
 
         <div class="analysis-page__composer">
-          <FileContextBar
-            :files="files"
-            :selected-file-ids="selectedFileIds"
-            :expanded="fileContextExpanded"
-            @toggle-file="toggleFile"
-            @preview-file="handlePreviewFile"
-            @delete-file="handleDeleteFile"
-          />
-
-          <!-- 输入区 -->
           <ChatInput
             :has-files="files.length > 0"
             :file-count="files.length"
             :selected-file-count="selectedFileCount"
             :file-context-expanded="fileContextExpanded"
+            :files="files"
+            :selected-file-ids="selectedFileIds"
+            :deleting-all="deletingAllFiles"
             :loading="chatting"
             :uploading="uploading"
             @send="handleSend"
             @stop="handleStop"
             @upload="handleUpload"
             @toggle-file-context="fileContextExpanded = !fileContextExpanded"
+            @toggle-file="toggleFile"
+            @preview-file="handlePreviewFile"
+            @delete-file="handleDeleteFile"
+            @delete-all-files="handleDeleteAllFiles"
             @clear-conversation="handleClearMessages"
             @reset-conversation="handleResetConversation"
           />

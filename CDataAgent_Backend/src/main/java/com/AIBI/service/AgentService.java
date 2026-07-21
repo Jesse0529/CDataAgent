@@ -30,7 +30,7 @@ public interface AgentService {
     /**
      * 执行 Agent 对话（流式），绑定指定数据文件。
      * @param userMessage 用户消息文本
-     * @param fileIds 本次消息绑定的数据文件 ID 列表（为空时沿用已有上下文）
+     * @param fileIds 本次消息绑定的数据文件 ID 列表（旧调用方为空时沿用已有上下文）
      */
     Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds);
 
@@ -47,6 +47,13 @@ public interface AgentService {
      */
     Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds,
                                          String renderProtocol, String runId);
+
+    /**
+     * 显式文件范围版本。范围为空时表示本轮不允许沿用历史数据文件。
+     */
+    Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds,
+                                         String renderProtocol, String runId,
+                                         boolean explicitFileScope);
 
     /**
      * 获取对话的消息历史（按时间正序）。

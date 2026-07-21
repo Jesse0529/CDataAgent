@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import FileContextBar from '@/components/analysis/FileContextBar.vue'
+import type { DataFileVO } from '@/services/types'
 
 const message = useMessage()
 
@@ -9,6 +11,9 @@ const props = defineProps<{
   fileCount: number
   selectedFileCount: number
   fileContextExpanded: boolean
+  files: DataFileVO[]
+  selectedFileIds: ReadonlySet<string>
+  deletingAll?: boolean
   loading: boolean
   uploading: boolean
 }>()
@@ -18,6 +23,10 @@ const emit = defineEmits<{
   (e: 'stop'): void
   (e: 'upload', files: File[]): void
   (e: 'toggle-file-context'): void
+  (e: 'toggle-file', fileId: string): void
+  (e: 'preview-file', file: DataFileVO): void
+  (e: 'delete-file', fileId: string): void
+  (e: 'delete-all-files'): void
   (e: 'clear-conversation'): void
   (e: 'reset-conversation'): void
 }>()
@@ -29,6 +38,7 @@ const attachWrapRef = ref<HTMLDivElement | null>(null)
 const showMenu = ref(false)
 /** true → 显示对话管理子菜单，false → 显示主菜单 */
 const manageSubmenu = ref(false)
+const MAX_UPLOAD_FILE_SIZE = 100 * 1024 * 1024
 
 function handleSend() {
   const trimmed = text.value.trim()
@@ -57,33 +67,37 @@ function handleKeydown(e: KeyboardEvent) {
 function toggleMenu() {
   if (props.uploading) return
   showMenu.value = !showMenu.value
-  if (!showMenu.value) {
-    manageSubmenu.value = false // 关闭菜单时重置子菜单状态
-  }
+  if (!showMenu.value) manageSubmenu.value = false
+}
+
+function closeMenu() {
+  showMenu.value = false
+  manageSubmenu.value = false
 }
 
 function handleMenuUpload() {
-  showMenu.value = false
-  manageSubmenu.value = false
+  closeMenu()
   fileInputRef.value?.click()
 }
 
-function handleManageClick(e: MouseEvent) {
-  e.stopPropagation()
+function openManageSubmenu() {
   if (props.loading) return
   manageSubmenu.value = true
 }
 
-function handleBackClick(e: MouseEvent) {
-  e.stopPropagation()
+function closeManageSubmenu() {
   manageSubmenu.value = false
+}
+
+function handleDeleteAllFiles(): void {
+  emit('delete-all-files')
 }
 
 function handleClickOutside(e: MouseEvent) {
   if (!showMenu.value) return
   const el = attachWrapRef.value
   if (el && !el.contains(e.target as Node)) {
-    showMenu.value = false
+    closeMenu()
   }
 }
 
@@ -116,8 +130,8 @@ function handleFileChange(event: Event) {
       continue
     }
 
-    if (file.size > 60 * 1024 * 1024) {
-      message.warning(`「${file.name}」超过 60MB 上限，已跳过`)
+    if (file.size > MAX_UPLOAD_FILE_SIZE) {
+      message.warning(`「${file.name}」超过 100MB 上限，已跳过`)
       continue
     }
 
@@ -161,6 +175,19 @@ defineExpose({ focusTextarea })
 <template>
   <div class="chat-input">
     <div class="chat-input__inner">
+      <div v-if="hasFiles" class="chat-input__file-panel">
+        <FileContextBar
+          :files="files"
+          :selected-file-ids="selectedFileIds"
+          :expanded="fileContextExpanded"
+          :deleting-all="deletingAll"
+          @toggle-file="emit('toggle-file', $event)"
+          @preview-file="emit('preview-file', $event)"
+          @delete-file="emit('delete-file', $event)"
+          @delete-all-files="handleDeleteAllFiles"
+        />
+      </div>
+
       <div ref="attachWrapRef" class="chat-input__attach-wrap">
         <button
           class="chat-input__attach"
@@ -175,9 +202,9 @@ defineExpose({ focusTextarea })
         </button>
 
         <!-- 弹出菜单 -->
-        <div v-if="showMenu" class="chat-input__menu">
+        <div v-if="showMenu" class="chat-input__menu" @mouseleave="closeManageSubmenu">
           <!-- 主菜单（v-show 避免 DOM 重建导致点击检测时序问题） -->
-          <div v-show="!manageSubmenu">
+          <div>
             <button class="chat-input__menu-item" @click="handleMenuUpload">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
@@ -187,7 +214,13 @@ defineExpose({ focusTextarea })
               <span>上传 Excel 文件</span>
             </button>
             <div class="chat-input__menu-divider" />
-            <button class="chat-input__menu-item" :disabled="loading" @click="handleManageClick">
+            <button
+              class="chat-input__menu-item"
+              :disabled="loading"
+              @mouseenter="openManageSubmenu"
+              @focus="openManageSubmenu"
+              @click="openManageSubmenu"
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -198,19 +231,12 @@ defineExpose({ focusTextarea })
               </svg>
             </button>
           </div>
-          <!-- 管理子菜单（v-show 避免 DOM 重建） -->
-          <div v-show="manageSubmenu">
-            <button class="chat-input__menu-item" @click="handleBackClick">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>返回</span>
-            </button>
-            <div class="chat-input__menu-divider" />
+          <!-- 管理子菜单 -->
+          <div v-show="manageSubmenu" class="chat-input__submenu">
             <button
               class="chat-input__menu-item"
               :disabled="loading"
-              @click="showMenu = false; manageSubmenu = false; emit('clear-conversation')"
+              @click="closeMenu(); emit('clear-conversation')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -221,7 +247,7 @@ defineExpose({ focusTextarea })
             <button
               class="chat-input__menu-item"
               :disabled="loading"
-              @click="showMenu = false; manageSubmenu = false; emit('reset-conversation')"
+              @click="closeMenu(); emit('reset-conversation')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -243,16 +269,14 @@ defineExpose({ focusTextarea })
         type="button"
         :aria-expanded="fileContextExpanded"
         aria-controls="file-context-list"
-        :title="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
-        :aria-label="fileContextExpanded ? '收起数据文件' : `数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        :title="fileContextExpanded ? '隐藏数据文件' : `展示数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
+        :aria-label="fileContextExpanded ? '隐藏数据文件' : `展示数据文件：已加载 ${fileCount} 个，已选 ${selectedFileCount} 个`"
         @click="emit('toggle-file-context')"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 5a2 2 0 012-2h4l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-        </svg>
-        <span>{{ selectedFileCount }}/{{ fileCount }}</span>
-        <svg class="chat-input__file-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path v-if="fileContextExpanded" d="M3 3l18 18M10.6 6.1A10.5 10.5 0 0112 6c6.5 0 10 6 10 6a18.2 18.2 0 01-3.3 3.8M6.4 6.4C3.9 8.1 2 12 2 12s3.5 6 10 6c1.4 0 2.7-.3 3.8-.8M9.9 9.9a3 3 0 004.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <path v-else d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          <circle v-if="!fileContextExpanded" cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
         </svg>
       </button>
 
@@ -318,10 +342,12 @@ defineExpose({ focusTextarea })
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   grid-template-areas:
+    "files-panel files-panel files-panel files-panel"
     "textarea textarea textarea textarea"
     "attach files . actions";
   align-items: center;
-  gap: 6px;
+  column-gap: 6px;
+  row-gap: 0;
   padding: 8px;
   transition: border-color 0.28s var(--ease-out-expo);
 }
@@ -334,13 +360,18 @@ defineExpose({ focusTextarea })
   display: none;
 }
 
+.chat-input__file-panel {
+  grid-area: files-panel;
+  min-width: 0;
+}
+
 .chat-input__attach {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border-soft);
-  background: var(--surface-raised);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--muted);
   display: grid;
   place-items: center;
@@ -351,8 +382,8 @@ defineExpose({ focusTextarea })
 .chat-input__attach:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-glow-soft);
-  transform: scale(1.08);
+  background: transparent;
+  transform: none;
 }
 
 .chat-input__attach:disabled {
@@ -368,14 +399,15 @@ defineExpose({ focusTextarea })
 
 .chat-input__file-toggle {
   grid-area: files;
-  display: inline-flex;
+  display: inline-grid;
   height: 36px;
+  width: 36px;
   align-items: center;
-  gap: 4px;
-  padding: 0 9px;
-  border: 1px solid var(--border-soft);
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: 18px;
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   font: inherit;
   font-size: 12px;
@@ -387,24 +419,15 @@ defineExpose({ focusTextarea })
 .chat-input__file-toggle:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-glow-soft);
+  background: transparent;
 }
 
 .chat-input__file-toggle--selected {
-  border-color: var(--accent);
   color: var(--accent);
 }
 
 .chat-input__file-toggle--expanded {
-  background: var(--accent-glow-soft);
-}
-
-.chat-input__file-chevron {
-  transition: transform 0.24s var(--ease-out-expo);
-}
-
-.chat-input__file-toggle--expanded .chat-input__file-chevron {
-  transform: rotate(180deg);
+  background: transparent;
 }
 
 /* ===== 弹出菜单 ===== */
@@ -412,11 +435,11 @@ defineExpose({ focusTextarea })
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  min-width: 200px;
+  min-width: 176px;
   background: var(--surface-raised);
   border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 4px;
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.45),
     0 12px 48px rgba(0, 0, 0, 0.3);
@@ -439,20 +462,48 @@ defineExpose({ focusTextarea })
 .chat-input__menu-divider {
   height: 1px;
   background: var(--border-inner);
-  margin: 4px 8px;
+  margin: 3px 6px;
+}
+
+.chat-input__submenu {
+  position: absolute;
+  right: auto;
+  bottom: 0;
+  left: calc(100% + 6px);
+  min-width: 158px;
+  padding: 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+  animation: submenu-enter 0.16s var(--ease-out-expo);
+}
+
+.chat-input__submenu::before {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  bottom: 0;
+  width: 6px;
+  content: '';
+}
+
+@keyframes submenu-enter {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .chat-input__menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: var(--fg);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   line-height: 1.4;
@@ -493,9 +544,9 @@ defineExpose({ focusTextarea })
   font-size: 15px;
   font-family: inherit;
   line-height: 24px;
-  min-height: 32px;
-  max-height: 84px;
-  padding: 4px 6px;
+  min-height: 46px;
+  max-height: 96px;
+  padding: 8px 6px;
 }
 
 .chat-input__textarea::placeholder {
@@ -514,9 +565,9 @@ defineExpose({ focusTextarea })
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: none;
-  background: var(--accent);
-  color: #fff;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -524,16 +575,17 @@ defineExpose({ focusTextarea })
 }
 
 .chat-input__send:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 4px 20px var(--accent-glow);
+  border-color: var(--accent);
+  transform: none;
+  box-shadow: none;
 }
 
 .chat-input__send:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: none;
 }
 
 .chat-input__send:disabled {
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   cursor: not-allowed;
 }
@@ -543,9 +595,9 @@ defineExpose({ focusTextarea })
   width: 32px;
   height: 32px;
   place-items: center;
-  border: 1px solid var(--border-soft);
+  border: 1px solid transparent;
   border-radius: 50%;
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   transition: border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo),
@@ -554,7 +606,7 @@ defineExpose({ focusTextarea })
 
 .chat-input__stop:hover {
   border-color: var(--accent);
-  background: var(--accent-glow-soft);
+  background: transparent;
   color: var(--accent);
 }
 

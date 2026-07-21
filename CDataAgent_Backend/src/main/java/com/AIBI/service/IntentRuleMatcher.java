@@ -127,11 +127,14 @@ public class IntentRuleMatcher {
     // ═══════════════════════════════════════════════════════════
 
     private static final Pattern FILE_QUERY_EXACT = Pattern.compile(
-            "^(我的文件|文件列表|有什么文件|当前文件|文件管理|文件状态)$",
+            "^(我的文件|文件列表|有什么文件|当前文件|当前可用文件|本轮文件|本轮可用文件|文件管理|文件状态)$",
             Pattern.CASE_INSENSITIVE);
 
     private static final Pattern FILE_QUERY_SAFE = Pattern.compile(
-            "(有哪些文件|上传了什么|已上传的?文件|我上传过)",
+            "(有哪些文件|上传了什么|已上传的?文件|我上传过"
+                    + "|当前(?:可用|选中|选择)的?文件|本轮(?:可用|选中|选择)的?文件"
+                    + "|(?:当前|本轮)(?:有)?哪些(?:可用|选中|选择)?文件"
+                    + "|(?:当前|本轮)(?:可用)?文件有哪些)",
             Pattern.CASE_INSENSITIVE);
 
     // ═══════════════════════════════════════════════════════════
@@ -189,6 +192,14 @@ public class IntentRuleMatcher {
      * @return 匹配结果，empty 表示未命中规则
      */
     public Optional<IntentRuleResult> match(String message) {
+        return match(message, null, null, false);
+    }
+
+    /**
+     * 对用户消息进行规则匹配，并在文件查询时使用本轮文件范围。
+     */
+    public Optional<IntentRuleResult> match(String message, Long conversationId,
+                                             List<Long> fileIds, boolean explicitFileScope) {
         if (message == null || message.isBlank()) {
             return Optional.empty();
         }
@@ -264,7 +275,8 @@ public class IntentRuleMatcher {
         // ── 8. 文件查询 ──────────────────────────────────
         if (FILE_QUERY_EXACT.matcher(trimmed).find()
                 || FILE_QUERY_SAFE.matcher(trimmed).find()) {
-            return Optional.of(new IntentRuleResult(true, buildFileListResponse()));
+            return Optional.of(new IntentRuleResult(true,
+                    buildFileListResponse(conversationId, fileIds, explicitFileScope)));
         }
 
         // ── 9. 模型查询 ──────────────────────────────────
@@ -291,21 +303,40 @@ public class IntentRuleMatcher {
 
     // ─── 回复构建 ──────────────────────────────────────────
 
-    private String buildFileListResponse() {
+    private String buildFileListResponse(Long conversationId, List<Long> fileIds,
+                                         boolean explicitFileScope) {
         try {
+            List<Long> scopeIds = fileIds == null ? List.of() : fileIds.stream()
+                    .filter(id -> id != null)
+                    .distinct()
+                    .toList();
+            if (explicitFileScope && scopeIds.isEmpty()) {
+                return "本轮没有选中的可用数据文件。请在文件区选择文件后再开始分析。";
+            }
+
             QueryWrapper<DataFile> qw = new QueryWrapper<>();
             qw.eq("status", "READY").orderByAsc("createTime");
+            if (explicitFileScope) {
+                // 显式范围只反映本轮前端传入的文件，不能回退到历史文件。
+                qw.in("id", scopeIds).eq("conversationId", conversationId);
+            }
             List<DataFile> files = dataFileMapper.selectList(qw);
             if (files.isEmpty()) {
-                return "当前没有已上传的数据文件。请先上传 Excel 或 CSV 文件。";
+                return explicitFileScope
+                        ? "本轮选择的文件当前均不可用，可能已被删除或仍在处理中，请刷新后重新选择。"
+                        : "当前没有已上传的数据文件。请先上传 Excel 或 CSV 文件。";
             }
-            StringBuilder sb = new StringBuilder("当前共有 ").append(files.size()).append(" 个数据文件：\n");
+            StringBuilder sb = new StringBuilder(explicitFileScope ? "本轮当前可用 " : "当前共有 ")
+                    .append(files.size()).append(" 个数据文件：\n");
             for (DataFile f : files) {
                 sb.append("- ").append(f.getOriginalFilename());
                 if (f.getRowCount() != null) {
                     sb.append(" (").append(f.getRowCount()).append(" 行)");
                 }
                 sb.append("\n");
+            }
+            if (explicitFileScope && files.size() < scopeIds.size()) {
+                sb.append("\n部分本轮选择的文件已不可用，请刷新文件选择。\n");
             }
             sb.append("\n请选择要分析的文件，告诉我想看什么。");
             return sb.toString();

@@ -6,6 +6,7 @@ import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.config.DuckDbConfig;
 import com.AIBI.service.DuckDbQueryService;
 import com.AIBI.utils.ToolResultUtils;
+import com.AIBI.utils.OutputKeyPolicy;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -77,6 +78,20 @@ public class DuckDbQueryTool {
         return null; // 放行
     }
 
+    /** 当前范围已显式声明时，查询只能使用该范围完整加载出的文件。 */
+    private String checkFileScope(List<AnalysisState.LoadedFileRecord> files) {
+        RunContext context = RunContextHolder.require();
+        if (context.isExplicitFileScope() && !context.isFileScopeLoaded()) {
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                    "本轮文件范围尚未确认，请先调用 loadData 获取当前可用文件。");
+        }
+        if (!context.matchesFileScope(files.stream().map(file -> file.fileId).toList())) {
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                    "当前文件范围尚未完整加载，请先调用 loadData。");
+        }
+        return null;
+    }
+
     /**
      * 执行 DuckDB SQL 查询。
      * <p>
@@ -91,6 +106,10 @@ public class DuckDbQueryTool {
         // 意图守卫
         String guardResult = checkIntentGuard();
         if (guardResult != null) return guardResult;
+        if (!OutputKeyPolicy.isValid(outputKey)) {
+            return ToolResultUtils.jsonTypedError("syntax",
+                    "outputKey 仅支持字母开头的字母、数字和下划线，长度不超过64");
+        }
 
         try {
             List<AnalysisState.LoadedFileRecord> files = analysisState.getLoadedFiles();
@@ -98,6 +117,8 @@ public class DuckDbQueryTool {
                 return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                         "没有已加载的数据文件，请先调用 loadData");
             }
+            String scopeError = checkFileScope(files);
+            if (scopeError != null) return scopeError;
 
             // 回合内去重：同一 outputKey 已有结果时直接返回
             AnalysisState.QueryOutputRecord existing = analysisState.getQueryOutput(outputKey);
@@ -175,6 +196,8 @@ public class DuckDbQueryTool {
             List<AnalysisState.LoadedFileRecord> files = analysisState.getLoadedFiles();
             if (files == null || files.isEmpty()) return ToolResultUtils.jsonTypedError(
                     ToolResultUtils.ERROR_PRECONDITION, "没有已加载的数据文件");
+            String scopeError = checkFileScope(files);
+            if (scopeError != null) return scopeError;
 
             // 回合内去重
             String existing = analysisState.getDataByKey(statsKey);

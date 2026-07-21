@@ -151,6 +151,34 @@ public class AnalysisState {
         loadedFiles.put(currentThreadId, new ArrayList<>(files));
     }
 
+    /**
+     * 激活本轮文件范围。范围变化时仅丢弃文件派生的工作结果，保留 Agent 对话记忆。
+     */
+    public void activateFileScope(Set<Long> fileIds, boolean forceReset) {
+        Set<Long> expected = fileIds == null ? Collections.emptySet() : new LinkedHashSet<>(fileIds);
+        List<LoadedFileRecord> loaded = getLoadedFiles();
+        Set<Long> actual = new LinkedHashSet<>();
+        for (LoadedFileRecord record : loaded) {
+            try {
+                actual.add(Long.valueOf(record.fileId));
+            } catch (NumberFormatException ignored) {
+                actual.clear();
+                break;
+            }
+        }
+        boolean hasDerivedState = !getSteps().isEmpty() || !getAvailableKeys().isEmpty();
+        boolean loadedScopeComplete = loaded.size() == actual.size();
+        if (!forceReset && loadedScopeComplete && actual.equals(expected)
+                && (!expected.isEmpty() || !hasDerivedState)) return;
+
+        loadedFiles.remove(currentThreadId);
+        stepResults.remove(currentThreadId);
+        dataIndex.remove(currentThreadId);
+        queryOutputs.remove(currentThreadId);
+        activeFileIds.remove(currentThreadId);
+        log.debug("文件范围已切换：旧文件数={}、新文件数={}，已清理文件派生状态", actual.size(), expected.size());
+    }
+
     // ─── 步骤管理 ────────────────────────────────
 
     /**

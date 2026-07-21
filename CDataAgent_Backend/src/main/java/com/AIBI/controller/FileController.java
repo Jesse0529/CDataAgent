@@ -1,6 +1,5 @@
 package com.AIBI.controller;
 
-import com.AIBI.agent.model.AnalysisState;
 import com.AIBI.agent.run.AgentLockKeys;
 import com.AIBI.common.BaseResponse;
 import com.AIBI.common.ErrorCode;
@@ -42,9 +41,6 @@ public class FileController {
     private DataFileMapper dataFileMapper;
 
     @Autowired
-    private AnalysisState analysisState;
-
-    @Autowired
     private DuckDbQueryService duckDbQueryService;
 
     @Autowired
@@ -76,10 +72,7 @@ public class FileController {
             List<DataFile> dataFiles = fileConversionService.batchUpload(
                     files, conversationId, replaceIfExists && lockAcquired);
 
-            if (lockAcquired) {
-                // 空闲时新文件立即生效，清除旧工作索引。
-                analysisState.resetByConversation(conversationId.toString());
-            } else if (deferReplacement) {
+            if (deferReplacement) {
                 log.info("任务运行中，文件替换已延后到下一轮使用");
             }
 
@@ -134,8 +127,38 @@ public class FileController {
             } catch (Exception e) {
                 log.warn("物理文件删除失败：{}", df.getStoragePath());
             }
-            analysisState.resetByConversation(df.getConversationId().toString());
+            // 不清空对话记忆；下一轮按前端显式文件范围自动失效旧工作结果。
             return ResultUtils.success(true);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");
+        } finally {
+            unlockQuietly(runLock, lockAcquired);
+        }
+    }
+
+    /** 删除指定对话的全部数据文件 */
+    @DeleteMapping("/conversations/{conversationId}")
+    public BaseResponse<Integer> deleteConversationFiles(@PathVariable Long conversationId) {
+        if (conversationId == null || conversationId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "conversationId 不能为空");
+        }
+
+        RLock runLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
+        boolean lockAcquired = false;
+        try {
+            lockAcquired = runLock.tryLock(0, TimeUnit.SECONDS);
+            if (!lockAcquired) {
+                throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, "任务运行中，暂不能删除文件");
+            }
+
+            List<DataFile> files = dataFileMapper.selectList(
+                    new QueryWrapper<DataFile>().eq("conversationId", conversationId));
+            if (files.isEmpty()) return ResultUtils.success(0);
+
+            fileConversionService.deleteConversationFiles(conversationId);
+            log.info("已删除对话文件：conversationId={}，count={}", conversationId, files.size());
+            return ResultUtils.success(files.size());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "系统繁忙");

@@ -25,6 +25,7 @@ export function useFiles(conversationId: Ref<string | null>) {
   const files = ref<DataFileVO[]>([])
   const fetchingFiles = ref(true)
   const uploading = ref(false)
+  const deletingAll = ref(false)
   const selectedFileIds = ref<Set<string>>(loadSelectedFiles())
 
   function saveSelectedFiles(): void {
@@ -106,14 +107,34 @@ export function useFiles(conversationId: Ref<string | null>) {
     saveSelectedFiles()
   }
 
+  async function deleteAllFiles(): Promise<number> {
+    const id = conversationId.value
+    if (!id) throw new Error('请等待对话初始化完成')
+
+    deletingAll.value = true
+    try {
+      const deletedCount = await withRetry(() =>
+        apiDeleteChecked<number>(`/file/conversations/${id}`),
+      )
+      files.value = []
+      selectedFileIds.value = new Set()
+      saveSelectedFiles()
+      return deletedCount
+    } finally {
+      deletingAll.value = false
+    }
+  }
+
   return {
     files,
     fetchingFiles,
     uploading,
+    deletingAll,
     selectedFileIds,
     toggleFile,
     fetchFiles,
     uploadFiles,
     deleteFile,
+    deleteAllFiles,
   }
 }

@@ -85,7 +85,7 @@ export function useAgentStream() {
 
   async function start(options: StartAgentStreamOptions): Promise<void> {
     const { conversationId, text, fileIds, message, onPersist } = options
-    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1`
+    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1&fileScope=explicit`
     if (fileIds.length > 0) streamUrl += `&fileIds=${fileIds.join(',')}`
 
     let finalAnalysis = ''
@@ -350,7 +350,9 @@ export function useAgentStream() {
       flushAll()
       await waitForArtifactDrain()
       if (message.status === 'streaming') {
-        message.content = finalAnalysis || message.content
+        const hasStreamedContent =
+          message.content.trim().length > 0 && !STATUS_TEXTS.has(message.content)
+        if (!hasStreamedContent && finalAnalysis) message.content = finalAnalysis
         message.status = 'done'
         message.timestamp = Date.now()
         message.chartGenerating = false

@@ -5,12 +5,14 @@ const props = defineProps<{
   files: DataFileVO[]
   selectedFileIds: ReadonlySet<string>
   expanded: boolean
+  deletingAll?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'toggle-file', fileId: string): void
   (e: 'preview-file', file: DataFileVO): void
   (e: 'delete-file', fileId: string): void
+  (e: 'delete-all-files'): void
 }>()
 
 function formatSize(bytes: number): string {
@@ -65,6 +67,18 @@ function formatSize(bytes: number): string {
             </div>
           </article>
         </div>
+        <button
+          class="file-context__delete-all"
+          type="button"
+          :disabled="deletingAll"
+          aria-label="清空文件"
+          title="清空"
+          @click="emit('delete-all-files')"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
     </section>
   </Transition>
@@ -72,35 +86,62 @@ function formatSize(bytes: number): string {
 
 <style scoped>
 .file-context {
-  position: absolute;
-  right: var(--composer-gutter, 0px);
-  bottom: calc(100% + 8px);
-  left: var(--composer-gutter, 0px);
-  z-index: 4;
-  flex-shrink: 0;
-  max-height: 270px;
+  min-width: 0;
+  max-height: 184px;
+  margin-bottom: 6px;
   overflow: hidden;
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow-card-hover);
-  contain: layout paint;
-  clip-path: inset(0 0 0 0);
+  border-radius: 13px;
+  background: transparent;
   transform-origin: bottom center;
-  will-change: clip-path, opacity, transform;
+  will-change: opacity, transform;
 }
 
 .file-context__body {
-  max-height: 270px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  max-height: 184px;
   overflow: auto;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 6px;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
+.file-context__delete-all {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  align-self: end;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #b65b5b;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.file-context__delete-all:hover:not(:disabled) {
+  border-color: currentColor;
+  color: #c94f4f;
+}
+
+.file-context__delete-all:focus-visible {
+  outline: 2px solid #c94f4f;
+  outline-offset: 2px;
+}
+
+.file-context__delete-all:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .file-context__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -108,14 +149,13 @@ function formatSize(bytes: number): string {
   display: flex;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--border-inner);
+  border: 1px solid transparent;
   border-radius: 12px;
-  background: var(--surface-raised);
-  transition: border-color 0.2s var(--ease-out-expo), background 0.2s var(--ease-out-expo);
+  background: transparent;
+  transition: border-color 0.2s var(--ease-out-expo);
 }
 
-.file-context__item:hover { border-color: var(--border-hover); }
-.file-context__item--selected { border-color: var(--accent); background: var(--accent-glow-soft); }
+.file-context__item--selected { border-color: transparent; background: transparent; }
 
 .file-context__select {
   display: flex;
@@ -132,6 +172,9 @@ function formatSize(bytes: number): string {
   cursor: pointer;
 }
 
+.file-context__select:hover { box-shadow: inset 0 0 0 1px var(--border-hover); border-radius: 9px; }
+.file-context__select:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 9px; }
+
 .file-context__check { display: grid; flex-shrink: 0; color: var(--muted); }
 .file-context__name { overflow: hidden; flex: 1; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .file-context__actions { display: flex; align-items: center; padding-right: 5px; }
@@ -140,32 +183,32 @@ function formatSize(bytes: number): string {
   width: 26px;
   height: 26px;
   place-items: center;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
-.file-context__actions button:hover { background: var(--surface); color: var(--accent); }
+.file-context__actions button:hover { border-color: currentColor; color: var(--accent); }
 .file-context__actions button:last-child:hover { color: #c94f4f; }
 
 .file-context-panel-enter-active,
 .file-context-panel-leave-active {
-  transition: clip-path 0.28s var(--ease-out-expo), opacity 0.2s ease,
-    transform 0.28s var(--ease-out-expo);
+  transition: max-height 0.28s var(--ease-out-expo), opacity 0.2s ease,
+    transform 0.28s var(--ease-out-expo), margin 0.28s var(--ease-out-expo);
 }
 
 .file-context-panel-enter-from,
 .file-context-panel-leave-to {
-  clip-path: inset(100% 0 0 0);
+  max-height: 0;
+  margin-bottom: 0;
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(4px);
 }
 
 @media (max-width: 640px) {
-  .file-context { max-height: 224px; }
-  .file-context__body { max-height: 224px; }
-  .file-context__grid { grid-template-columns: 1fr; }
+  .file-context { max-height: 148px; }
+  .file-context__body { max-height: 148px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
