@@ -67,7 +67,7 @@ public class PresentationSubmissionTool {
                     "展示计划不能为空。请至少填写 summary、bulletItems、tableOutputKeys 或 chartOutputKeys 中任意一项。");
         }
 
-        String referenceError = validateOutputKeys(permittedTableKeys, chartOutputKeys);
+        String referenceError = validateOutputKeys(ctx, permittedTableKeys, chartOutputKeys);
         if (referenceError != null) return referenceError;
 
         PresentationPlan existingPlan = ctx.getPresentationPlan();
@@ -123,7 +123,12 @@ public class PresentationSubmissionTool {
         ctx.publishPresentationPlan(plan);
     }
 
-    private String validateOutputKeys(List<String> tableOutputKeys, List<String> chartOutputKeys) {
+    private String validateOutputKeys(RunContext context, List<String> tableOutputKeys, List<String> chartOutputKeys) {
+        if ((!isEmpty(tableOutputKeys) || !isEmpty(chartOutputKeys))
+                && context.isExplicitFileScope() && !context.isFileScopeLoaded()) {
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                    "本轮文件范围尚未确认，请先调用 loadData 获取当前可用文件。");
+        }
         Set<String> available = analysisState.getAvailableKeys();
         for (String outputKey : distinctKeys(tableOutputKeys)) {
             if (!OutputKeyPolicy.isValid(outputKey)) {

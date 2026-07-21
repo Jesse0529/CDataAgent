@@ -77,25 +77,36 @@ public class DataLoadingTool {
     /**
      * 加载本轮消息绑定的数据文件到分析环境。
      * <p>
-     * 根据前端传入的 fileIds 加载对应文件。无 fileIds 时复用已有加载结果。
+     * 根据本轮显式文件范围加载对应文件。旧客户端未声明范围时才兼容复用已有结果。
      * 每个文件有独立的 viewName，SQL 中通过 viewName 引用。
      */
     @Tool(description = "加载本轮数据文件，返回 viewName、列名和类型；需要样本时再调用 getSchema。")
     public String loadData() {
-        String conversationId = RunContextHolder.require().getConversationId().toString();
+        RunContext context = RunContextHolder.require();
+        String conversationId = context.getConversationId().toString();
 
         try {
-            // 1. 优先检查本轮 active 文件 ID
-            List<Long> activeIds = analysisState.getActiveFileIds();
+            // 1. 显式范围只认当前请求的文件 ID，绝不沿用历史文件。
+            List<Long> activeIds = new ArrayList<>(context.getFileScopeIds());
             List<DataFile> files;
 
-            if (activeIds != null && !activeIds.isEmpty()) {
-                // 按前端指定的文件加载
+            if (context.isExplicitFileScope()) {
+                if (activeIds.isEmpty()) {
+                    return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                            "本轮未附加数据文件。需要分析数据时，请在输入区域选择文件后发送。");
+                }
                 QueryWrapper<DataFile> qw = new QueryWrapper<>();
-                qw.in("id", activeIds).eq("status", "READY");
+                qw.in("id", activeIds)
+                        .eq("conversationId", conversationId)
+                        .eq("status", "READY");
+                files = dataFileMapper.selectList(qw);
+            } else if (!analysisState.getActiveFileIds().isEmpty()) {
+                // 旧调用方兼容：仍按 activeFileIds 加载。
+                QueryWrapper<DataFile> qw = new QueryWrapper<>();
+                qw.in("id", analysisState.getActiveFileIds()).eq("status", "READY");
                 files = dataFileMapper.selectList(qw);
             } else {
-                // 2. 无 activeFileIds → 检查已有 loadedFiles（附言时复用）
+                // 2. 旧调用方未传范围时，兼容复用已有加载结果。
                 List<AnalysisState.LoadedFileRecord> existing = analysisState.getLoadedFiles();
                 if (existing != null && !existing.isEmpty()) {
                     return buildExistingResult(existing);
@@ -109,7 +120,7 @@ public class DataLoadingTool {
             if (files.isEmpty()) {
                 analysisState.setLoadedFiles(new ArrayList<>());
                 return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
-                        "指定的文件未找到或状态异常，请重新上传");
+                        "本轮绑定的文件不存在、已删除或状态异常，请重新选择文件后发送");
             }
 
             List<AnalysisState.LoadedFileRecord> records = new ArrayList<>();
@@ -149,6 +160,7 @@ public class DataLoadingTool {
 
             // 注册到 AnalysisState
             analysisState.setLoadedFiles(records);
+            context.markFileScopeLoaded();
 
             JSONObject result = new JSONObject();
             result.put("fileCount", files.size());
@@ -216,9 +228,18 @@ public class DataLoadingTool {
             }
 
             final String targetFileId = df.getId().toString();
+            RunContext context = RunContextHolder.require();
+            if (context.isExplicitFileScope()
+                    && (!context.allowsFile(df.getId())
+                    || !context.getConversationId().equals(df.getConversationId()))) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "文件 \"" + df.getOriginalFilename() + "\" 不在当前查询范围。请重新 attach 该文件后发送消息。");
+            }
             List<AnalysisState.LoadedFileRecord> loaded = analysisState.getLoadedFiles();
             boolean isLoaded = loaded.stream().anyMatch(r -> targetFileId.equals(r.fileId));
-            boolean isAttached = analysisState.getActiveFileIds().contains(df.getId());
+            boolean isAttached = context.isExplicitFileScope()
+                    ? context.allowsFile(df.getId())
+                    : analysisState.getActiveFileIds().contains(df.getId());
             if (!isLoaded && !isAttached) {
                 return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
                         "文件 \"" + df.getOriginalFilename() + "\" 不在当前查询范围。请重新 attach 该文件后发送消息。");

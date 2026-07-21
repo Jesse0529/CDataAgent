@@ -24,6 +24,8 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* 环境光网格背景 — 浅色暖光 + 低透明度十字网格 */
@@ -64,6 +66,36 @@ body::before {
 button {
   cursor: pointer;
   font-family: inherit;
+}
+
+/* 系统控件仅用于操作，避免拖选或复制到按钮文字与图标。 */
+button,
+[role="button"],
+[role="checkbox"],
+[role="switch"],
+svg,
+.n-icon {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button svg,
+[role="button"] svg,
+[role="checkbox"] svg,
+[role="switch"] svg,
+button img,
+[role="button"] img {
+  -webkit-user-drag: none;
+}
+
+/* 仅保留用户与 Agent 的实际对话内容可复制，系统状态、侧栏和品牌元素均不可选。 */
+.msg-bubble--user .msg-text,
+.msg-bubble--ai .msg-text,
+.msg-conclusion__text,
+.render-document,
+.msg-bubble--ai .msg-tables {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 a {

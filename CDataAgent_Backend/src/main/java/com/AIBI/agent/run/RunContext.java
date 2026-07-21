@@ -6,7 +6,9 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +40,21 @@ public class RunContext {
     /** 所属对话 ID */
     @Getter
     private final Long conversationId;
+
+    /** 本轮前端明确声明的文件范围；不写入工作记忆或 Checkpoint。 */
+    @Getter
+    private boolean explicitFileScope;
+
+    @Getter
+    private Set<Long> fileScopeIds = Set.of();
+
+    /** 显式范围中的文件是否仍全部属于当前对话且处于可用状态。 */
+    @Getter
+    private boolean fileScopeAvailable = true;
+
+    /** 显式范围在本轮是否已通过 loadData 实时确认。 */
+    @Getter
+    private boolean fileScopeLoaded = true;
 
     /** 当前模型调用所属阶段，仅用于调用级成本观测。 */
     @Getter @Setter
@@ -129,6 +146,47 @@ public class RunContext {
     public RunContext(String runId, Long conversationId) {
         this.runId = runId;
         this.conversationId = conversationId;
+    }
+
+    /**
+     * 设置本轮文件范围。显式空集合表示本轮不允许访问任何数据文件。
+     */
+    public void setFileScope(boolean explicit, List<Long> fileIds) {
+        this.explicitFileScope = explicit;
+        LinkedHashSet<Long> normalized = new LinkedHashSet<>();
+        if (fileIds != null) {
+            fileIds.stream().filter(java.util.Objects::nonNull).forEach(normalized::add);
+        }
+        this.fileScopeIds = Collections.unmodifiableSet(normalized);
+        this.fileScopeAvailable = true;
+        this.fileScopeLoaded = !explicit;
+    }
+
+    public void markFileScopeUnavailable() {
+        if (explicitFileScope) this.fileScopeAvailable = false;
+    }
+
+    public void markFileScopeLoaded() {
+        if (explicitFileScope) this.fileScopeLoaded = true;
+    }
+
+    /** 本轮显式范围内是否允许访问指定文件。 */
+    public boolean allowsFile(Long fileId) {
+        return !explicitFileScope || (fileScopeAvailable && fileId != null && fileScopeIds.contains(fileId));
+    }
+
+    /** 已加载文件必须与本轮显式范围完全一致，避免沿用历史文件。 */
+    public boolean matchesFileScope(Collection<String> loadedFileIds) {
+        if (!explicitFileScope) return true;
+        if (!fileScopeAvailable) return false;
+        if (loadedFileIds == null || loadedFileIds.size() != fileScopeIds.size()) return false;
+        try {
+            return loadedFileIds.stream()
+                    .map(Long::valueOf)
+                    .allMatch(fileScopeIds::contains);
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 
     // ── 图表管理（从 AnalysisState 迁移） ──
@@ -334,6 +392,10 @@ public class RunContext {
             presentationPlanReadyFuture.complete(null);
         }
         clearIntent();
+        explicitFileScope = false;
+        fileScopeIds = Set.of();
+        fileScopeAvailable = true;
+        fileScopeLoaded = true;
         log.debug("运行上下文已清理: runId={}", runId);
     }
 

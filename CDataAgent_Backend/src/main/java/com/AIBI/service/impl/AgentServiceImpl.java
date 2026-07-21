@@ -260,11 +260,20 @@ public class AgentServiceImpl implements AgentService {
     @Override
     public Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds,
                                                   String renderProtocol, String runId) {
+        return chatStream(userMessage, fileIds, renderProtocol, runId, false);
+    }
+
+    @Override
+    public Flux<Map<String, String>> chatStream(String userMessage, List<Long> fileIds,
+                                                  String renderProtocol, String runId,
+                                                  boolean explicitFileScope) {
         ThrowUtils.throwIf(StringUtils.isBlank(userMessage), ErrorCode.PARAMS_ERROR, "消息不能为空");
 
         return Flux.defer(() -> {
+            Long cid = getOrCreateDefaultConversation();
             // Layer 1: 规则层 — 零模型开销拦截问候/告别/文件查询等
-            Optional<IntentRuleMatcher.IntentRuleResult> ruleOpt = intentRuleMatcher.match(userMessage);
+            Optional<IntentRuleMatcher.IntentRuleResult> ruleOpt = intentRuleMatcher.match(
+                    userMessage, cid, fileIds, explicitFileScope);
             if (ruleOpt.isPresent()) {
                 IntentRuleMatcher.IntentRuleResult ruleResult = ruleOpt.get();
                 log.debug("规则匹配命中，输入长度={}", userMessage.length());
@@ -273,7 +282,6 @@ public class AgentServiceImpl implements AgentService {
                         .map(chunk -> Map.of("type", "message", "data", normalizeTableFormat(chunk)));
             }
 
-            Long cid = getOrCreateDefaultConversation();
             String effectiveRunId = StringUtils.defaultIfBlank(runId, UUID.randomUUID().toString());
 
             RLock globalLock = redissonClient.getLock(AgentLockKeys.GLOBAL_RUN_LOCK);
@@ -297,22 +305,23 @@ public class AgentServiceImpl implements AgentService {
             // 创建 RunContext（请求级运行上下文）
             RunContext runContext = new RunContext(effectiveRunId, cid);
             runContext.setRenderProtocol(renderProtocol);
+            runContext.setFileScope(explicitFileScope, fileIds);
             boolean analysisStateInitialized = false;
             try {
                 RunContextHolder.set(runContext);
 
-                // 设置本轮 active 文件（前端传递的文件绑定）
+                // 兼容旧工具读取；当前请求的权威范围由 RunContext 保存。
                 analysisState.setCurrentThreadId(cid.toString());
+                analysisState.setActiveFileIds(fileIds);
                 analysisStateInitialized = true;
                 String fileAttachments = null;
                 List<String> fileNames = new ArrayList<>();
                 if (fileIds != null && !fileIds.isEmpty()) {
-                    analysisState.setActiveFileIds(fileIds);
-                    // 文件切换时清空旧加载缓存，下次 loadData 重新加载
-                    analysisState.setLoadedFiles(new ArrayList<>());
-
-                // 构建文件附件 JSON（用于持久化到消息表）
+                    // 构建文件附件 JSON（用于持久化到消息表）
                     List<DataFile> dataFiles = dataFileMapper.selectBatchIds(fileIds);
+                    if (explicitFileScope && !isCurrentFileScope(dataFiles, runContext)) {
+                        runContext.markFileScopeUnavailable();
+                    }
                     JSONArray arr = new JSONArray();
                     for (DataFile df : dataFiles) {
                         JSONObject item = new JSONObject();
@@ -329,9 +338,9 @@ public class AgentServiceImpl implements AgentService {
                 saveMessage(cid, "user", userMessage, fileAttachments);
                 redisLimiterManager.doRateLimit("agent_chat_default");
 
-                String effectiveMessage = injectContext(userMessage, cid, fileIds);
+                String effectiveMessage = injectContext(userMessage, cid, runContext);
 
-                log.info("运行开始 文件数={}", fileNames.size());
+                log.info("运行开始 文件数={}、显式范围={}", fileNames.size(), explicitFileScope);
 
                 modelManager.setCurrentConversationId(cid);
                 exactTokenCounter.setCurrentConversationId(cid);
@@ -697,25 +706,35 @@ public class AgentServiceImpl implements AgentService {
 
     // ======================== 上下文注入 ========================
 
-    private String injectContext(String userMessage, Long conversationId, List<Long> fileIds) {
+    private String injectContext(String userMessage, Long conversationId, RunContext runContext) {
         if (injectAnalysisState) {
-            // 仅当本轮没有新文件附件时，才从 Redis 恢复上一轮的分析状态
-            // 如果有新文件（fileIds 非空），说明用户在切换/重新选择文件，
-            // 此时应使用干净的上下文，让 Agent 从 loadData 开始重新加载
-            boolean hasNewFiles = fileIds != null && !fileIds.isEmpty();
-            if (!hasNewFiles) {
-                boolean restored = analysisState.restoreFromRedis(conversationId.toString());
-                if (restored) {
-                    log.debug("已恢复上一轮分析状态");
-                }
-            } else {
-                log.debug("本轮绑定新文件({}个)，跳过状态恢复",
-                        fileIds.size());
+            boolean restored = analysisState.restoreFromRedis(conversationId.toString());
+            if (restored) {
+                log.debug("已恢复上一轮分析状态");
             }
+        }
+        if (runContext.isExplicitFileScope()) {
+            analysisState.activateFileScope(runContext.getFileScopeIds(), !runContext.isFileScopeAvailable());
+        }
+        // 显式文件范围时，追加文件计数提示让 Agent 先调 loadData 确认文件状态。
+        // 仅含文件计数，不拼接文件名等不可信数据，不影响指令权。
+        if (runContext.isExplicitFileScope() && !runContext.getFileScopeIds().isEmpty()) {
+            int fileCount = runContext.getFileScopeIds().size();
+            String hint = runContext.isFileScopeAvailable()
+                    ? "\n\n【本轮附加了 " + fileCount + " 个数据文件，如需分析请先调用 loadData 确认当前文件状态。】"
+                    : "\n\n【本轮附加的文件存在异常，请先调用 loadData 查看当前可用文件。】";
+            return userMessage + hint;
         }
         // 文件范围、查询结果和偏好均由服务端状态及工具读取，不能与用户消息拼接。
         // 文件名、偏好值和上传数据都可能包含不可信文本，拼接会让模型误判其指令权。
         return userMessage;
+    }
+
+    private static boolean isCurrentFileScope(List<DataFile> files, RunContext context) {
+        if (files == null || files.size() != context.getFileScopeIds().size()) return false;
+        return files.stream().allMatch(file -> context.getConversationId().equals(file.getConversationId())
+                && "READY".equals(file.getStatus())
+                && context.getFileScopeIds().contains(file.getId()));
     }
 
     /**

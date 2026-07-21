@@ -1,6 +1,5 @@
 package com.AIBI.controller;
 
-import com.AIBI.agent.model.AnalysisState;
 import com.AIBI.agent.run.AgentLockKeys;
 import com.AIBI.common.BaseResponse;
 import com.AIBI.common.ErrorCode;
@@ -42,9 +41,6 @@ public class FileController {
     private DataFileMapper dataFileMapper;
 
     @Autowired
-    private AnalysisState analysisState;
-
-    @Autowired
     private DuckDbQueryService duckDbQueryService;
 
     @Autowired
@@ -76,10 +72,7 @@ public class FileController {
             List<DataFile> dataFiles = fileConversionService.batchUpload(
                     files, conversationId, replaceIfExists && lockAcquired);
 
-            if (lockAcquired) {
-                // 空闲时新文件立即生效，清除旧工作索引。
-                analysisState.resetByConversation(conversationId.toString());
-            } else if (deferReplacement) {
+            if (deferReplacement) {
                 log.info("任务运行中，文件替换已延后到下一轮使用");
             }
 
@@ -134,7 +127,7 @@ public class FileController {
             } catch (Exception e) {
                 log.warn("物理文件删除失败：{}", df.getStoragePath());
             }
-            analysisState.resetByConversation(df.getConversationId().toString());
+            // 不清空对话记忆；下一轮按前端显式文件范围自动失效旧工作结果。
             return ResultUtils.success(true);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -164,7 +157,6 @@ public class FileController {
             if (files.isEmpty()) return ResultUtils.success(0);
 
             fileConversionService.deleteConversationFiles(conversationId);
-            analysisState.resetByConversation(conversationId.toString());
             log.info("已删除对话文件：conversationId={}，count={}", conversationId, files.size());
             return ResultUtils.success(files.size());
         } catch (InterruptedException e) {

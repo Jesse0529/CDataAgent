@@ -57,6 +57,7 @@ public class AgentController {
     public SseEmitter chatStream(
             @RequestParam("message") String message,
             @RequestParam(value = "fileIds", required = false) String fileIds,
+            @RequestParam(value = "fileScope", defaultValue = "legacy") String fileScope,
             @RequestParam(value = "renderProtocol", required = false) String protocolParam,
             @RequestHeader(value = "X-Agent-Render-Protocol", required = false) String protocolHeader) {
         ThrowUtils.throwIf(StringUtils.isBlank(message), ErrorCode.PARAMS_ERROR, "消息不能为空");
@@ -80,7 +81,7 @@ public class AgentController {
 
         List<Long> ids = parseFileIds(fileIds);
         Flux<Map<String, String>> events = agentService
-                .chatStream(message, ids, protocol, runId)
+                .chatStream(message, ids, protocol, runId, "explicit".equals(fileScope))
                 .publish()
                 .refCount(1);
         Flux<Map<String, String>> heartbeat = Flux.interval(Duration.ofSeconds(15))

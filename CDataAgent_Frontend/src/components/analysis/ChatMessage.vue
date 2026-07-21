@@ -582,7 +582,7 @@ function formatTokens(n: number): string {
   max-width: 100%;
   background: var(--accent);
   color: #fff;
-  border-radius: 20px;
+  border-radius: 12px;
 }
 
 .msg-bubble--ai {

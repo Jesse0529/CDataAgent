@@ -85,7 +85,7 @@ export function useAgentStream() {
 
   async function start(options: StartAgentStreamOptions): Promise<void> {
     const { conversationId, text, fileIds, message, onPersist } = options
-    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1`
+    let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1&fileScope=explicit`
     if (fileIds.length > 0) streamUrl += `&fileIds=${fileIds.join(',')}`
 
     let finalAnalysis = ''
