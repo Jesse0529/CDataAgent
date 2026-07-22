@@ -4,8 +4,6 @@ import com.AIBI.agent.run.RunActivity;
 import com.AIBI.agent.run.RunContext;
 import com.AIBI.agent.run.RunContextHolder;
 import com.AIBI.utils.ToolResultUtils;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -91,16 +89,7 @@ public class ToolCallAspect {
      * 无法解析时返回 "unknown"。
      */
     private static String extractErrorType(String resultJson) {
-        try {
-            JSONObject obj = JSON.parseObject(resultJson);
-            if (obj != null) {
-                String type = obj.getString("error");
-                if (type != null) return type;
-            }
-        } catch (Exception ignored) {
-            // 非 JSON 或解析失败，不阻塞
-        }
-        return "unknown";
+        return ToolResultUtils.errorType(resultJson).orElse("unknown");
     }
 
     private static void finishActivity(RunContext context, String activityId,

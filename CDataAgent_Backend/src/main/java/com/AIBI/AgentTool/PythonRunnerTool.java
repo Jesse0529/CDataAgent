@@ -1,6 +1,7 @@
 package com.AIBI.AgentTool;
 
 import com.AIBI.agent.model.AnalysisState;
+import com.AIBI.utils.ToolResultUtils;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.ToolCallback;
@@ -57,18 +58,20 @@ public class PythonRunnerTool {
             // 1. AST 安全检查
             String validationError = validateCode(code);
             if (validationError != null) {
-                return jsonError("代码安全检查失败: " + validationError);
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYNTAX,
+                        "代码安全检查失败: " + validationError);
             }
 
             // 2. 沙箱不可用时降级
             if (sandboxToolCallback == null) {
-                return jsonError("沙箱未启用。请使用 DuckDB 工具（runDuckdb, queryStatistics）完成分析，" +
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "沙箱未启用。请使用 DuckDB 工具（runDuckdb, queryStatistics）完成分析，" +
                         "或启用 Docker 沙箱后重试。");
             }
 
             // 3. 调用框架沙箱工具
             String toolInput = "{\"code\":\"" + escapeJson(code) + "\"}";
-            String output = sandboxToolCallback.call(toolInput);
+            String output = callSandboxOnceWithRetry(toolInput);
 
             // 4. 存入分析状态
             analysisState.addStepResult(outputKey, "runPython", 1, null);
@@ -83,9 +86,19 @@ public class PythonRunnerTool {
             return result.toJSONString();
 
         } catch (Exception e) {
-            log.error("Python执行失败", e);
+            log.warn("Python执行失败：异常={}", e.getClass().getSimpleName());
             analysisState.addStepResultFailed(outputKey, "runPython", e.getMessage());
-            return jsonError("Python 执行失败: " + e.getMessage());
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM,
+                    "Python 执行失败，建议改用 DuckDB 或简化分析逻辑");
+        }
+    }
+
+    private String callSandboxOnceWithRetry(String toolInput) {
+        try {
+            return sandboxToolCallback.call(toolInput);
+        } catch (Exception first) {
+            log.warn("Python沙箱瞬态失败，重试一次");
+            return sandboxToolCallback.call(toolInput);
         }
     }
 
@@ -107,7 +120,4 @@ public class PythonRunnerTool {
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     }
 
-    private static String jsonError(String msg) {
-        JSONObject err = new JSONObject(); err.put("error", msg); return err.toJSONString();
-    }
 }
