@@ -6,6 +6,7 @@ import ChatMessage from '@/components/analysis/ChatMessage.vue'
 import FilePreviewModal from '@/components/analysis/FilePreviewModal.vue'
 import ModelConfigPanel from '@/components/analysis/ModelConfigPanel.vue'
 import WelcomeScreen from '@/components/analysis/WelcomeScreen.vue'
+import { useAgentRunRecovery } from '@/composables/useAgentRunRecovery'
 import { useAgentStream } from '@/composables/useAgentStream'
 import { useChatPersistence } from '@/composables/useChatPersistence'
 import { useFiles } from '@/composables/useFiles'
@@ -56,7 +57,9 @@ const {
   flushPending: flushAgentStream,
   start: startAgentStream,
   stop: stopAgentStream,
+  suspend: suspendAgentStream,
 } = useAgentStream()
+const { loadActiveRun, saveActiveRun, clearActiveRun } = useAgentRunRecovery()
 const selectedFileCount = computed(
   () => files.value.filter((file) => selectedFileIds.value.has(file.id)).length,
 )
@@ -355,11 +358,19 @@ async function handleSend(text: string) {
     fileIds: [...selectedFileIds.value],
     message: activeStreamMessage,
     onPersist: syncMessagesAfterStream,
+    onRunState: (run) => {
+      if (run) saveActiveRun(run)
+      else clearActiveRun()
+    },
   })
 }
 
 // ---- 持久化 ----
-const { saveMessages } = useChatPersistence()
+const {
+  saveMessages,
+  loadMessages: loadLocalMessages,
+  clearMessages,
+} = useChatPersistence()
 
 function flushMessages(): void {
   if (saveTimer) {
@@ -373,6 +384,7 @@ function flushMessages(): void {
 function handleBeforeUnload(): void {
   // 先把流式缓冲区刷进 messages.value，否则最新 token 会丢失
   flushAgentStream()
+  suspendAgentStream()
   if (messages.value.length === 0) return
   saveMessages(messages.value)
 }
@@ -448,8 +460,6 @@ watch(messages, () => {
 })
 
 // ---- 初始化 ----
-const { loadMessages: loadLocalMessages, clearMessages } = useChatPersistence()
-
 onMounted(async () => {
   try {
     configCollapsed.value = window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
@@ -471,18 +481,54 @@ onMounted(async () => {
 
     // 2. 优先从 localStorage 恢复消息（含表格、图表等完整前端状态）
     const localMsgs = loadLocalMessages()
+    const activeRun = loadActiveRun()
+    const recoverableMessage = activeRun?.conversationId === activeConversationId.value
+      ? localMsgs.find(
+          (item) => item.id === activeRun.messageId && (item.status === 'streaming' || item.backgroundRunning),
+        )
+      : undefined
     if (localMsgs.length > 0) {
-      // 将流式残留标记为完成（加 incomplete 标记）
+      // 仅保留与当前恢复记录匹配的流式消息，其余残留仍标记为不完整。
       messages.value = localMsgs.map((m) =>
-        m.status === 'streaming'
+        m === recoverableMessage
+          ? {
+              ...m,
+              runId: activeRun?.runId,
+              lastEventId: activeRun?.lastEventId,
+              status: 'streaming' as const,
+              backgroundRunning: false,
+              reconnecting: true,
+            }
+          : m.status === 'streaming'
           ? { ...m, status: 'done' as const, timestamp: Date.now(), incomplete: true }
           : m,
       )
-      if (localMsgs.some((m) => m.status === 'streaming')) {
+      if (localMsgs.some((m) => m.status === 'streaming') && !recoverableMessage) {
         clearMessages()
       }
       scrollToBottom(true)
+
+      if (activeRun && recoverableMessage) {
+        const streamMessage = messages.value.find((item) => item.id === activeRun.messageId)
+        if (streamMessage) {
+          void startAgentStream({
+            conversationId: activeConversationId.value,
+            text: '',
+            fileIds: [],
+            message: streamMessage,
+            onPersist: syncMessagesAfterStream,
+            onRunState: (run) => {
+              if (run) saveActiveRun(run)
+              else clearActiveRun()
+            },
+            resume: activeRun,
+          })
+        }
+      } else if (activeRun) {
+        clearActiveRun()
+      }
     } else {
+      if (activeRun) clearActiveRun()
       // 无本地缓存时从后端加载（不含 tables，但文本内容可正常渲染）
       await loadMessages()
     }
@@ -512,8 +558,8 @@ watch(fileContextExpanded, (value) => {
 })
 
 onBeforeUnmount(() => {
-  handleStop()
   flushAgentStream()
+  suspendAgentStream()
   if (saveTimer) clearTimeout(saveTimer)
   if (followScrollFrame !== null) cancelAnimationFrame(followScrollFrame)
   messagesResizeObserver?.disconnect()

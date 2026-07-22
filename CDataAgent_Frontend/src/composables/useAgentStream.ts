@@ -1,6 +1,8 @@
 import { ref } from 'vue'
-import { apiPostStream } from '@/services/api'
+import type { ActiveAgentRun } from '@/composables/useAgentRunRecovery'
+import { apiGetChecked, apiPostStream } from '@/services/api'
 import type {
+  AgentRunStatus,
   ArtifactEvent,
   ChartResultEvent,
   ChatMessageVO,
@@ -68,15 +70,24 @@ export interface StartAgentStreamOptions {
   fileIds: string[]
   message: ChatMessageVO
   onPersist: () => void
+  onRunState: (run: ActiveAgentRun | null) => void
+  resume?: ActiveAgentRun
 }
 
 export function useAgentStream() {
   const chatting = ref(false)
-  let cancelCurrent: (() => void) | null = null
+  let cancelCurrent: ((reason: 'user' | 'suspended') => void) | null = null
   let flushCurrent: (() => void) | null = null
+  let persistRunStateCurrent: (() => void) | null = null
 
   function stop(): void {
-    cancelCurrent?.()
+    cancelCurrent?.('user')
+  }
+
+  function suspend(): void {
+    flushCurrent?.()
+    persistRunStateCurrent?.()
+    cancelCurrent?.('suspended')
   }
 
   function flushPending(): void {
@@ -84,9 +95,12 @@ export function useAgentStream() {
   }
 
   async function start(options: StartAgentStreamOptions): Promise<void> {
-    const { conversationId, text, fileIds, message, onPersist } = options
+    const { conversationId, text, fileIds, message, onPersist, onRunState, resume } = options
     let streamUrl = `/agent/chat/stream?message=${encodeURIComponent(text)}&conversationId=${conversationId}&renderProtocol=render-document.v1&fileScope=explicit`
     if (fileIds.length > 0) streamUrl += `&fileIds=${fileIds.join(',')}`
+    if (resume) {
+      streamUrl = `/agent/chat/resume?runId=${encodeURIComponent(resume.runId)}&resumeToken=${encodeURIComponent(resume.resumeToken)}&lastEventId=${encodeURIComponent(resume.lastEventId)}`
+    }
 
     let finalAnalysis = ''
     let pendingContent = ''
@@ -97,18 +111,52 @@ export function useAgentStream() {
     const pendingArtifactBlocks: RenderDocument['blocks'] = []
     const queuedArtifactIds = new Set((message.liveBlocks ?? []).map((block) => block.id))
     let resolveArtifactDrain: (() => void) | null = null
-    let resumeToken: string | undefined
+    let resumeToken: string | undefined = resume?.resumeToken
     let retryCount = 0
     let retryTimer: ReturnType<typeof setTimeout> | null = null
     let resolveRetryWait: ((shouldRetry: boolean) => void) | null = null
     let currentAbort: (() => void) | null = null
     let cancelled = false
+    let cancelReason: 'user' | 'suspended' | null = null
+    let retainRunState = false
+    let runStateTimer: ReturnType<typeof setTimeout> | null = null
 
     // v1 协议状态
-    let currentRunId: string | null = null
-    let lastEventId: string | null = null
+    let currentRunId: string | null = resume?.runId ?? null
+    let lastEventId: string | null = resume?.lastEventId ?? null
     const seenEventIds = new Set<string>()
     let lastDocumentRevision = message.renderDocument?.revision ?? 0
+
+    function publishRunState(immediate = false): void {
+      if (!currentRunId || !resumeToken || !lastEventId) return
+      const publish = () => {
+        runStateTimer = null
+        onRunState({
+          conversationId,
+          messageId: message.id,
+          runId: currentRunId as string,
+          resumeToken: resumeToken as string,
+          lastEventId: lastEventId as string,
+        })
+      }
+      if (immediate) {
+        if (runStateTimer) clearTimeout(runStateTimer)
+        publish()
+      } else if (!runStateTimer) {
+        runStateTimer = setTimeout(publish, 100)
+      }
+    }
+
+    function applyEventCursor(eventId: string | null): boolean {
+      if (!eventId) return true
+      const eventKey = `${currentRunId ?? 'pending'}:${eventId}`
+      if (seenEventIds.has(eventKey)) return false
+      seenEventIds.add(eventKey)
+      lastEventId = eventId
+      message.lastEventId = eventId
+      publishRunState()
+      return true
+    }
 
     function flushBuffer(): void {
       rafToken = null
@@ -205,8 +253,9 @@ export function useAgentStream() {
       })
     }
 
-    function cancelActiveStream(): void {
+    function cancelActiveStream(reason: 'user' | 'suspended'): void {
       cancelled = true
+      cancelReason = reason
       currentAbort?.()
       currentAbort = null
       if (retryTimer) {
@@ -221,11 +270,13 @@ export function useAgentStream() {
       return apiPostStream(
         url,
         {},
-        (token) => {
+        (token, eventId) => {
+          if (!applyEventCursor(eventId)) return
           pendingContent += token
           if (!rafToken) rafToken = requestAnimationFrame(flushBuffer)
         },
-        (data: StructuredEvent) => {
+        (data: StructuredEvent, eventId) => {
+          if (!applyEventCursor(eventId)) return
           const chartOptions = parseChartOptions(data.chartOption)
           if (chartOptions) {
             message.chartOption = chartOptions
@@ -234,9 +285,11 @@ export function useAgentStream() {
           if (typeof data.tokenUsage === 'number') message.tokenUsage = data.tokenUsage
           if (data.resumeToken) resumeToken = data.resumeToken
         },
-        (status) => {
+        (status, eventId) => {
+          if (!applyEventCursor(eventId)) return
           if (status.startsWith('resumeToken:')) {
             resumeToken = status.slice('resumeToken:'.length).trim()
+            publishRunState(true)
             return
           }
           if (status === '正在生成图表…') {
@@ -245,13 +298,15 @@ export function useAgentStream() {
           }
           if (message.content === '' || STATUS_TEXTS.has(message.content)) message.content = status
         },
-        (chartJson) => {
+        (chartJson, eventId) => {
+          if (!applyEventCursor(eventId)) return
           const chartOptions = parseChartOptions(chartJson)
           if (chartOptions) {
             message.chartOption = chartOptions
           }
         },
-        (tableData: TableEventData) => {
+        (tableData: TableEventData, eventId) => {
+          if (!applyEventCursor(eventId)) return
           message.tables = [...(message.tables || []), tableData]
         },
         (meta: MetaEvent, eventId: string | null) => {
@@ -260,25 +315,21 @@ export function useAgentStream() {
           resumeToken = meta.resumeToken
           message.runId = meta.runId
           message.lastEventId = eventId
+          if (eventId) seenEventIds.add(`${meta.runId}:${eventId}`)
+          publishRunState(true)
         },
         (doc: RenderDocument, eventId: string | null) => {
-          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
-          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          if (!applyEventCursor(eventId)) return
           if (currentRunId && doc.runId !== currentRunId) return
           const revision = doc.revision ?? lastDocumentRevision + 1
           if (revision <= lastDocumentRevision) return
           lastDocumentRevision = revision
           message.renderDocument = doc
           message.renderVersion = 1
-          message.lastEventId = eventId
-          if (eventId) lastEventId = eventId
         },
         (progress: ProgressEvent, eventId: string | null) => {
-          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
-          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          if (!applyEventCursor(eventId)) return
           message.progress = progress
-          message.lastEventId = eventId
-          if (eventId) lastEventId = eventId
           if (progress.stage === 'chart') {
             message.chartGenerating = progress.state === 'running'
           }
@@ -287,33 +338,24 @@ export function useAgentStream() {
           }
         },
         (activity: RunActivity, eventId: string | null) => {
-          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
-          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
-          message.lastEventId = eventId
-          if (eventId) lastEventId = eventId
+          if (!applyEventCursor(eventId)) return
           queueActivity(activity)
         },
         (artifact: ArtifactEvent, eventId: string | null) => {
           if (currentRunId && artifact.runId !== currentRunId) return
-          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
-          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          if (!applyEventCursor(eventId)) return
           if (artifact.chartExpected === true) message.chartExpected = true
           queueArtifactBlocks(artifact.blocks)
-          message.lastEventId = eventId
-          if (eventId) lastEventId = eventId
         },
         (result: ChartResultEvent, eventId: string | null) => {
           if (currentRunId && result.runId !== currentRunId) return
-          if (currentRunId && eventId && seenEventIds.has(`${currentRunId}:${eventId}`)) return
-          if (currentRunId && eventId) seenEventIds.add(`${currentRunId}:${eventId}`)
+          if (!applyEventCursor(eventId)) return
           message.chartExpected = result.plannedChartCount > 0
           message.chartResultState = result.state
           message.chartGenerating = false
           message.chartPreviewAvailable = result.state === 'ready'
           const chartOptions = parseChartOptions(result.chartOption)
           if (chartOptions) message.chartOption = chartOptions
-          message.lastEventId = eventId
-          if (eventId) lastEventId = eventId
         },
       )
     }
@@ -345,8 +387,10 @@ export function useAgentStream() {
     chatting.value = true
     cancelCurrent = cancelActiveStream
     flushCurrent = flushAll
+    persistRunStateCurrent = () => publishRunState(true)
     try {
       await streamWithReconnect()
+      if (cancelReason === 'suspended') return
       flushAll()
       await waitForArtifactDrain()
       if (message.status === 'streaming') {
@@ -363,6 +407,28 @@ export function useAgentStream() {
         onPersist()
       }
     } catch (error) {
+      if (cancelReason === 'suspended') return
+      if (resume) {
+        const runStatus = await loadRunStatus(resume)
+        if (runStatus?.state === 'COMPLETED') {
+          flushAll()
+          message.status = 'done'
+          message.timestamp = Date.now()
+          message.reconnecting = false
+          onPersist()
+          return
+        }
+        if (runStatus?.state === 'RUNNING') {
+          flushAll()
+          message.status = 'done'
+          message.timestamp = Date.now()
+          message.incomplete = true
+          message.reconnecting = false
+          message.backgroundRunning = true
+          retainRunState = true
+          return
+        }
+      }
       const errorText = error instanceof Error ? error.message : '分析请求失败'
       message.content = message.content || `❌ ${errorText}`
       message.status = 'error'
@@ -372,12 +438,25 @@ export function useAgentStream() {
       message.reconnecting = false
       onPersist()
     } finally {
-      cancelActiveStream()
+      if (runStateTimer) clearTimeout(runStateTimer)
+      if (cancelReason !== 'suspended' && !retainRunState) onRunState(null)
+      if (!cancelled) cancelActiveStream('user')
       chatting.value = false
       cancelCurrent = null
       flushCurrent = null
+      persistRunStateCurrent = null
     }
   }
 
-  return { chatting, flushPending, start, stop }
+  return { chatting, flushPending, start, stop, suspend }
+}
+
+async function loadRunStatus(run: ActiveAgentRun): Promise<AgentRunStatus | null> {
+  try {
+    return await apiGetChecked<AgentRunStatus>(
+      `/agent/chat/runs/${encodeURIComponent(run.runId)}?resumeToken=${encodeURIComponent(run.resumeToken)}`,
+    )
+  } catch {
+    return null
+  }
 }

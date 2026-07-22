@@ -276,11 +276,11 @@ export async function apiDeleteChecked<T = unknown>(url: string): Promise<T> {
 export function apiPostStream(
   url: string,
   body: Record<string, unknown>,
-  onToken: (token: string) => void,
-  onStructured?: (data: StructuredEvent) => void,
-  onStatus?: (text: string) => void,
-  onChart?: (chartJson: string) => void,
-  onTable?: (tableData: TableEventData) => void,
+  onToken: (token: string, eventId: string | null) => void,
+  onStructured?: (data: StructuredEvent, eventId: string | null) => void,
+  onStatus?: (text: string, eventId: string | null) => void,
+  onChart?: (chartJson: string, eventId: string | null) => void,
+  onTable?: (tableData: TableEventData, eventId: string | null) => void,
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
@@ -411,11 +411,11 @@ export function apiPostStream(
  */
 function processBuffer(
   buffer: string,
-  onToken: (token: string) => void,
-  onStructured?: (data: StructuredEvent) => void,
-  onStatus?: (text: string) => void,
-  onChart?: (chartJson: string) => void,
-  onTable?: (tableData: TableEventData) => void,
+  onToken: (token: string, eventId: string | null) => void,
+  onStructured?: (data: StructuredEvent, eventId: string | null) => void,
+  onStatus?: (text: string, eventId: string | null) => void,
+  onChart?: (chartJson: string, eventId: string | null) => void,
+  onTable?: (tableData: TableEventData, eventId: string | null) => void,
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
@@ -446,11 +446,11 @@ function processBuffer(
  */
 function processSSEEvent(
   rawEvent: string,
-  onToken: (token: string) => void,
-  onStructured?: (data: StructuredEvent) => void,
-  onStatus?: (text: string) => void,
-  onChart?: (chartJson: string) => void,
-  onTable?: (tableData: TableEventData) => void,
+  onToken: (token: string, eventId: string | null) => void,
+  onStructured?: (data: StructuredEvent, eventId: string | null) => void,
+  onStatus?: (text: string, eventId: string | null) => void,
+  onChart?: (chartJson: string, eventId: string | null) => void,
+  onTable?: (tableData: TableEventData, eventId: string | null) => void,
   onMeta?: (meta: MetaEvent, eventId: string | null) => void,
   onDocument?: (doc: RenderDocument, eventId: string | null) => void,
   onProgress?: (progress: ProgressEvent, eventId: string | null) => void,
@@ -551,12 +551,12 @@ function processSSEEvent(
   }
 
   if (eventType === 'preview') {
-    onToken(text)
+    onToken(text, eventId)
     return
   }
 
   if (eventType === 'status') {
-    if (onStatus) onStatus(text)
+    if (onStatus) onStatus(text, eventId)
     return
   }
 
@@ -567,7 +567,7 @@ function processSSEEvent(
 
   // event:chart — 图表配置事件（来自 Synthesizer 阶段）
   if (eventType === 'chart') {
-    if (onChart) onChart(text)
+    if (onChart) onChart(text, eventId)
     return
   }
 
@@ -576,7 +576,7 @@ function processSSEEvent(
     if (onTable) {
       try {
         const tableData = JSON.parse(text) as TableEventData
-        onTable(tableData)
+        onTable(tableData, eventId)
       } catch {
         /* 解析失败静默忽略 */
       }
@@ -591,7 +591,7 @@ function processSSEEvent(
       if (parsed.type === 'error') {
         throw new Error(parsed.message || '服务处理出错')
       } else if (onStructured) {
-        onStructured(parsed)
+        onStructured(parsed, eventId)
       }
     } catch (error) {
       throw error instanceof Error ? error : new Error('无效的完成事件')
@@ -605,6 +605,6 @@ function processSSEEvent(
 
   // event:message / 无 event 字段 → 文本 token
   if ((eventType === 'message' || eventType === '') && text) {
-    onToken(text)
+    onToken(text, eventId)
   }
 }

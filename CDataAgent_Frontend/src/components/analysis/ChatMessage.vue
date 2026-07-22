@@ -385,6 +385,9 @@ function formatTokens(n: number): string {
           :activities="analysisActivities"
           :streaming="message.status === 'streaming'"
         />
+        <div v-if="message.backgroundRunning" class="msg-background-running">
+          实时恢复窗口已结束，任务仍在后台执行；完成后刷新即可查看结果。
+        </div>
         <!-- 结论区（独立于推理过程，仅完成态显示） -->
         <div v-if="message.status === 'done' && conclusion" class="msg-conclusion">
           <div class="msg-conclusion__header">
@@ -612,6 +615,12 @@ function formatTokens(n: number): string {
 }
 .msg-bubble--streaming > .msg-tables {
   width: 100%;
+}
+
+.msg-background-running {
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .render-document {
