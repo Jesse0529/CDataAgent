@@ -90,9 +90,7 @@ public class DuckDbQueryService {
                 finalSql += " LIMIT " + maxRows;
             }
 
-            log.debug("DuckDB 查询: {} 个视图, SQL={}",
-                    files.size(),
-                    finalSql.length() > 200 ? finalSql.substring(0, 200) + "..." : finalSql);
+            log.debug("DuckDB查询开始：视图数={}", files.size());
 
             try (ResultSet rs = stmt.executeQuery(finalSql)) {
                 ResultSetMetaData meta = rs.getMetaData();
@@ -120,49 +118,44 @@ public class DuckDbQueryService {
                 return new QueryExecution(result.toJSONString(), rowCount, truncated);
             }
         } catch (java.sql.SQLTimeoutException e) {
-            log.warn("DuckDB 查询超时: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=timeout");
             return QueryExecution.error(ToolResultUtils.jsonTypedError("timeout", "查询超时（超过" + duckDbConfig.getQueryTimeoutSeconds() + "秒），" +
                     "建议：① 减少数据量 ② 添加 WHERE 筛选 ③ 分步查询"));
         } catch (java.sql.SQLSyntaxErrorException e) {
-            log.warn("DuckDB 查询语法错误: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=syntax");
             String msg = e.getMessage();
             String hint = buildSyntaxHint(msg);
-            return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                    (msg != null ? ": " + msg : "") + "。" + hint));
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误。" + hint));
         } catch (java.sql.SQLException e) {
-            log.error("DuckDB 查询异常: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=sql");
             String msg = e.getMessage();
             if (msg == null) msg = "";
-            if (msg.contains("Parser Error") || msg.contains("syntax error")
-                    || msg.contains("Binder Error")) {
-                String hint = buildSyntaxHint(msg);
-                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。" + hint));
-            }
             // 函数不存在（Catalog Error: Scalar Function ... does not exist!）
             if (msg.contains("Catalog Error") && msg.contains("Scalar Function")) {
                 String hint = buildSyntaxHint(msg);
-                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。" + hint));
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误。" + hint));
             }
             if (msg.contains("not found") || msg.contains("does not exist")
                     || msg.contains("Table") || msg.contains("Column")) {
                 String hint = buildColumnHint(msg);
-                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
-                        ": " + msg + "。" + hint));
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在。" + hint));
             }
-            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
-                    (msg != null ? ": " + msg : "") + "，请重试"));
+            if (msg.contains("Parser Error") || msg.contains("syntax error")
+                    || msg.contains("Binder Error")) {
+                String hint = buildSyntaxHint(msg);
+                return QueryExecution.error(ToolResultUtils.jsonTypedError("syntax", "查询语法错误。" + hint));
+            }
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常，请稍后重试"));
         } catch (Exception e) {
-            log.error("DuckDB 连接/系统异常: {}", sql, e);
-            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常: " + e.getMessage() + "，请重试"));
+            log.warn("DuckDB查询失败：类型=system、异常={}", e.getClass().getSimpleName());
+            return QueryExecution.error(ToolResultUtils.jsonTypedError("system", "数据引擎异常，请稍后重试"));
         }
     }
 
     /** Agent 查询结果，截断状态仅在 Agent 专用入口中提供。 */
     public record AgentQueryResult(String dataJson, int rowCount, boolean truncated, int rowLimit) {
         public boolean hasError() {
-            return dataJson != null && dataJson.contains("\"error\"");
+            return ToolResultUtils.isError(dataJson);
         }
     }
 
@@ -207,9 +200,7 @@ public class DuckDbQueryService {
                 finalSql += " LIMIT " + maxRows;
             }
 
-            log.debug("DuckDB 查询: {} 个视图, SQL={}",
-                    files.size(),
-                    finalSql.length() > 200 ? finalSql.substring(0, 200) + "..." : finalSql);
+            log.debug("DuckDB查询开始：视图数={}", files.size());
 
             try (ResultSet rs = stmt.executeQuery(finalSql)) {
                 ResultSetMetaData meta = rs.getMetaData();
@@ -232,34 +223,36 @@ public class DuckDbQueryService {
                 return result.toJSONString();
             }
         } catch (java.sql.SQLTimeoutException e) {
-            log.warn("DuckDB 查询超时: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=timeout");
             return ToolResultUtils.jsonTypedError("timeout", "查询超时（超过" + duckDbConfig.getQueryTimeoutSeconds() + "秒），" +
                     "建议：① 减少数据量 ② 添加 WHERE 筛选 ③ 分步查询");
         } catch (java.sql.SQLSyntaxErrorException e) {
-            log.warn("DuckDB 查询语法错误: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=syntax");
             String msg = e.getMessage();
-            return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                    (msg != null ? ": " + msg : "") +
-                    "。请用 getSchema 确认列名后重试");
+            return ToolResultUtils.jsonTypedError("syntax",
+                    "查询语法错误。" + buildSyntaxHint(msg));
         } catch (java.sql.SQLException e) {
-            log.error("DuckDB 查询异常: {}", sql, e);
+            log.warn("DuckDB查询失败：类型=sql");
             String msg = e.getMessage();
             if (msg == null) msg = "";
-            if (msg.contains("Parser Error") || msg.contains("syntax error")
-                    || msg.contains("Binder Error")) {
-                return ToolResultUtils.jsonTypedError("syntax", "查询语法错误" +
-                        ": " + msg + "。请用 getSchema 确认后重试");
+            if (msg.contains("Catalog Error") && msg.contains("Scalar Function")) {
+                return ToolResultUtils.jsonTypedError("syntax",
+                        "查询语法错误。" + buildSyntaxHint(msg));
             }
             if (msg.contains("not found") || msg.contains("does not exist")
                     || msg.contains("Table") || msg.contains("Column")) {
-                return ToolResultUtils.jsonTypedError("syntax", "列名或表名不存在" +
-                        ": " + msg + "。请用 getSchema 确认后重试");
+                return ToolResultUtils.jsonTypedError("syntax",
+                        "列名或表名不存在。" + buildColumnHint(msg));
             }
-            return ToolResultUtils.jsonTypedError("system", "数据引擎异常" +
-                    (msg != null ? ": " + msg : "") + "，请重试");
+            if (msg.contains("Parser Error") || msg.contains("syntax error")
+                    || msg.contains("Binder Error")) {
+                return ToolResultUtils.jsonTypedError("syntax",
+                        "查询语法错误。" + buildSyntaxHint(msg));
+            }
+            return ToolResultUtils.jsonTypedError("system", "数据引擎异常，请稍后重试");
         } catch (Exception e) {
-            log.error("DuckDB 连接/系统异常: {}", sql, e);
-            return ToolResultUtils.jsonTypedError("system", "数据引擎异常: " + e.getMessage() + "，请重试");
+            log.warn("DuckDB查询失败：类型=system、异常={}", e.getClass().getSimpleName());
+            return ToolResultUtils.jsonTypedError("system", "数据引擎异常，请稍后重试");
         }
     }
 
@@ -322,7 +315,7 @@ public class DuckDbQueryService {
             return vo;
 
         } catch (Exception e) {
-            log.error("数据预览查询失败: parquetPath={}, viewName={}", parquetPath, viewName, e);
+            log.warn("数据预览查询失败：异常={}", e.getClass().getSimpleName());
             throw new RuntimeException("数据预览查询失败: " + e.getMessage(), e);
         }
     }
@@ -399,7 +392,7 @@ public class DuckDbQueryService {
         // Step 3: 检查危险函数/模式
         for (Pattern p : DANGEROUS_PATTERNS) {
             if (p.matcher(sql).find()) {
-                log.warn("SQL 注入检测拦截: 匹配到危险模式 {} 在 SQL: {}", p, truncateSql(sql));
+                log.warn("SQL安全校验已拦截危险模式");
                 return "SQL 中包含不被允许的操作";
             }
         }
@@ -527,16 +520,7 @@ public class DuckDbQueryService {
         return false;
     }
 
-    /**
-     * 数值类型强制转换：整数保持 long，浮点保持 double。
-     */
-    /**
-     * 截断长 SQL（日志输出用）。
-     */
-    private static String truncateSql(String sql) {
-        return sql != null && sql.length() > 200 ? sql.substring(0, 200) + "..." : sql;
-    }
-
+    /** 数值类型强制转换：整数保持 long，浮点保持 double。 */
     private static Object coerceNumber(String value) {
         try {
             double d = Double.parseDouble(value);

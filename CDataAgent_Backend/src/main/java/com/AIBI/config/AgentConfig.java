@@ -4,7 +4,6 @@ import com.AIBI.AgentTool.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolerror.ToolErrorInterceptor;
-import com.alibaba.cloud.ai.graph.agent.interceptor.toolretry.ToolRetryInterceptor;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.redis.RedisSaver;
 import com.alibaba.cloud.ai.graph.serializer.std.SpringAIStateSerializer;
@@ -50,30 +49,6 @@ public class AgentConfig {
     private boolean sandboxEnabled;
 
     // ─── 拦截器 ────────────────────────────────────────────────
-
-    private ToolRetryInterceptor duckdbRetry() {
-        return ToolRetryInterceptor.builder()
-                .maxRetries(1)
-                .initialDelay(500)
-                .backoffFactor(2.0)
-                .jitter(true)
-                .retryOn(java.sql.SQLException.class)
-                .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE)
-                .errorFormatter(ex -> "DuckDB 查询失败（" + ex.getMessage() + "），请用 getSchema 确认列名后重试")
-                .build();
-    }
-
-    private ToolRetryInterceptor sandboxRetry() {
-        return ToolRetryInterceptor.builder()
-                .maxRetries(1)
-                .initialDelay(1000)
-                .backoffFactor(2.0)
-                .jitter(true)
-                .retryOn(Exception.class)
-                .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE)
-                .errorFormatter(ex -> "Python 执行失败（" + ex.getMessage() + "），建议改用 DuckDB SQL 或简化分析逻辑")
-                .build();
-    }
 
     private ToolErrorInterceptor toolErrorHandler() {
         return ToolErrorInterceptor.builder().build();
@@ -129,11 +104,11 @@ public class AgentConfig {
                 .hooks(summarizationHook)
                 .toolExecutionTimeout(Duration.ofSeconds(executorTimeout));
         if (sandboxEnabled) {
-            builder.interceptors(duckdbRetry(), sandboxRetry(), toolErrorHandler());
+            builder.interceptors(toolErrorHandler());
             builder.methodTools(dataLoadingTool, duckDbQueryTool, pythonRunnerTool,
                     preferenceTool, presentationSubmissionTool);
         } else {
-            builder.interceptors(duckdbRetry(), toolErrorHandler());
+            builder.interceptors(toolErrorHandler());
             builder.methodTools(dataLoadingTool, duckDbQueryTool, preferenceTool, presentationSubmissionTool);
         }
         ReactAgent agent = builder.build();

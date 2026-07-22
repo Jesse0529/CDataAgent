@@ -3,7 +3,6 @@ package com.AIBI.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.util.Map;
@@ -13,6 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * SSE 优雅断开管理器。
@@ -26,6 +26,7 @@ public class DisconnectGraceManager {
 
     /** 优雅窗格时长（秒） */
     private static final int GRACE_SECONDS = 30;
+    private static final int TERMINAL_STATE_SECONDS = 300;
 
     /** 对话 → Sinks.Many（热点事件源） */
     private final ConcurrentHashMap<String, Sinks.Many<Map<String, String>>> sinks = new ConcurrentHashMap<>();
@@ -35,6 +36,20 @@ public class DisconnectGraceManager {
 
     /** 对话 → 是否已被取消 */
     private final ConcurrentHashMap<String, AtomicBoolean> cancelled = new ConcurrentHashMap<>();
+
+    /** 对话 → 已连接的 SSE 客户端数 */
+    private final ConcurrentHashMap<String, AtomicLong> clientCounts = new ConcurrentHashMap<>();
+
+    /** 运行状态仅由 Agent 执行流的终态更新，不能由 SSE 断连更新。 */
+    private final ConcurrentHashMap<String, RunState> runStates = new ConcurrentHashMap<>();
+
+    /** 已超过实时续播窗口，但 Agent 仍在后台安全执行。 */
+    private final ConcurrentHashMap<String, Boolean> resumeExpired = new ConcurrentHashMap<>();
+
+    /** 运行恢复凭据在终态后短暂保留，供前端判定结果。 */
+    private final ConcurrentHashMap<String, String> resumeTokens = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> terminalCleanups = new ConcurrentHashMap<>();
 
     /** 对话 → SseEventBuffer */
     private final ConcurrentHashMap<String, SseEventBuffer> buffers = new ConcurrentHashMap<>();
@@ -55,8 +70,13 @@ public class DisconnectGraceManager {
      * @param sink   热点 Sinks.Many
      * @param buffer SseEventBuffer 实例
      */
-    public Sinks.Many<Map<String, String>> register(String cid, Sinks.Many<Map<String, String>> sink, SseEventBuffer buffer) {
+    public Sinks.Many<Map<String, String>> register(String cid, Sinks.Many<Map<String, String>> sink,
+                                                      SseEventBuffer buffer, String resumeToken) {
         cancelled.put(cid, new AtomicBoolean(false));
+        clientCounts.put(cid, new AtomicLong(0));
+        runStates.put(cid, RunState.RUNNING);
+        resumeExpired.remove(cid);
+        resumeTokens.put(cid, resumeToken);
         sinks.put(cid, sink);
         buffers.put(cid, buffer);
         log.debug("SSE流已注册");
@@ -70,60 +90,71 @@ public class DisconnectGraceManager {
         return sinks.get(cid);
     }
 
-    /**
-     * 客户端断连时调用：启动 30s 优雅窗格。
-     * 到期后取消 Sinks，触发下游清理。
-     */
-    public void onDisconnect(String cid) {
+    /** 客户端建立订阅。返回 false 表示运行已经结束或被取消。 */
+    public boolean attachClient(String cid) {
         AtomicBoolean flag = cancelled.get(cid);
-        if (flag != null && flag.get()) return; // 已取消
+        AtomicLong clients = clientCounts.get(cid);
+        if (flag == null || clients == null || flag.get()
+                || runStates.get(cid) != RunState.RUNNING
+                || Boolean.TRUE.equals(resumeExpired.get(cid))) return false;
 
-        ScheduledFuture<?> existing = timers.get(cid);
-        if (existing != null && !existing.isDone()) return; // 已有活跃定时器
-
-        ScheduledFuture<?> timer = scheduler.schedule(() -> {
-            log.warn("优雅窗格到期，强制终止流");
-            forceCancel(cid);
-        }, GRACE_SECONDS, TimeUnit.SECONDS);
-
-        timers.put(cid, timer);
-        log.info("SSE断连，启动{}s优雅窗格", GRACE_SECONDS);
-    }
-
-    /**
-     * 客户端重连时调用：取消 30s 定时器，返回 Sinks.Many 的热点 Flux。
-     *
-     * @return 热点 Flux（可 skip），若已超期返回 null
-     */
-    public Flux<Map<String, String>> onReconnect(String cid) {
-        AtomicBoolean flag = cancelled.get(cid);
-        if (flag != null && flag.get()) {
-            log.warn("重连失败，流已取消");
-            return null;
-        }
-        if (flag == null) {
-            log.warn("重连失败，无活跃流");
-            return null;
-        }
-
-        // 取消定时器
+        clients.incrementAndGet();
         ScheduledFuture<?> timer = timers.remove(cid);
         if (timer != null && !timer.isDone()) {
             timer.cancel(false);
         }
+        return true;
+    }
 
-        Sinks.Many<Map<String, String>> sink = sinks.get(cid);
-        if (sink == null) return null;
+    /**
+     * 客户端断连时调用。仅最后一个订阅者离开时启动 30 秒恢复窗口。
+     */
+    public void detachClient(String cid) {
+        AtomicBoolean flag = cancelled.get(cid);
+        AtomicLong clients = clientCounts.get(cid);
+        if (flag == null || clients == null || flag.get()) return;
 
-        log.info("SSE重连成功，接回活跃流");
-        return sink.asFlux();
+        long remaining = clients.updateAndGet(value -> Math.max(0, value - 1));
+        if (remaining > 0) return;
+
+        ScheduledFuture<?> existing = timers.get(cid);
+        if (existing != null && !existing.isDone()) return; // 已有活跃定时器
+
+        ScheduledFuture<?> timer = scheduler.schedule(() -> expireResumeWindow(cid), GRACE_SECONDS, TimeUnit.SECONDS);
+
+        timers.put(cid, timer);
+        log.info("SSE断连，启动{}s实时恢复窗口", GRACE_SECONDS);
     }
 
     /**
      * 注册冷 Flux 的 Disposable，供 forceCancel 时取消以释放锁。
      */
     public void setColdSubscription(String cid, Disposable disposable) {
-        coldSubscriptions.put(cid, disposable);
+        if (sinks.containsKey(cid)) {
+            coldSubscriptions.put(cid, disposable);
+        } else {
+            disposable.dispose();
+        }
+    }
+
+    /** Agent 执行真正结束后调用；与浏览器断连无关。 */
+    public void completeRun(String cid, RunState state) {
+        if (state == RunState.RUNNING) {
+            throw new IllegalArgumentException("终态不能为 RUNNING");
+        }
+        runStates.put(cid, state);
+        ScheduledFuture<?> timer = timers.remove(cid);
+        if (timer != null && !timer.isDone()) {
+            timer.cancel(false);
+        }
+        coldSubscriptions.remove(cid);
+        sinks.remove(cid);
+        buffers.remove(cid);
+        clientCounts.remove(cid);
+        cancelled.remove(cid);
+        resumeExpired.remove(cid);
+        scheduleTerminalCleanup(cid);
+        log.debug("Agent运行结束: state={}", state);
     }
 
     /**
@@ -139,7 +170,7 @@ public class DisconnectGraceManager {
             coldSub.dispose();
         }
 
-        Sinks.Many<Map<String, String>> sink = sinks.remove(cid);
+        Sinks.Many<Map<String, String>> sink = sinks.get(cid);
         if (sink != null) {
             sink.tryEmitComplete();
         }
@@ -149,13 +180,51 @@ public class DisconnectGraceManager {
             timer.cancel(false);
         }
 
-        SseEventBuffer buf = buffers.remove(cid);
+        SseEventBuffer buf = buffers.get(cid);
         if (buf != null) {
             buf.markStreamEnd();
         }
+        completeRun(cid, RunState.CANCELLED);
 
         log.info("SSE流已强制取消");
     }
+
+    public boolean validateResumeToken(String cid, String token) {
+        String expected = resumeTokens.get(cid);
+        return expected != null && expected.equals(token);
+    }
+
+    public RunSnapshot snapshot(String cid) {
+        RunState state = runStates.get(cid);
+        if (state == null) return null;
+        return new RunSnapshot(state, state == RunState.RUNNING
+                && !Boolean.TRUE.equals(resumeExpired.get(cid)) && sinks.containsKey(cid));
+    }
+
+    private void expireResumeWindow(String cid) {
+        AtomicLong clients = clientCounts.get(cid);
+        if (clients == null || clients.get() > 0 || runStates.get(cid) != RunState.RUNNING) return;
+        resumeExpired.put(cid, true);
+        log.info("SSE实时恢复窗口结束，Agent继续后台执行");
+    }
+
+    private void scheduleTerminalCleanup(String cid) {
+        ScheduledFuture<?> old = terminalCleanups.remove(cid);
+        if (old != null && !old.isDone()) old.cancel(false);
+        ScheduledFuture<?> cleanup = scheduler.schedule(() -> {
+            runStates.remove(cid);
+            resumeTokens.remove(cid);
+            resumeExpired.remove(cid);
+            terminalCleanups.remove(cid);
+        }, TERMINAL_STATE_SECONDS, TimeUnit.SECONDS);
+        terminalCleanups.put(cid, cleanup);
+    }
+
+    public enum RunState {
+        RUNNING, COMPLETED, FAILED, CANCELLED
+    }
+
+    public record RunSnapshot(RunState state, boolean resumable) {}
 
     /**
      * 检查对话的流是否已被取消。

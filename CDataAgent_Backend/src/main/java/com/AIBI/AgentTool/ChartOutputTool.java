@@ -52,6 +52,11 @@ public class ChartOutputTool {
     public String describeData(
             @ToolParam(description = "runDuckdb 或 runPython 返回的 outputKey") String dataRef) {
         try {
+            RunContext context = RunContextHolder.require();
+            if (!context.allowsChartDataRef(dataRef)) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "数据引用不在当前图表计划中: " + dataRef);
+            }
             String truncatedError = truncatedResultError(dataRef);
             if (truncatedError != null) return truncatedError;
             JSONArray dataArray = getDataArray(dataRef);
@@ -63,12 +68,10 @@ public class ChartOutputTool {
 
             List<String> fields = availableFields(dataArray);
             JSONArray fieldDetails = new JSONArray();
-            JSONObject firstRow = dataArray.getJSONObject(0);
             for (String field : fields) {
                 JSONObject detail = new JSONObject();
-                Object value = firstRow.get(field);
                 detail.put("name", field);
-                detail.put("type", value == null ? "null" : value.getClass().getSimpleName());
+                detail.put("type", inferFieldType(dataArray, field));
                 fieldDetails.add(detail);
             }
 
@@ -81,10 +84,11 @@ public class ChartOutputTool {
             result.put("rowCount", dataArray.size());
             result.put("fields", fieldDetails);
             result.put("samples", samples);
+            context.markChartDataDescribed(dataRef);
             return result.toJSONString();
         } catch (Exception e) {
-            log.warn("读取图表数据 schema 失败: dataRef={}", dataRef, e);
-            return ToolResultUtils.jsonTypedError("system", "读取数据 schema 失败: " + e.getMessage());
+            log.warn("读取图表数据结构失败：异常={}", e.getClass().getSimpleName());
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "读取图表数据结构失败，请稍后重试");
         }
     }
 
@@ -96,16 +100,25 @@ public class ChartOutputTool {
             @ToolParam(description = "图表类型") String chartType,
             @ToolParam(description = "业务标题") String title,
             @ToolParam(description = "真实维度字段") String dimensionField,
-            @ToolParam(description = "JSON：展示名到真实指标字段的映射") String metricMapping,
+            @ToolParam(description = "展示名到真实指标字段的映射") Map<String, String> metricMapping,
             @ToolParam(description = "查询结果 outputKey") String dataRef) {
         try {
             if (StringUtils.isBlank(chartType) || StringUtils.isBlank(title)
-                    || StringUtils.isBlank(dimensionField) || StringUtils.isBlank(metricMapping)) {
+                    || StringUtils.isBlank(dimensionField) || metricMapping == null || metricMapping.isEmpty()) {
                 return ToolResultUtils.jsonTypedError("syntax", "chartType, title, dimensionField, metricMapping 不能为空");
             }
 
+            RunContext context = RunContextHolder.require();
+            if (!context.allowsChartDataRef(dataRef)) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "数据引用不在当前图表计划中: " + dataRef);
+            }
             String truncatedError = truncatedResultError(dataRef);
             if (truncatedError != null) return truncatedError;
+            if (!context.isChartDataDescribed(dataRef)) {
+                return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                        "构建图表前必须先调用 describeData 确认当前数据字段");
+            }
 
             // 从分析状态获取数据
             JSONArray dataArray = getDataArray(dataRef);
@@ -117,8 +130,8 @@ public class ChartOutputTool {
                 return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION, "数据为空");
             }
 
-            JSONObject mapping = JSON.parseObject(metricMapping);
-            if (mapping == null || mapping.isEmpty()) return ToolResultUtils.jsonTypedError("syntax", "metricMapping 格式无效");
+            JSONObject mapping = new JSONObject();
+            mapping.putAll(metricMapping);
 
             List<String> seriesNames = new ArrayList<>(mapping.keySet());
             List<String> dataColumns = new ArrayList<>();
@@ -191,51 +204,34 @@ public class ChartOutputTool {
                 default -> ToolResultUtils.jsonTypedError("syntax", "不支持的图表类型: " + chartType);
             };
 
-            // 系统错误自动重试一次
-            if (optionJson.contains("\"error\":\"system\"")) {
-                log.debug("图表重试：类型={}", chartType);
-                optionJson = switch (normalizeChartType(chartType)) {
-                    case "bar" -> buildBar(title, dimValues, seriesNames, metricData);
-                    case "line" -> buildLine(title, dimValues, seriesNames, metricData);
-                    case "area" -> buildArea(title, dimValues, seriesNames, metricData);
-                    case "pie" -> buildPie(title, dimValues, metricData);
-                    case "scatter" -> buildScatter(title, seriesNames, metricData);
-                    case "radar" -> buildRadar(title, dimValues, seriesNames, metricData);
-                    case "funnel" -> buildFunnel(title, dimValues, metricData);
-                    case "gauge" -> buildGauge(title, metricData);
-                    case "heatmap" -> buildHeatmap(title, dimValues, seriesNames, metricData);
-                    default -> ToolResultUtils.jsonTypedError("syntax", "不支持的图表类型: " + chartType);
-                };
-            }
-
             // 存入 RunContext（供持久化），返回摘要给 LLM（避免 LLM 在文本中复述 JSON）
-            if (!optionJson.contains("\"error\"")) {
-                RunContext ctx = RunContextHolder.require();
-                ctx.addChartOption(optionJson);
-                int chartIndex = ctx.getChartOptionCount();
-                log.info("chart.ready runId={} index={} type={} dataRef={}",
-                        ctx.getRunId(), chartIndex, chartType, dataRef);
+            if (!ToolResultUtils.isError(optionJson)) {
+                context.addChartOption(optionJson);
+                int chartIndex = context.getChartOptionCount();
+                log.info("图表就绪：序号={}、类型={}", chartIndex, chartType);
                 return "chart-ready:" + chartIndex;
             } else {
-                log.warn("图表生成失败：类型={}、数据引用={}", chartType, dataRef);
+                log.warn("图表生成失败：类型={}", chartType);
             }
             return optionJson;
 
         } catch (Exception e) {
-            log.error("图表构建异常：数据引用={}", dataRef, e);
-            analysisState.addStepResultFailed(dataRef + "_chart", "buildChart", e.getMessage());
-            return ToolResultUtils.jsonTypedError("system", "图表构建失败: " + e.getMessage());
+            log.warn("图表构建异常：异常={}", e.getClass().getSimpleName());
+            analysisState.addStepResultFailed(dataRef + "_chart", "buildChart", "图表构建失败");
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "图表构建失败，请稍后重试");
         }
     }
 
     /**
      * 校验 ECharts option JSON 结构完整性。
      */
-    @Tool(description = "校验 buildChart 返回的 chart-ready:N；构建后必须调用。")
+    @Tool(description = "校验 buildChart 返回的 chart-ready:N；构建后必须调用，不接受原始 option JSON。")
     public String validateChart(
-            @ToolParam(description = "chart-ready:N 或 ECharts option JSON") String optionJson) {
+            @ToolParam(description = "buildChart 返回的 chart-ready:N") String optionJson) {
         try {
-            if (optionJson == null || optionJson.isBlank()) return ToolResultUtils.jsonTypedError("syntax", "option JSON 为空");
+            if (optionJson == null || optionJson.isBlank()) {
+                return ToolResultUtils.jsonTypedError("syntax", "图表引用为空");
+            }
 
             String cleaned = resolveOptionJson(optionJson);
             if (cleaned == null) {
@@ -287,15 +283,12 @@ public class ChartOutputTool {
             cacheManager.put(cacheKey, result, 600);
             return result;
         } catch (Exception e) {
-            return ToolResultUtils.jsonTypedError("system", "校验异常: " + e.getMessage());
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "图表校验异常，请稍后重试");
         }
     }
 
     private String resolveOptionJson(String rawOption) {
-        String cleaned = rawOption.trim()
-                .replaceAll("(?s)^```[a-z]*\\n?", "")
-                .replaceAll("\\n```\\s*$", "").trim();
-        if (cleaned.startsWith("{")) return cleaned;
+        String cleaned = rawOption.trim();
         if (!cleaned.matches("chart-ready:[1-9]\\d*")) return null;
 
         int chartIndex = Integer.parseInt(cleaned.substring("chart-ready:".length()));
@@ -338,7 +331,7 @@ public class ChartOutputTool {
             DuckDbQueryService.AgentQueryResult result = duckDbQueryService.executeAgentQuery(
                     RunContextHolder.require().getConversationId().toString(), refs, output.sql, output.rowLimit);
             if (result == null || result.hasError()) {
-                log.warn("图表数据重算失败：引用={}", dataRef);
+                log.warn("图表数据重算失败");
                 return null;
             }
             return JSON.parseArray(result.dataJson());
@@ -348,6 +341,15 @@ public class ChartOutputTool {
                 context.recordQueryReplay((System.nanoTime() - startNanos) / 1_000_000);
             }
         }
+    }
+
+    private String inferFieldType(JSONArray dataArray, String field) {
+        for (int i = 0; i < dataArray.size(); i++) {
+            JSONObject row = dataArray.getJSONObject(i);
+            Object value = row == null ? null : row.get(field);
+            if (value != null) return value.getClass().getSimpleName();
+        }
+        return "unknown";
     }
 
     private String truncatedResultError(String dataRef) {

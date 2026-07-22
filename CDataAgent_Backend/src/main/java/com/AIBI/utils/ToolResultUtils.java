@@ -2,7 +2,8 @@ package com.AIBI.utils;
 
 import com.alibaba.fastjson2.JSONObject;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Agent 工具返回值工具类。
@@ -19,6 +20,9 @@ import java.util.List;
  *   <dt>precondition</dt><dd>缺少前置状态或引用，需先完成对应步骤</dd>
  *   <dt>timeout</dt><dd>执行超时，需简化查询</dd>
  *   <dt>system</dt><dd>引擎/系统异常，可重试</dd>
+ *   <dt>schema</dt><dd>表结构或字段不匹配</dd>
+ *   <dt>limit</dt><dd>结果或资源超过限制</dd>
+ *   <dt>output_key_conflict</dt><dd>输出键已被其他查询占用</dd>
  * </dl>
  */
 public final class ToolResultUtils {
@@ -29,6 +33,13 @@ public final class ToolResultUtils {
     public static final String ERROR_TIMEOUT = "timeout";
     public static final String ERROR_SYSTEM = "system";
     public static final String ERROR_PRECONDITION = "precondition";
+    public static final String ERROR_SCHEMA = "schema";
+    public static final String ERROR_LIMIT = "limit";
+    public static final String ERROR_OUTPUT_KEY_CONFLICT = "output_key_conflict";
+
+    private static final Set<String> ERROR_TYPES = Set.of(
+            ERROR_SYNTAX, ERROR_TIMEOUT, ERROR_SYSTEM, ERROR_PRECONDITION,
+            ERROR_SCHEMA, ERROR_LIMIT, ERROR_OUTPUT_KEY_CONFLICT);
 
     /**
      * 返回带类型的错误响应。
@@ -48,19 +59,26 @@ public final class ToolResultUtils {
         return jsonTypedError(ERROR_SYSTEM, message);
     }
 
-    /**
-     * 判断响应字符串是否包含 "error" 字段。
-     */
+    /** 只有 JSON 根对象中的合法错误类型才表示工具失败。 */
     public static boolean isError(String response) {
-        return response != null && response.contains("\"error\"");
+        return errorType(response).isPresent();
     }
 
-    /**
-     * 判断是否为可重试的瞬态错误（system / timeout）。
-     */
+    public static Optional<String> errorType(String response) {
+        if (response == null || response.isBlank() || !response.stripLeading().startsWith("{")) {
+            return Optional.empty();
+        }
+        try {
+            JSONObject object = JSONObject.parseObject(response);
+            String type = object == null ? null : object.getString("error");
+            return ERROR_TYPES.contains(type) ? Optional.of(type) : Optional.empty();
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
+    }
+
+    /** 只有 system 可使用相同参数进行一次技术重试。 */
     public static boolean isTransientError(String response) {
-        if (response == null) return false;
-        return response.contains("\"error\":\"system\"")
-                || response.contains("\"error\":\"timeout\"");
+        return errorType(response).filter(ERROR_SYSTEM::equals).isPresent();
     }
 }

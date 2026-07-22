@@ -69,9 +69,13 @@ public class AgentController {
         SseEventBuffer buffer = bufferManager.getOrCreate(runId);
         buffer.setRunId(runId);
         Sinks.Many<Map<String, String>> sink = Sinks.many().replay().limit(512);
-        graceManager.register(runId, sink, buffer);
+        graceManager.register(runId, sink, buffer, resumeToken);
 
+        if (!graceManager.attachClient(runId)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "运行已结束或已过期");
+        }
         reactor.core.Disposable clientSubscription = forward(sink.asFlux(), emitter, runId);
+        bindClientLifecycle(emitter, clientSubscription, runId);
         AtomicLong sequence = new AtomicLong();
         emit(sink, buffer, sequence, "meta", JSON.toJSONString(Map.of(
                 "runId", runId,
@@ -98,16 +102,14 @@ public class AgentController {
                         sink::tryEmitNext,
                         error -> {
                             sink.tryEmitNext(enrich(errorEvent(error), sequence, buffer));
+                            graceManager.completeRun(runId, DisconnectGraceManager.RunState.FAILED);
                             sink.tryEmitComplete();
                         },
-                        sink::tryEmitComplete);
+                        () -> {
+                            graceManager.completeRun(runId, DisconnectGraceManager.RunState.COMPLETED);
+                            sink.tryEmitComplete();
+                        });
         graceManager.setColdSubscription(runId, sourceSubscription);
-
-        emitter.onCompletion(clientSubscription::dispose);
-        emitter.onTimeout(() -> {
-            clientSubscription.dispose();
-            graceManager.onDisconnect(runId);
-        });
         return emitter;
     }
 
@@ -116,24 +118,38 @@ public class AgentController {
             @RequestParam("runId") String runId,
             @RequestParam("resumeToken") String resumeToken,
             @RequestParam(value = "lastEventId", defaultValue = "-1") long lastEventId) {
-        if (!bufferManager.validateResumeToken(runId, resumeToken)) {
+        if (!graceManager.validateResumeToken(runId, resumeToken)) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "resumeToken 无效或已过期");
         }
         Sinks.Many<Map<String, String>> sink = graceManager.getSink(runId);
         if (sink == null) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "该运行已结束或已过期");
         }
-        graceManager.onReconnect(runId);
+        if (!graceManager.attachClient(runId)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "该运行已结束或已过期");
+        }
 
         SseEmitter emitter = newEmitter();
         reactor.core.Disposable subscription = forward(
                 sink.asFlux().filter(event -> isAfter(event.get("seq"), lastEventId)), emitter, runId);
-        emitter.onCompletion(subscription::dispose);
-        emitter.onTimeout(() -> {
-            subscription.dispose();
-            graceManager.onDisconnect(runId);
-        });
+        bindClientLifecycle(emitter, subscription, runId);
         return emitter;
+    }
+
+    @GetMapping("/chat/runs/{runId}")
+    public BaseResponse<Map<String, Object>> getRunStatus(
+            @PathVariable String runId,
+            @RequestParam("resumeToken") String resumeToken) {
+        if (!graceManager.validateResumeToken(runId, resumeToken)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "运行不存在或恢复凭据已过期");
+        }
+        DisconnectGraceManager.RunSnapshot snapshot = graceManager.snapshot(runId);
+        if (snapshot == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "运行状态已过期");
+        }
+        return ResultUtils.success(Map.of(
+                "state", snapshot.state().name(),
+                "resumable", snapshot.resumable()));
     }
 
     @GetMapping("/conversation")
@@ -216,11 +232,47 @@ public class AgentController {
                 if (event.get("seq") != null) builder.id(event.get("seq"));
                 emitter.send(builder);
             } catch (IOException e) {
-                throw new RuntimeException("SSE 发送失败", e);
+                throw new ClientDisconnectedException(e);
             }
         }, error -> {
+            if (isClientDisconnected(error)) {
+                log.debug("SSE客户端已断开: runId={}", runId);
+                emitter.complete();
+                return;
+            }
             log.warn("SSE客户端发送失败: runId={}", runId, error);
             emitter.completeWithError(error);
         }, emitter::complete);
+    }
+
+    private void bindClientLifecycle(SseEmitter emitter, reactor.core.Disposable subscription, String runId) {
+        java.util.concurrent.atomic.AtomicBoolean detached = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable detach = () -> {
+            if (detached.compareAndSet(false, true)) {
+                subscription.dispose();
+                graceManager.detachClient(runId);
+            }
+        };
+        emitter.onCompletion(detach);
+        emitter.onTimeout(detach);
+    }
+
+    private boolean isClientDisconnected(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof ClientDisconnectedException || current instanceof IOException) return true;
+            String name = current.getClass().getSimpleName();
+            if ("ClientAbortException".equals(name) || "AsyncRequestNotUsableException".equals(name)) return true;
+            String message = current.getMessage();
+            if (message != null && message.contains("Response not usable after response errors")) return true;
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private static final class ClientDisconnectedException extends RuntimeException {
+        private ClientDisconnectedException(IOException cause) {
+            super(cause);
+        }
     }
 }

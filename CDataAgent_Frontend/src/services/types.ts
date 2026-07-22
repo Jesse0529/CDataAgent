@@ -44,6 +44,8 @@ export interface ChatMessageVO {
   conclusion?: string
   /** SSE 断线重连中，显示重连指示器 */
   reconnecting?: boolean
+  /** 实时恢复窗口结束，任务仍在后端执行。 */
+  backgroundRunning?: boolean
   /** 后端正在生成或校验图表中，禁用统一图表入口。 */
   chartGenerating?: boolean
   /** 本轮展示计划已明确包含图表，可在生成前稳定地预留图表入口。 */
@@ -176,6 +178,12 @@ export interface MetaEvent {
   renderProtocol: string
   resumeToken?: string
   replaySupported: boolean
+}
+
+/** 单实例运行恢复的服务端状态。 */
+export interface AgentRunStatus {
+  state: 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+  resumable: boolean
 }
 
 /** 服务端进度事件。展示文本必须是服务端受控纯文本。 */

@@ -68,6 +68,9 @@ public class RunContext {
     /** 通过 validateChart 的图表索引；未校验图表绝不进入最终结果。 */
     private final Set<Integer> validatedChartIndexes = Collections.synchronizedSet(new java.util.LinkedHashSet<>());
 
+    /** 本轮已完成字段确认的图表数据引用。 */
+    private final Set<String> describedChartDataRefs = Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+
     /** 图表就绪信号（ChartOutputTool 完成时触发，用于异步发射 chart SSE 事件） */
     @Getter
     private volatile CompletableFuture<String> chartReadyFuture = new CompletableFuture<>();
@@ -245,6 +248,22 @@ public class RunContext {
         }
     }
 
+    public void markChartDataDescribed(String dataRef) {
+        if (dataRef != null && !dataRef.isBlank()) describedChartDataRefs.add(dataRef);
+    }
+
+    public boolean isChartDataDescribed(String dataRef) {
+        return dataRef != null && describedChartDataRefs.contains(dataRef);
+    }
+
+    /** 有展示计划时，Synthesizer 只能使用计划内的数据引用；旧协议保持兼容。 */
+    public boolean allowsChartDataRef(String dataRef) {
+        if (dataRef == null || dataRef.isBlank()) return false;
+        PresentationPlan plan = presentationPlan;
+        return plan == null || plan.getChartOutputKeys() == null
+                || plan.getChartOutputKeys().contains(dataRef);
+    }
+
     private List<String> validatedChartOptions() {
         return validatedChartIndexes.stream()
                 .sorted()
@@ -385,6 +404,7 @@ public class RunContext {
         completeActivityEvents();
         chartOptions.clear();
         validatedChartIndexes.clear();
+        describedChartDataRefs.clear();
         if (!chartReadyFuture.isDone()) {
             chartReadyFuture.complete(null);
         }
