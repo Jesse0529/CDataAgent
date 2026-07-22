@@ -18,7 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -100,6 +102,13 @@ public class DataLoadingTool {
                         .eq("conversationId", conversationId)
                         .eq("status", "READY");
                 files = dataFileMapper.selectList(qw);
+                Set<Long> readyIds = files.stream().map(DataFile::getId).collect(Collectors.toSet());
+                if (files.size() != activeIds.size() || !readyIds.equals(new HashSet<>(activeIds))) {
+                    analysisState.setLoadedFiles(new ArrayList<>());
+                    context.markFileScopeUnavailable();
+                    return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_PRECONDITION,
+                            "本轮选择的文件存在已删除、未就绪或不属于当前对话的情况，请刷新后重新选择");
+                }
             } else if (!analysisState.getActiveFileIds().isEmpty()) {
                 // 旧调用方兼容：仍按 activeFileIds 加载。
                 QueryWrapper<DataFile> qw = new QueryWrapper<>();
@@ -167,15 +176,13 @@ public class DataLoadingTool {
             result.put("files", fileInfos);
             result.put("note", "以上是本次查询可用的文件。需要查看某个文件的样本值时，再用 getSchema；SQL 中通过 viewName 引用文件。");
 
-            List<String> names = files.stream()
-                    .map(DataFile::getOriginalFilename)
-                    .collect(Collectors.toList());
-            log.info("数据加载：{}个文件已加载：{}", files.size(), names);
+            log.info("数据加载完成：文件数={}", files.size());
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("数据加载失败", e);
-            analysisState.addStepResultFailed("loadData", "loadData", e.getMessage());
-            return ToolResultUtils.jsonTypedError("system", "文件加载失败: " + e.getMessage() + "。请确认文件状态后重试或重新上传。");
+            log.warn("数据加载失败：异常={}", e.getClass().getSimpleName());
+            analysisState.addStepResultFailed("loadData", "loadData", "文件加载失败");
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM,
+                    "文件加载失败，请确认文件状态后重试或重新上传");
         }
     }
 
@@ -268,9 +275,10 @@ public class DataLoadingTool {
             }
             return result.toJSONString();
         } catch (Exception e) {
-            log.error("获取表结构失败：文件引用={}", fileRef, e);
-            analysisState.addStepResultFailed(fileRef, "getSchema", e.getMessage());
-            return ToolResultUtils.jsonTypedError("system", "获取 schema 失败: " + e.getMessage() + "。请确认文件状态后重试。");
+            log.warn("获取表结构失败：异常={}", e.getClass().getSimpleName());
+            analysisState.addStepResultFailed(fileRef, "getSchema", "获取 schema 失败");
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM,
+                    "获取 schema 失败，请确认文件状态后重试");
         }
     }
 
@@ -293,7 +301,8 @@ public class DataLoadingTool {
         try {
             return analysisState.toContextString();
         } catch (Exception e) {
-            return "分析状态获取失败: " + e.getMessage();
+            log.warn("分析状态获取失败：异常={}", e.getClass().getSimpleName());
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "分析状态获取失败，请稍后重试");
         }
     }
 

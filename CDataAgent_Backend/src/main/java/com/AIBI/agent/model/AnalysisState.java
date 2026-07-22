@@ -472,6 +472,8 @@ public class AnalysisState {
     public static class QueryOutputRecord {
         public String outputKey;
         public String sql;
+        /** SQL 与数据源共同生成的内部身份，用于安全幂等。 */
+        public String queryFingerprint;
         public List<QuerySourceRecord> sources;
         public List<String> fields;
         public String sampleJson;

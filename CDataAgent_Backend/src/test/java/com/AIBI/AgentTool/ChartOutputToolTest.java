@@ -10,6 +10,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,9 +40,10 @@ class ChartOutputToolTest {
     @Test
     void buildsChartUsingExactSchemaFields() {
         analysisState.addData("monthly_prices", "[{\"month\":\"2025-01\",\"close\":10.5},{\"month\":\"2025-02\",\"close\":12.0}]");
+        chartOutputTool.describeData("monthly_prices");
 
         String result = chartOutputTool.buildChart("line", "ETF 收盘价", "month",
-                "{\"收盘价\":\"close\"}", "monthly_prices");
+                Map.of("收盘价", "close"), "monthly_prices");
 
         assertEquals("chart-ready:1", result);
         JSONObject option = JSON.parseObject(RunContextHolder.get().getChartOption(1));
@@ -50,9 +54,10 @@ class ChartOutputToolTest {
     @Test
     void rejectsUnknownFieldsInsteadOfGeneratingBlankAndZeroChart() {
         analysisState.addData("monthly_prices", "[{\"month\":\"2025-01\",\"close\":10.5}]");
+        chartOutputTool.describeData("monthly_prices");
 
         String result = chartOutputTool.buildChart("line", "ETF 收盘价", "日期",
-                "{\"收盘价\":\"收盘价\"}", "monthly_prices");
+                Map.of("收盘价", "收盘价"), "monthly_prices");
 
         JSONObject error = JSON.parseObject(result);
         assertEquals("schema", error.getString("error"));
@@ -77,9 +82,14 @@ class ChartOutputToolTest {
                 [{"model":"模型A","r2":0.91,"rmse":12.0,"mae":8.0},
                  {"model":"模型B","r2":0.87,"rmse":15.0,"mae":10.0}]
                 """);
+        chartOutputTool.describeData("model_metrics");
+        Map<String, String> metrics = new LinkedHashMap<>();
+        metrics.put("R²", "r2");
+        metrics.put("RMSE", "rmse");
+        metrics.put("MAE", "mae");
 
         String result = chartOutputTool.buildChart("radar", "模型性能对比", "model",
-                "{\"R²\":\"r2\",\"RMSE\":\"rmse\",\"MAE\":\"mae\"}", "model_metrics");
+                metrics, "model_metrics");
 
         assertEquals("chart-ready:1", result);
         JSONObject option = JSON.parseObject(RunContextHolder.get().getChartOption(1));
@@ -100,9 +110,17 @@ class ChartOutputToolTest {
         analysisState.addQueryOutput(output);
 
         JSONObject error = JSON.parseObject(chartOutputTool.buildChart("bar", "明细", "month",
-                "{\"销售额\":\"sales\"}", "raw_detail"));
+                Map.of("销售额", "sales"), "raw_detail"));
 
         assertEquals("schema", error.getString("error"));
         assertTrue(error.getString("message").contains("Top N"));
+    }
+
+    @Test
+    void rejectsRawOptionJsonDuringValidation() {
+        JSONObject error = JSON.parseObject(chartOutputTool.validateChart("{\"series\":[]}"));
+
+        assertEquals("syntax", error.getString("error"));
+        assertTrue(error.getString("message").contains("chart-ready"));
     }
 }

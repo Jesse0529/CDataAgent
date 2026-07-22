@@ -99,7 +99,7 @@ public class DuckDbQueryTool {
      * 单文件示例：SELECT region, SUM(sales) FROM data_1001_abc123 GROUP BY region
      * 多文件 JOIN 示例：SELECT a.region, a.sales, b.target FROM data_1001_abc123 a JOIN data_1001_def456 b ON a.region=b.region
      */
-    @Tool(description = "对已加载视图执行只读 SQL：聚合、筛选、排序、统计或 JOIN。结果保存为 outputKey；截断结果需重查。")
+    @Tool(description = "对已加载视图执行只读 SQL：聚合、筛选、排序、统计或 JOIN。不同查询必须使用不同 outputKey；截断结果需重查。")
     public String runDuckdb(
             @ToolParam(description = "SELECT SQL；表名使用 viewName") String sql,
             @ToolParam(description = "结果引用，如 monthly_sales") String outputKey) {
@@ -120,27 +120,34 @@ public class DuckDbQueryTool {
             String scopeError = checkFileScope(files);
             if (scopeError != null) return scopeError;
 
-            // 回合内去重：同一 outputKey 已有结果时直接返回
-            AnalysisState.QueryOutputRecord existing = analysisState.getQueryOutput(outputKey);
-            if (existing != null) {
-                return buildSummary(outputKey, existing.rowCount, existing.rowLimit, existing.truncated,
-                        existing.sampleJson, true).toJSONString();
-            }
-
             // 构建 FileRef 列表
             List<DuckDbConfig.FileRef> refs = files.stream()
                     .map(f -> new DuckDbConfig.FileRef(f.parquetPath, f.viewName))
                     .collect(Collectors.toList());
+            String queryFingerprint = buildQueryFingerprint(refs, sql);
+
+            // 相同 key 只允许同一查询幂等复用，禁止静默返回其他查询的旧结果。
+            AnalysisState.QueryOutputRecord existing = analysisState.getQueryOutput(outputKey);
+            if (existing != null) {
+                String existingFingerprint = existing.queryFingerprint != null
+                        ? existing.queryFingerprint : buildQueryFingerprintFromRecord(existing);
+                if (!queryFingerprint.equals(existingFingerprint)) {
+                    return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_OUTPUT_KEY_CONFLICT,
+                            "outputKey 已用于其他查询，请为当前查询使用新的 outputKey");
+                }
+                return buildSummary(outputKey, existing.rowCount, existing.rowLimit, existing.truncated,
+                        existing.sampleJson, true).toJSONString();
+            }
 
             // 跨轮次 SQL 缓存（输出键不同但 SQL 可能相同）
-            String cacheKey = buildCacheKey(refs, sql);
+            String cacheKey = queryFingerprint;
             CachedQueryResult cachedResult = sqlCache.getIfPresent(cacheKey);
             if (cachedResult != null) {
                 JSONArray cachedData = JSON.parseArray(cachedResult.dataJson());
-                saveQueryOutput(outputKey, sql, refs, cachedData, cachedResult.rowCount(),
+                saveQueryOutput(outputKey, sql, queryFingerprint, refs, cachedData, cachedResult.rowCount(),
                         cachedResult.rowLimit(), cachedResult.truncated(), "runDuckdb");
-                log.info("DuckDB查询：命中本地缓存 输出键={} 行数={} 截断={}",
-                        outputKey, cachedResult.rowCount(), cachedResult.truncated());
+                log.info("DuckDB查询：命中本地缓存、行数={}、截断={}",
+                        cachedResult.rowCount(), cachedResult.truncated());
                 return buildSummary(outputKey, cachedResult.rowCount(), cachedResult.rowLimit(),
                         cachedResult.truncated(), sampleJson(cachedData), true).toJSONString();
             }
@@ -149,7 +156,7 @@ public class DuckDbQueryTool {
             DuckDbQueryService.AgentQueryResult result = duckDbQueryService
                     .executeAgentQuery(conversationId, refs, sql, agentMaxResultRows);
 
-            // 瞬态错误自动重试一次（system/timeout）
+            // 仅系统瞬态错误原参数重试一次；超时必须修改查询后再执行。
             if (result != null && ToolResultUtils.isTransientError(result.dataJson())) {
                 log.warn("DuckDB查询：瞬态错误，重试一次");
                 result = duckDbQueryService.executeAgentQuery(conversationId, refs, sql, agentMaxResultRows);
@@ -165,17 +172,17 @@ public class DuckDbQueryTool {
 
             // 存入分析状态
             JSONArray data = JSON.parseArray(result.dataJson());
-            saveQueryOutput(outputKey, sql, refs, data, result.rowCount(), result.rowLimit(),
+            saveQueryOutput(outputKey, sql, queryFingerprint, refs, data, result.rowCount(), result.rowLimit(),
                     result.truncated(), "runDuckdb");
 
-            log.info("DuckDB查询：输出键={}、行数={}、截断={}、视图数={}",
-                    outputKey, result.rowCount(), result.truncated(), files.size());
+            log.info("DuckDB查询完成：行数={}、截断={}、视图数={}",
+                    result.rowCount(), result.truncated(), files.size());
             return buildSummary(outputKey, result.rowCount(), result.rowLimit(), result.truncated(),
                     sampleJson(data), false).toJSONString();
         } catch (Exception e) {
-            log.error("DuckDB查询失败", e);
-            analysisState.addStepResultFailed(outputKey, "runDuckdb", e.getMessage());
-            return ToolResultUtils.jsonTypedError("system", "查询异常: " + e.getMessage());
+            log.warn("DuckDB查询失败：异常={}", e.getClass().getSimpleName());
+            analysisState.addStepResultFailed(outputKey, "runDuckdb", "查询异常");
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "查询执行异常，请稍后重试");
         }
     }
 
@@ -202,7 +209,7 @@ public class DuckDbQueryTool {
             // 回合内去重
             String existing = analysisState.getDataByKey(statsKey);
             if (existing != null) {
-                log.info("统计查询：命中缓存 列={}", columns);
+                log.info("统计查询：命中缓存");
                 return existing;
             }
 
@@ -235,12 +242,13 @@ public class DuckDbQueryTool {
             List<DuckDbConfig.FileRef> refs = List.of(
                     new DuckDbConfig.FileRef(activeFile.parquetPath, activeFile.viewName));
             String querySql = sqlBuilder.toString();
-            String cacheKey = buildCacheKey(refs, querySql);
+            String queryFingerprint = buildQueryFingerprint(refs, querySql);
+            String cacheKey = queryFingerprint;
             CachedQueryResult cachedResult = sqlCache.getIfPresent(cacheKey);
             if (cachedResult != null) {
-                log.info("统计查询：Caffeine缓存命中 列={}", columns);
+                log.info("统计查询：命中本地缓存");
                 JSONArray data = JSON.parseArray(cachedResult.dataJson());
-                saveQueryOutput(statsKey, querySql, refs, data, cachedResult.rowCount(),
+                saveQueryOutput(statsKey, querySql, queryFingerprint, refs, data, cachedResult.rowCount(),
                         cachedResult.rowLimit(), cachedResult.truncated(), "queryStatistics");
                 return cachedResult.dataJson();
             }
@@ -250,7 +258,7 @@ public class DuckDbQueryTool {
 
             // 瞬态错误自动重试一次
             if (result != null && ToolResultUtils.isTransientError(result.dataJson())) {
-                log.warn("统计查询：瞬态错误，重试一次 列={}", columns);
+                log.warn("统计查询：瞬态错误，重试一次");
                 result = duckDbQueryService.executeAgentQuery(conversationId, refs, sqlBuilder.toString(), agentMaxResultRows);
             }
 
@@ -260,26 +268,26 @@ public class DuckDbQueryTool {
 
             sqlCache.put(cacheKey, new CachedQueryResult(result.dataJson(), result.rowCount(),
                     result.rowLimit(), result.truncated()));
-            saveQueryOutput(statsKey, querySql, refs, JSON.parseArray(result.dataJson()), result.rowCount(),
+            saveQueryOutput(statsKey, querySql, queryFingerprint, refs, JSON.parseArray(result.dataJson()), result.rowCount(),
                     result.rowLimit(), result.truncated(), "queryStatistics");
 
             return result.dataJson();
         } catch (Exception e) {
-            log.error("统计查询失败", e);
-            analysisState.addStepResultFailed(statsKey, "queryStatistics", e.getMessage());
-            return ToolResultUtils.jsonTypedError("system", "统计查询异常: " + e.getMessage());
+            log.warn("统计查询失败：异常={}", e.getClass().getSimpleName());
+            analysisState.addStepResultFailed(statsKey, "queryStatistics", "统计查询异常");
+            return ToolResultUtils.jsonTypedError(ToolResultUtils.ERROR_SYSTEM, "统计查询异常，请稍后重试");
         }
     }
 
     /**
      * 构建 Caffeine 缓存 key：viewNames 排序拼接 + SQL → SHA256。
      */
-    private static String buildCacheKey(List<DuckDbConfig.FileRef> refs, String sql) {
-        String viewPart = refs.stream()
-                .map(r -> r.viewName())
+    private static String buildQueryFingerprint(List<DuckDbConfig.FileRef> refs, String sql) {
+        String sourcePart = refs.stream()
+                .map(r -> r.viewName() + "|" + r.parquetPath())
                 .sorted()
                 .collect(Collectors.joining(","));
-        String rawKey = viewPart + "|" + sql;
+        String rawKey = sourcePart + "|" + normalizeSqlIdentity(sql);
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(rawKey.getBytes(StandardCharsets.UTF_8));
@@ -292,7 +300,21 @@ public class DuckDbQueryTool {
         }
     }
 
-    private void saveQueryOutput(String outputKey, String sql, List<DuckDbConfig.FileRef> refs,
+    private static String buildQueryFingerprintFromRecord(AnalysisState.QueryOutputRecord output) {
+        if (output == null || output.sources == null) return "";
+        List<DuckDbConfig.FileRef> refs = output.sources.stream()
+                .map(source -> new DuckDbConfig.FileRef(source.parquetPath, source.viewName))
+                .toList();
+        return buildQueryFingerprint(refs, output.sql);
+    }
+
+    private static String normalizeSqlIdentity(String sql) {
+        if (sql == null) return "";
+        return sql.trim().replaceFirst(";\\s*$", "");
+    }
+
+    private void saveQueryOutput(String outputKey, String sql, String queryFingerprint,
+                                 List<DuckDbConfig.FileRef> refs,
                                  JSONArray data, int rowCount, int rowLimit, boolean truncated, String toolName) {
         String dataJson = data == null ? "[]" : data.toJSONString();
         boolean inline = rowCount <= MAX_INLINE_RESULT_ROWS
@@ -301,6 +323,7 @@ public class DuckDbQueryTool {
         AnalysisState.QueryOutputRecord output = new AnalysisState.QueryOutputRecord();
         output.outputKey = outputKey;
         output.sql = sql;
+        output.queryFingerprint = queryFingerprint;
         output.sources = refs.stream()
                 .map(ref -> new AnalysisState.QuerySourceRecord(ref.parquetPath(), ref.viewName()))
                 .collect(Collectors.toList());
