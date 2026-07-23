@@ -27,8 +27,16 @@ Thumbs.db
 .uploads/
 /uploads/
 *.log
+*.gz
 hs_err_pid*
 replay_pid*
+
+# ---- 本地测试脚本与结果（不入库） ----
+test_tool_success_rate.py
+*_test_results*.txt
+CDataAgent_Backend/test_results*.txt
+CDataAgent_Backend/run_tests.sh
+CDataAgent_Backend/src/*.csv
 
 # ---- 构建产物（子项目 gitignore 已覆盖，根级补充） ----
 target/
